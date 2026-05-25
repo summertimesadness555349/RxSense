@@ -229,15 +229,26 @@ export const login = async (email, password) => {
 
 // POST /api/auth/register
 export const register = async (userData) => {
-  // TODO: Replace with actual API call to backend
-  await delay(1200);
-  return {
-    token: 'mock_token_new123',
-    user: {
-      id: `usr_${Date.now()}`,
+  try {
+    const res = await api.post('/auth/register', {
       name: userData.name,
       email: userData.email,
-      role: userData.role || 'patient',
-    },
-  };
+      password: userData.password,
+      phone: userData.phone,
+      role: userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
+    });
+
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    const token = data.tokens?.accessToken || data.token || null;
+    const user = data.user || null;
+
+    return { token, user, raw: data };
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || 'Registration failed';
+    throw new Error(msg);
+  }
 };

@@ -16,12 +16,14 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { swaggerJsdocOptions } = require('./docs/swaggerConfig.js');
 
+dotenv.config({path: path.resolve(__dirname, '../.env')});
 dotenv.config({path: path.resolve(__dirname, '.env')});
 
 const app = express();
 const {authRouter} = require('./routes/authRoutes.js');
 const {userRouter} = require('./routes/userRoutes.js');
 const {patientRouter} = require('./routes/patientRoutes.js');
+const {doctorRouter} = require('./routes/doctorRoutes.js');
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
 const socketLayer = createSocketServer(server);
@@ -127,6 +129,7 @@ app.use(
 app.use('/api/auth', loginLimiter, authRouter);
 app.use('/api/user', apiLimiter, userRouter);
 app.use('/api/patient', apiLimiter, patientRouter);
+app.use('/api/doctor', apiLimiter, doctorRouter);
 
 const options = {
   transports: [

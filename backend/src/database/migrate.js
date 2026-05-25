@@ -20,7 +20,7 @@
 
 const dotenv = require('dotenv');
 const fs     = require('fs');
-const path   = require('path');
+const path   = require('path');cd
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

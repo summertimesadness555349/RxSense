@@ -4,8 +4,9 @@
 --  Generated for Infinity AI Buildfest 2026 · Track 3 HealthTech
 -- ============================================================
 
--- NOTE: CREATE EXTENSION is not supported in this SQL dialect/editor.
--- gen_random_uuid() requires pgcrypto in PostgreSQL runtime.
+-- Extension required for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- ============================================================
 --  ENUM TYPES
 -- ============================================================
@@ -54,7 +55,16 @@ CREATE TYPE risk_level_type AS ENUM (
   'high',
   'critical'
 );
+-- New ENUM types
+DO $$ BEGIN
+  CREATE TYPE condition_status AS ENUM ('active', 'resolved', 'managed', 'chronic');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
+DO $$ BEGIN
+  CREATE TYPE surgery_outcome AS ENUM ('successful', 'complicated', 'failed', 'ongoing');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 --  TABLE 1: HOSPITAL
@@ -67,7 +77,7 @@ CREATE TABLE hospital (
   location      VARCHAR(200),
   type          VARCHAR(50),          -- e.g. 'public', 'private', 'clinic', 'NGO'
   created_at    TIMESTAMP   NOT NULL DEFAULT NOW(),
-  updated_at    TIMESTAMP   NOT NULL DEFAULT NOW()
+  updated_at    TIMESTAMP   NOT NULL DEFAULT NOW() 
 );
 
 COMMENT ON TABLE  hospital            IS 'Healthcare facility registry';
@@ -82,16 +92,28 @@ COMMENT ON COLUMN hospital.type       IS 'Facility type: public | private | clin
 -- ============================================================
 
 CREATE TABLE doctor (
-  doctor_id      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id      UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   name           VARCHAR(100) NOT NULL,
   specialty      VARCHAR(100),
   license_number VARCHAR(50)  NOT NULL UNIQUE,
-  created_at     TIMESTAMP   NOT NULL DEFAULT NOW(),
-  updated_at     TIMESTAMP   NOT NULL DEFAULT NOW()
+  gender         VARCHAR(20),
+  
+  -- Auth fields
+  username       VARCHAR(50)  NOT NULL UNIQUE,
+  email          VARCHAR(255) NOT NULL UNIQUE,
+  password       VARCHAR(255) NOT NULL, -- To store hashed password strings
+  
+  -- Tracking & Metadata
+  last_login     TIMESTAMPTZ,
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE  doctor                IS 'Physician profiles — affiliations live in doctor_hospital';
-COMMENT ON COLUMN doctor.license_number IS 'Unique medical license number; enforced unique constraint';
+COMMENT ON TABLE  doctor            IS 'Physician profiles and credentials';
+COMMENT ON COLUMN doctor.password   IS 'Hashed password for doctor portal access';
+COMMENT ON COLUMN doctor.gender     IS 'Gender identifier (e.g., Male, Female, Non-binary)';
+COMMENT ON COLUMN doctor.last_login IS 'Timestamp of the user''s most recent successful login';
+
 
 
 -- ============================================================
@@ -123,18 +145,109 @@ COMMENT ON COLUMN doctor_hospital.end_date   IS 'NULL means the affiliation is c
 -- ============================================================
 
 CREATE TABLE patient (
-  patient_id   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-  name         VARCHAR(100) NOT NULL,
+  patient_id    UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          VARCHAR(150) NOT NULL,
   date_of_birth DATE,
-  gender       gender_type,
-  blood_group  VARCHAR(5),
-  location     VARCHAR(200),
-  contact_info VARCHAR(200),
-  created_at   TIMESTAMP    NOT NULL DEFAULT NOW(),
-  updated_at   TIMESTAMP    NOT NULL DEFAULT NOW()
+  gender        VARCHAR(20),
+  phone         VARCHAR(20),
+  
+  -- Clinical Metrics
+  height        NUMERIC(5, 2), -- Stored in cm (e.g., 175.50)
+  weight        NUMERIC(5, 2), -- Stored in kg (e.g., 72.30)
+  
+  -- Auth fields
+  username      VARCHAR(50)  NOT NULL UNIQUE,
+  email         VARCHAR(255) NOT NULL UNIQUE,
+  password      VARCHAR(255) NOT NULL, -- For hashed password strings
+  
+  -- Tracking & Metadata
+  last_login    TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE patient IS 'Core patient identity and demographic information';
+-- Documentation Comments
+COMMENT ON TABLE  patient            IS 'Patient demographics, clinical baselines, and registry';
+COMMENT ON COLUMN patient.password   IS 'Hashed password for patient portal access';
+COMMENT ON COLUMN patient.height     IS 'Patient height in centimeters (cm)';
+COMMENT ON COLUMN patient.weight     IS 'Patient weight in kilograms (kg)';
+COMMENT ON COLUMN patient.last_login IS 'Timestamp of the patient''s most recent successful login';
+
+
+-- ============================================================
+--  RxSense — Add 3 new tables to existing Neon DB schema
+--  Run this once against your existing database.
+--  Safe to run: uses IF NOT EXISTS on all objects.
+-- ============================================================
+
+
+
+
+
+-- KNOWN_CONDITION
+CREATE TABLE IF NOT EXISTS known_condition (
+  condition_id    UUID             PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id      UUID             NOT NULL REFERENCES patient(patient_id) ON DELETE CASCADE,
+  diagnosed_by    UUID             REFERENCES doctor(doctor_id),
+  condition_name  VARCHAR(150)     NOT NULL,
+  icd_10_code     VARCHAR(10),
+  diagnosed_at    DATE,
+  status          condition_status NOT NULL DEFAULT 'active',
+  severity        severity_type,
+  notes           TEXT,
+  llm_context     TEXT,
+  created_at      TIMESTAMP        NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMP        NOT NULL DEFAULT NOW()
+);
+
+
+-- SURGICAL_HISTORY
+CREATE TABLE IF NOT EXISTS surgical_history (
+  surgery_id       UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id       UUID            NOT NULL REFERENCES patient(patient_id) ON DELETE CASCADE,
+  hospital_id      UUID            REFERENCES hospital(hospital_id),
+  surgeon_id       UUID            REFERENCES doctor(doctor_id),
+  procedure_name   VARCHAR(200)    NOT NULL,
+  icd_10_pcs       VARCHAR(10),
+  performed_at     DATE,
+  outcome          surgery_outcome,
+  complications    TEXT,
+  anaesthesia_type VARCHAR(50),
+  notes            TEXT,
+  created_at       TIMESTAMP       NOT NULL DEFAULT NOW()
+);
+
+
+--VACCINATION_RECORD
+CREATE TABLE IF NOT EXISTS vaccination_record (
+  vaccination_id  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id      UUID         NOT NULL REFERENCES patient(patient_id) ON DELETE CASCADE,
+  administered_by UUID         REFERENCES doctor(doctor_id),
+  hospital_id     UUID         REFERENCES hospital(hospital_id),
+  vaccine_name    VARCHAR(150) NOT NULL,
+  cvx_code        VARCHAR(10),
+  dose_number     INTEGER      CHECK (dose_number > 0),
+  total_doses     INTEGER      CHECK (total_doses > 0),
+  administered_at DATE         NOT NULL,
+  batch_number    VARCHAR(50),
+  site            VARCHAR(50),
+  next_due_date   DATE,
+  notes           TEXT,
+  created_at      TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_kc_patient  ON known_condition (patient_id);
+CREATE INDEX IF NOT EXISTS idx_kc_status   ON known_condition (status);
+CREATE INDEX IF NOT EXISTS idx_kc_icd10    ON known_condition (icd_10_code);
+
+CREATE INDEX IF NOT EXISTS idx_sh_patient  ON surgical_history (patient_id);
+CREATE INDEX IF NOT EXISTS idx_sh_hospital ON surgical_history (hospital_id);
+
+CREATE INDEX IF NOT EXISTS idx_vr_patient  ON vaccination_record (patient_id);
+CREATE INDEX IF NOT EXISTS idx_vr_due      ON vaccination_record (next_due_date)
+  WHERE next_due_date IS NOT NULL;
 
 
 -- ============================================================

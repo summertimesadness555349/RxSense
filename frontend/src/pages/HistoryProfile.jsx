@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Edit2, Plus, Share2, Printer, X } from 'lucide-react';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import EmergencyCard from '../components/history/EmergencyCard.jsx';
 import { mockUser } from '../data/mockUser.js';
+import { getHealthProfile } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
+
+function calculateBMI(user) {
+  if (!user.weight || !user.height) return null;
+  const heightInMeters = user.height / 100;
+  return user.weight / (heightInMeters * heightInMeters);
+}
 
 function getBMICategory(bmi) {
   if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-500' };
@@ -14,11 +21,76 @@ function getBMICategory(bmi) {
   return { label: 'Obese', color: 'text-red-500' };
 }
 
+function calculateAge(dob) {
+  if (!dob) return null;
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+function formatDateOnly(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value).split('T')[0];
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
 export default function HistoryProfile() {
   const [user, setUser] = useState(mockUser);
   const [editMode, setEditMode] = useState(false);
   const { addToast } = useToast();
-  const bmiInfo = getBMICategory(user.bmi);
+  const bmi = calculateBMI(user);
+  const bmiInfo = getBMICategory(bmi);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProfile = async () => {
+      const token = localStorage.getItem('rxsense_token');
+      if (!token) {
+        return;
+      }
+
+      try {
+        const profile = await getHealthProfile();
+        if (!isMounted || !profile) {
+          return;
+        }
+
+        setUser({
+          ...mockUser,
+          ...profile,
+          phone: profile.contactInfo || profile.phone || mockUser.phone,
+          contactInfo: profile.contactInfo || profile.phone || mockUser.phone,
+          allergies: Array.isArray(profile.allergies)
+            ? profile.allergies.map((allergy) => ({
+                id: allergy.id,
+                name: allergy.name,
+                severity: allergy.severity,
+                reaction: allergy.reaction,
+              }))
+            : mockUser.allergies,
+        });
+      } catch (error) {
+        console.error('Failed to load patient profile:', error);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSave = () => {
     setEditMode(false);
@@ -38,8 +110,8 @@ export default function HistoryProfile() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {[
             { label: 'Full Name', value: user.name },
-            { label: 'Date of Birth', value: user.dateOfBirth },
-            { label: 'Age', value: `${user.age} years` },
+            { label: 'Date of Birth', value: formatDateOnly(user.dateOfBirth) },
+            { label: 'Age', value: `${calculateAge(user.dateOfBirth)} years` },
             { label: 'Gender', value: user.gender },
             { label: 'Blood Group', value: user.bloodGroup },
             { label: 'Phone', value: user.phone },
@@ -58,7 +130,7 @@ export default function HistoryProfile() {
           {[
             { label: 'Height', value: `${user.height} cm` },
             { label: 'Weight', value: `${user.weight} kg` },
-            { label: 'BMI', value: user.bmi.toFixed(1), extra: bmiInfo },
+            { label: 'BMI', value: bmi.toFixed(1), extra: bmiInfo },
           ].map(({ label, value, extra }) => (
             <div key={label} className="text-center bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
@@ -152,7 +224,7 @@ export default function HistoryProfile() {
             <div key={v.id} className="flex items-center gap-2 text-sm">
               <span className="text-emerald-500">✓</span>
               <span className="text-gray-900 dark:text-white">{v.name}</span>
-              <Badge variant="gray">{v.dose}</Badge>
+              <Badge variant="gray">{ "Dose " + v.dose }</Badge>
               <span className="text-xs text-gray-400">{v.date}</span>
             </div>
           ))}

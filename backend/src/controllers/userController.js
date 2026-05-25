@@ -412,7 +412,7 @@ class UserController {
                     // uuid: user.uuid,
                     username: user.username,
                     email: user.email,
-                    full_name: user.name,
+                    name: user.name,
                     // is_active: user.is_active,
                     // avatar_url: user.avatar_url,
                     // subscription_type: user.subscription_type

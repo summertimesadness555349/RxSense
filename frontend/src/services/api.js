@@ -15,6 +15,29 @@ import {
 import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '../data/mockFamilyHistory.js';
 import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
+import axios from 'axios';
+
+// const API_URL = process.env.REACT_APP_API_URL || process.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = 'http://localhost:3000/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add token to requests if it exists
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('rxsense_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -70,11 +93,20 @@ export const addTimelineEntry = async (userId, entry) => {
   return { ...entry, id: `tl_${Date.now()}`, date: new Date().toISOString() };
 };
 
-// GET /api/user/:userId/profile
+// GET /api/patient/me
 export const getHealthProfile = async (userId) => {
-  // TODO: Replace with actual API call to backend
-  await delay(500);
-  return mockUser;
+  try {
+    const res = await api.get('/patient/me');
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to load health profile');
+    }
+
+    return data.user || null;
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || 'Failed to load health profile';
+    throw new Error(msg);
+  }
 };
 
 // PUT /api/user/:userId/profile
@@ -160,21 +192,39 @@ export const generateEmergencyCard = async (userId) => {
 };
 
 // POST /api/auth/login
+// export const login = async (email, password) => {
+//   // TODO: Replace with actual API call to backend
+//   await delay(1000);
+//   if (email && password) {
+//     return {
+//       token: 'mock_token_abc123',
+//       user: {
+//         id: 'usr_001',
+//         name: 'Rahim Uddin',
+//         email: 'rahim@example.com',
+//         role: 'patient',
+//       },
+//     };
+//   }
+//   throw new Error('Invalid credentials');
+// };
+
 export const login = async (email, password) => {
-  // TODO: Replace with actual API call to backend
-  await delay(1000);
-  if (email && password) {
-    return {
-      token: 'mock_token_abc123',
-      user: {
-        id: 'usr_001',
-        name: 'Rahim Uddin',
-        email: 'rahim@example.com',
-        role: 'patient',
-      },
-    };
+  try {
+    const res = await api.post('/auth/login', { identifier: email, password });
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.error || 'Login failed');
+    }
+
+    const token = data.tokens?.accessToken || data.token || null;
+    const user = data.user || null;
+
+    return { token, user, raw: data };
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || 'Login failed';
+    throw new Error(msg);
   }
-  throw new Error('Invalid credentials');
 };
 
 // POST /api/auth/register

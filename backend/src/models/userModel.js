@@ -153,7 +153,7 @@ class UserModel {
     getUserByEmail = async(email)=>{
         try {
             const query = `
-                SELECT password
+                SELECT *
                 FROM patient
                 WHERE email = $1
                 LIMIT 1;
@@ -169,7 +169,7 @@ class UserModel {
     getUserByUsername = async(username)=>{
         try {
             const query = `
-                SELECT password
+                SELECT *
                 FROM patient
                 WHERE username = $1
                 LIMIT 1;

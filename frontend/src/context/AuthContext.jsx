@@ -18,14 +18,16 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = (userData) => {
+  const login = (userData, token) => {
     setUser(userData);
     localStorage.setItem('rxsense_user', JSON.stringify(userData));
+    localStorage.setItem('rxsense_token', token);
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('rxsense_user');
+    localStorage.removeItem('rxsense_token');
   };
 
   return (

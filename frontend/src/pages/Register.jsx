@@ -33,8 +33,8 @@ export default function Register() {
     setLoading(true);
     try {
       // TODO: Replace with actual API call
-      const { user } = await apiRegister(form);
-      login(user);
+      const { user, token } = await apiRegister(form);
+      login(user, token);
       addToast(`Account created! Welcome, ${user.name}!`, 'success');
       navigate('/dashboard');
     } catch {

@@ -23,13 +23,13 @@ class UserController {
 
     generateTokens = (user) => {
         const accessPayload = {
-            sub: user.id,
+            sub: user.patient_id,
             username: user.username,
             email: user.email
         };
 
         const accessToken = jwt.sign(accessPayload, this.access_token_secret, { expiresIn: this.access_token_expiry });
-        const refreshToken = jwt.sign({ sub: user.id }, this.refresh_token_secret, { expiresIn: this.refresh_token_expiry });
+        const refreshToken = jwt.sign({ sub: user.patient_id }, this.refresh_token_secret, { expiresIn: this.refresh_token_expiry });
 
         return { accessToken, refreshToken };
     };
@@ -374,7 +374,7 @@ class UserController {
                 });
             }
 
-            const match = await bcrypt.compare(password, user.password_hash);
+            const match = await bcrypt.compare(password, user.password);
             if (!match) {
                 const updated = await this.userModel.incrementLoginAttempts(user.id);
                 const attempts = updated ? updated.login_attempts : (user.login_attempts + 1);
@@ -400,7 +400,7 @@ class UserController {
             await this.userModel.setLastLogin(user.id);
 
             const { accessToken, refreshToken } = this.generateTokens(user);
-            await this.userModel.updateRefreshToken(user.id, refreshToken);
+            // await this.userModel.updateRefreshToken(user.id, refreshToken);
 
             bus.emit(Events.USER_LOGIN, { userId: user.id });
 
@@ -408,14 +408,14 @@ class UserController {
                 success: true,
                 message: 'Login successful',
                 user: {
-                    id: user.id,
-                    uuid: user.uuid,
+                    id: user.patient_id,
+                    // uuid: user.uuid,
                     username: user.username,
                     email: user.email,
-                    full_name: user.full_name,
-                    is_active: user.is_active,
-                    avatar_url: user.avatar_url,
-                    subscription_type: user.subscription_type
+                    full_name: user.name,
+                    // is_active: user.is_active,
+                    // avatar_url: user.avatar_url,
+                    // subscription_type: user.subscription_type
                 },
                 tokens: { accessToken, refreshToken }
             });

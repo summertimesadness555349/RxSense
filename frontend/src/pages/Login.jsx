@@ -19,8 +19,8 @@ export default function Login() {
     setLoading(true);
     try {
       // TODO: Replace with actual API call
-      const { user } = await apiLogin(email, password);
-      login(user);
+      const { user, token } = await apiLogin(email, password);
+      login(user, token);
       addToast(`Welcome back, ${user.name}!`, 'success');
       navigate('/dashboard');
     } catch {

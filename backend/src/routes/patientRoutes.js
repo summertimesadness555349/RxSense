@@ -1,13 +1,13 @@
 const express = require('express');
 const PatientController = require('../controllers/patientController.js');
 const AuthenticateToken = require('../middlewares/authenticateToken.js');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 // essential modules
 const patientRouter = express.Router();
 const patientController = new PatientController();
 const authenticateToken = new AuthenticateToken();
-
-patientRouter.use(authenticateToken.authenticateToken);
 
 // patientRouter.post('/reports/analyze', patientController.getProfile);
 
@@ -25,7 +25,7 @@ patientRouter.use(authenticateToken.authenticateToken);
  *       401:
  *         description: Unauthorized
  */
-patientRouter.get('/me', patientController.getProfile);
+patientRouter.get('/me', authenticateToken.authenticateToken, patientController.getProfile);
 
 /**
  * @openapi
@@ -47,11 +47,10 @@ patientRouter.get('/me', patientController.getProfile);
  *       404:
  *         description: Patient not found
  */
-patientRouter.get('/profile/:patientId', upload.single('report'), patientController.analyzeReport);
+patientRouter.get('/profile/:patientId', authenticateToken.authenticateToken, patientController.getProfile);
+
+patientRouter.post('/reports/analyze', upload.single('report'), patientController.analyzeReport);
 
 module.exports = {
     patientRouter
 };
-
-
-module.exports = {patientRouter};

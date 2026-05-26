@@ -15,6 +15,7 @@ class UserModel {
         email: row.email,
         full_name: row.name,
         name: row.name,
+        password: row.password,
         password_hash: row.password,
         is_active: true,
         email_verified: true,
@@ -183,7 +184,7 @@ class UserModel {
     getUserByEmail = async(email)=>{
         try {
             const patientQuery = `
-                SELECT patient_id, name, username, email, *, last_login, created_at, updated_at
+                SELECT patient_id, name, username, email, password, last_login, created_at, updated_at
                 FROM patient
                 WHERE email = $1
                 LIMIT 1;
@@ -213,7 +214,7 @@ class UserModel {
     getUserByUsername = async(username)=>{
         try {
             const patientQuery = `
-                SELECT patient_id, name, username, email, *, last_login, created_at, updated_at
+                SELECT patient_id, name, username, email, password, last_login, created_at, updated_at
                 FROM patient
                 WHERE username = $1
                 LIMIT 1;

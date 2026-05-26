@@ -22,14 +22,15 @@ class UserController {
     }
 
     generateTokens = (user) => {
+        const subject = user.patient_id || user.uuid || user.id;
         const accessPayload = {
-            sub: user.patient_id,
+            sub: subject,
             username: user.username,
             email: user.email
         };
 
         const accessToken = jwt.sign(accessPayload, this.access_token_secret, { expiresIn: this.access_token_expiry });
-        const refreshToken = jwt.sign({ sub: user.patient_id }, this.refresh_token_secret, { expiresIn: this.refresh_token_expiry });
+        const refreshToken = jwt.sign({ sub: subject }, this.refresh_token_secret, { expiresIn: this.refresh_token_expiry });
 
         return { accessToken, refreshToken };
     };
@@ -374,7 +375,8 @@ class UserController {
                 });
             }
 
-            const match = await bcrypt.compare(password, user.password);
+            const passwordHash = user.password || user.password_hash;
+            const match = passwordHash ? await bcrypt.compare(password, passwordHash) : false;
             if (!match) {
                 const updated = await this.userModel.incrementLoginAttempts(user.id);
                 const attempts = updated ? updated.login_attempts : (user.login_attempts + 1);

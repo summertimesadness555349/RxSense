@@ -14,36 +14,16 @@ import {
 import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '../data/mockFamilyHistory.js';
 import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
-import axios from 'axios';
-
-// const API_URL = process.env.REACT_APP_API_URL || process.env.VITE_API_URL || 'http://localhost:3000/api';
-const API_URL = 'http://localhost:3000/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add token to requests if it exists
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('rxsense_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const getAccessToken = () => {
-  const directToken = localStorage.getItem('rxsense_access_token');
-  if (directToken) return directToken;
+  const appToken = localStorage.getItem('rxsense_token');
+  if (appToken) return appToken;
+
+  const accessToken = localStorage.getItem('rxsense_access_token');
+  if (accessToken) return accessToken;
 
   try {
     const stored = JSON.parse(localStorage.getItem('rxsense_user') || '{}');
@@ -139,18 +119,8 @@ export const addTimelineEntry = async (userId, entry) => {
 
 // GET /api/patient/me
 export const getHealthProfile = async (userId) => {
-  try {
-    const res = await api.get('/patient/me');
-    const data = res.data || {};
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to load health profile');
-    }
-
-    return data.user || null;
-  } catch (err) {
-    const msg = err.response?.data?.error || err.message || 'Failed to load health profile';
-    throw new Error(msg);
-  }
+  const data = await request('/patient/me');
+  return data.user || null;
 };
 
 // PUT /api/user/:userId/profile
@@ -254,21 +224,17 @@ export const generateEmergencyCard = async (userId) => {
 // };
 
 export const login = async (email, password) => {
-  try {
-    const res = await api.post('/auth/login', { identifier: email, password });
-    const data = res.data || {};
-    if (!data.success) {
-      throw new Error(data.error || 'Login failed');
-    }
+  const data = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: email, password }),
+  });
 
-    const token = data.tokens?.accessToken || data.token || null;
-    const user = data.user || null;
+  const token = data.tokens?.accessToken || data.token || null;
+  const user = data.user || null;
+  if (!token) throw new Error('Login succeeded but no access token was returned');
 
-    return { token, user, raw: data };
-  } catch (err) {
-    const msg = err.response?.data?.error || err.message || 'Login failed';
-    throw new Error(msg);
-  }
+  return { token, user, raw: data };
 };
 
 // POST /api/auth/register

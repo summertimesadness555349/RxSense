@@ -1,6 +1,5 @@
 // TODO: Replace all mock returns with actual API calls to backend
 import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
-import { mockReportResult } from '../data/mockReports.js';
 import { mockTimeline } from '../data/mockTimeline.js';
 import { mockUser } from '../data/mockUser.js';
 import { mockCurrentMedications, mockPastMedications } from '../data/mockMedications.js';
@@ -17,6 +16,36 @@ import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+const getAccessToken = () => {
+  const directToken = localStorage.getItem('rxsense_access_token');
+  if (directToken) return directToken;
+
+  try {
+    const stored = JSON.parse(localStorage.getItem('rxsense_user') || '{}');
+    return stored?.token || stored?.tokens?.accessToken || null;
+  } catch {
+    return null;
+  }
+};
+
+const request = async (path, options = {}) => {
+  const token = getAccessToken();
+  const headers = new Headers(options.headers || {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.success === false) {
+    throw new Error(data.error || data.message || 'Request failed');
+  }
+  return data;
+};
 
 // POST /api/prescription/analyze
 export const analyzePrescription = async (imageFile) => {
@@ -27,9 +56,24 @@ export const analyzePrescription = async (imageFile) => {
 
 // POST /api/report/analyze
 export const analyzeReport = async (file, reportType) => {
-  // TODO: Replace with actual API call to backend
-  await delay(2500);
-  return mockReportResult;
+  const formData = new FormData();
+  formData.append('report', file);
+  formData.append('reportType', reportType);
+
+  try {
+    const storedUser = JSON.parse(localStorage.getItem('rxsense_user') || '{}');
+    const patientId = storedUser.patient_id || storedUser.uuid;
+    if (patientId) formData.append('patientId', patientId);
+  } catch {
+    // Optional patient ID only; backend can still analyze without saving.
+  }
+
+  const data = await request('/patient/reports/analyze', {
+    method: 'POST',
+    body: formData,
+  });
+
+  return data.report;
 };
 
 // POST /api/symptoms/check

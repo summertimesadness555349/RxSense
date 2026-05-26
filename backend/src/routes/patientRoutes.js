@@ -9,4 +9,8 @@ const patientRouter = express.Router();
 const patientController = new PatientController();
 const authenticateToken = new AuthenticateToken();
 
-patientRouter.get('/get-profile/:userId', authenticateToken.authenticateToken, patientController.getProfile);
+patientRouter.post('/reports/analyze', upload.single('report'), patientController.analyzeReport);
+
+module.exports = {
+    patientRouter
+};

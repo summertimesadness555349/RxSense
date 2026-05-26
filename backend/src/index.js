@@ -23,6 +23,7 @@ const app = express();
 const {authRouter} = require('./routes/authRoutes.js');
 const {userRouter} = require('./routes/userRoutes.js');
 const {doctorRouter} = require('./routes/doctorRoutes.js');
+const {patientRouter} = require('./routes/patientRoutes.js');
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
 const socketLayer = createSocketServer(server);
@@ -128,6 +129,7 @@ app.use(
 app.use('/api/auth', loginLimiter, authRouter);
 app.use('/api/user', apiLimiter, userRouter);
 app.use('/api/doctor', apiLimiter, doctorRouter);
+app.use('/api/patient', apiLimiter, patientRouter);
 
 const options = {
   transports: [

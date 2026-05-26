@@ -78,10 +78,11 @@ def download_models():
 @modal.asgi_app()
 def serve():
     import os
+    import json as _json
     import tempfile
-    from fastapi import FastAPI, HTTPException, UploadFile
+    from fastapi import FastAPI, Form, HTTPException, UploadFile
     from fastapi.middleware.cors import CORSMiddleware
-    from extract import extract, load_vlm
+    from extract import extract, extract_dosages, load_vlm
 
     os.environ["HF_HOME"] = f"{CACHE_DIR}/huggingface"
     os.environ["EASYOCR_MODULE_PATH"] = f"{CACHE_DIR}/easyocr"
@@ -134,6 +135,39 @@ def serve():
 
         try:
             return await extract(tmp_path, processor, vlm_model)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+        finally:
+            os.unlink(tmp_path)
+
+    @web_app.post("/extract-dosages")
+    async def extract_dosages_endpoint(file: UploadFile, drug_names: str = Form(...)):
+        content_type = (file.content_type or "").lower()
+        if content_type not in ALLOWED_MIME:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported type '{content_type}'. Send JPEG, PNG, or WEBP.",
+            )
+
+        try:
+            names = _json.loads(drug_names)
+            if not isinstance(names, list):
+                raise ValueError("drug_names must be a JSON array")
+        except (ValueError, _json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid drug_names: {exc}")
+
+        ext = (
+            "." + file.filename.rsplit(".", 1)[-1]
+            if file.filename and "." in file.filename
+            else ".jpg"
+        )
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+            tmp.write(await file.read())
+            tmp_path = tmp.name
+
+        try:
+            result = await extract_dosages(tmp_path, names, processor, vlm_model)
+            return {"dosages": result, "vlm_available": processor is not None}
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
         finally:

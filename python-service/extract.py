@@ -122,6 +122,98 @@ def _medgemma_extract_sync(image_path: str, processor, model, ocr_text: str) -> 
     return _parse_json(raw)
 
 
+# ─── Dosage extraction (given confirmed drug names) ──────────────────────────
+
+def _build_dosage_prompt(drug_names: list) -> str:
+    names = '\n'.join(f'- {n}' for n in drug_names)
+    return f"""You are analyzing a Bangladeshi prescription image.
+
+The following medications are confirmed to be prescribed in this image:
+{names}
+
+Look at the prescription image and for EACH medication above, find and extract the exact dosage, frequency, and duration written next to it.
+
+Return ONLY a valid JSON array with no extra text or markdown:
+[
+  {{
+    "name": "medication name exactly as listed above",
+    "dosage": "e.g. 500mg, 100mg, 40mg — or null if not visible",
+    "frequency": "e.g. 1+0+1, 0+0+1, twice daily — or null if not visible",
+    "duration": "e.g. 7 days, 10 days, 1 month — or null if not visible",
+    "instructions": "e.g. after meal, before meal, apply locally — or null if not visible"
+  }}
+]"""
+
+
+def _parse_json_array(text: str) -> list:
+    try:
+        result = json.loads(text)
+        if isinstance(result, list):
+            return result
+    except json.JSONDecodeError:
+        pass
+    match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            pass
+    match = re.search(r"\[.*\]", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
+    return []
+
+
+def _extract_dosages_sync(image_path: str, drug_names: list, processor, model) -> list:
+    image = Image.open(image_path).convert("RGB")
+    prompt = _build_dosage_prompt(drug_names)
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": image},
+                {"type": "text", "text": prompt},
+            ],
+        }
+    ]
+
+    inputs = processor.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        tokenize=True,
+        return_dict=True,
+        return_tensors="pt",
+    ).to(model.device)
+
+    input_len = inputs["input_ids"].shape[-1]
+
+    with torch.inference_mode():
+        generation = model.generate(**inputs, max_new_tokens=512, do_sample=False)
+        generation = generation[0][input_len:]
+
+    raw = processor.decode(generation, skip_special_tokens=True).strip()
+    return _parse_json_array(raw)
+
+
+async def extract_dosages(image_path: str, drug_names: list, processor=None, model=None) -> list:
+    """Given confirmed drug names, use MedGemma to extract dosage/frequency/duration from the image."""
+    if not drug_names or processor is None or model is None:
+        return []
+
+    def _run():
+        try:
+            return _extract_dosages_sync(image_path, drug_names, processor, model)
+        except Exception as exc:
+            print(f"[extract_dosages] MedGemma failed: {exc}")
+            return []
+
+    return await asyncio.to_thread(_run)
+
+
 # ─── Deduplication ────────────────────────────────────────────────────────────
 
 def _deduplicate(items: list) -> list:

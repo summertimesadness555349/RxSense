@@ -121,6 +121,11 @@ export const analyzePrescription = async (imageFile) => {
     const medications = drugs.map((d, i) => ({
       id: i + 1,
       name: d.matched_brand || d.extracted_name,
+      generic:      d.generic      || null,
+      dosage:       d.dosage_from_prescription || d.strength || null,
+      frequency:    d.frequency    || null,
+      duration:     d.duration     || null,
+      instructions: d.instructions || null,
     }));
 
     const warnings = (data.needs_review || []).map((d) => ({
@@ -135,29 +140,38 @@ export const analyzePrescription = async (imageFile) => {
       });
     }
 
-    const diseaseList = (data.diseases || []).join(', ');
-    const testList = (data.tests || []).join(', ');
+    const diseases = data.diseases || [];
+    const tests    = data.tests    || [];
+    const patient  = data.patient  || null;
+    const doctor   = data.doctor   || null;
+    const hospital = data.hospital || null;
+
+    const diseaseList = diseases.join(', ');
+    const testList    = tests.join(', ');
     const explanation =
       medications.length > 0
-        ? `Your prescription contains ${medications.length} medication${medications.length !== 1 ? 's' : ''}: ` +
+        ? `Prescribed ${medications.length} medication${medications.length !== 1 ? 's' : ''}: ` +
           `${medications.map((m) => m.name).join(', ')}.` +
-          (diseaseList ? ` Diagnosed condition: ${diseaseList}.` : '') +
-          (testList ? ` Required tests: ${testList}.` : '') +
+          (diseaseList ? ` Diagnosis: ${diseaseList}.` : '') +
+          (testList    ? ` Required tests: ${testList}.` : '') +
           ` Consult your doctor or pharmacist if you have any questions.`
         : 'No medications could be detected. Please ensure the image is clear and well-lit, then try again.';
 
+    const rxDate = data.date
+      ? new Date(data.date).toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' })
+      : new Date().toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' });
+
     return {
       confidence: avgConf,
-      date: new Date().toLocaleDateString('en-BD', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      doctor: 'From your prescription',
-      hospital: data.vlm_available ? 'Analyzed by MedGemma + EasyOCR' : 'Analyzed by EasyOCR',
+      date:       rxDate,
+      patient,
+      doctor,
+      hospital,
+      notes:    data.notes    || null,
+      followUp: data.followUp || null,
       medications,
-      diseases: data.diseases || [],
-      tests: data.tests || [],
+      diseases,
+      tests,
       explanation,
       warnings,
     };

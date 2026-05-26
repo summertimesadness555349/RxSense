@@ -79,7 +79,8 @@ class PatientModel {
                 SELECT
                     condition_id AS id,
                     condition_name AS name,
-                    kc.diagnosed_at AS "since",
+                    kc.diagnosed_at,
+                    TO_CHAR(kc.diagnosed_at, 'YYYY') AS since,
                     kc.status,
                     kc.severity,
                     kc.diagnosed_by AS "doctorId",
@@ -94,10 +95,7 @@ class PatientModel {
             `;
 
             const result = await this.db_connection.query_executor(query, [patientId]);
-            return (result.rows || []).map((condition) => ({
-                ...condition,
-                since: condition.diagnosed_at ? String(new Date(condition.diagnosed_at).getFullYear()) : null,
-            }));
+            return result.rows || [];
         } catch (error) {
             console.log(`Finding patient conditions failed: ${error.message}`);
             throw error;
@@ -129,10 +127,7 @@ class PatientModel {
             `;
 
             const result = await this.db_connection.query_executor(query, [patientId]);
-            return (result.rows || []).map((surgery) => ({
-                ...surgery,
-                year: surgery.performed_at ? new Date(surgery.performed_at).getFullYear().toString() : null,
-            }));
+            return result.rows || [];
         } catch (error) {
             console.log(`Finding patient surgeries failed: ${error.message}`);
             throw error;

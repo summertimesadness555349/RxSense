@@ -301,3 +301,65 @@ export const generateEmergencyCard = async (userId) => {
   await delay(1000);
   return { shareUrl: 'https://rxsense.app/emergency/usr_001', expiresIn: '24 hours' };
 };
+
+// POST /api/auth/login
+// export const login = async (email, password) => {
+//   // TODO: Replace with actual API call to backend
+//   await delay(1000);
+//   if (email && password) {
+//     return {
+//       token: 'mock_token_abc123',
+//       user: {
+//         id: 'usr_001',
+//         name: 'Rahim Uddin',
+//         email: 'rahim@example.com',
+//         role: 'patient',
+//       },
+//     };
+//   }
+//   throw new Error('Invalid credentials');
+// };
+
+export const login = async (email, password) => {
+  try {
+    const res = await api.post('/auth/login', { identifier: email, password });
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.error || 'Login failed');
+    }
+
+    const token = data.tokens?.accessToken || data.token || null;
+    const user = data.user || null;
+
+    return { token, user, raw: data };
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || 'Login failed';
+    throw new Error(msg);
+  }
+};
+
+// POST /api/auth/register
+export const register = async (userData) => {
+  try {
+    const res = await api.post('/auth/register', {
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      phone: userData.phone,
+      role: userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
+    });
+
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    const token = data.tokens?.accessToken || data.token || null;
+    const user = data.user || null;
+
+    return { token, user, raw: data };
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || 'Registration failed';
+    throw new Error(msg);
+  }
+};

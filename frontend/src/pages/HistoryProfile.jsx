@@ -11,10 +11,12 @@ import { useToast } from '../context/ToastContext.jsx';
 function calculateBMI(user) {
   if (!user.weight || !user.height) return null;
   const heightInMeters = user.height / 100;
-  return user.weight / (heightInMeters * heightInMeters);
+  const bmi = user.weight / (heightInMeters * heightInMeters);
+  return bmi;
 }
 
 function getBMICategory(bmi) {
+  if (bmi == null || Number.isNaN(bmi)) return null;
   if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-500' };
   if (bmi < 25) return { label: 'Normal', color: 'text-emerald-500' };
   if (bmi < 30) return { label: 'Overweight', color: 'text-amber-500' };
@@ -48,6 +50,10 @@ export default function HistoryProfile() {
   const [user, setUser] = useState(mockUser);
   const [editMode, setEditMode] = useState(false);
   const { addToast } = useToast();
+  const conditions = Array.isArray(user.conditions) ? user.conditions : [];
+  const allergies = Array.isArray(user.allergies) ? user.allergies : [];
+  const surgeries = Array.isArray(user.surgeries) ? user.surgeries : [];
+  const vaccinations = Array.isArray(user.vaccinations) ? user.vaccinations : [];
   const bmi = calculateBMI(user);
   const bmiInfo = getBMICategory(bmi);
 
@@ -69,8 +75,10 @@ export default function HistoryProfile() {
         setUser({
           ...mockUser,
           ...profile,
+          age: calculateAge(profile.dateOfBirth),
           phone: profile.contactInfo || profile.phone || mockUser.phone,
           contactInfo: profile.contactInfo || profile.phone || mockUser.phone,
+          conditions: Array.isArray(profile.conditions) ? profile.conditions : mockUser.conditions,
           allergies: Array.isArray(profile.allergies)
             ? profile.allergies.map((allergy) => ({
                 id: allergy.id,
@@ -79,6 +87,8 @@ export default function HistoryProfile() {
                 reaction: allergy.reaction,
               }))
             : mockUser.allergies,
+          surgeries: Array.isArray(profile.surgeries) ? profile.surgeries : mockUser.surgeries,
+          vaccinations: Array.isArray(profile.vaccinations) ? profile.vaccinations : mockUser.vaccinations,
         });
       } catch (error) {
         console.error('Failed to load patient profile:', error);
@@ -111,7 +121,7 @@ export default function HistoryProfile() {
           {[
             { label: 'Full Name', value: user.name },
             { label: 'Date of Birth', value: formatDateOnly(user.dateOfBirth) },
-            { label: 'Age', value: `${calculateAge(user.dateOfBirth)} years` },
+            { label: 'Age', value: `${user.age} years` },
             { label: 'Gender', value: user.gender },
             { label: 'Blood Group', value: user.bloodGroup },
             { label: 'Phone', value: user.phone },
@@ -130,7 +140,7 @@ export default function HistoryProfile() {
           {[
             { label: 'Height', value: `${user.height} cm` },
             { label: 'Weight', value: `${user.weight} kg` },
-            { label: 'BMI', value: bmi.toFixed(1), extra: bmiInfo },
+            { label: 'BMI', value: bmi != null ? bmi.toFixed(1) : '—', extra: bmiInfo },
           ].map(({ label, value, extra }) => (
             <div key={label} className="text-center bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
@@ -157,7 +167,7 @@ export default function HistoryProfile() {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Active</p>
           <div className="flex flex-wrap gap-2">
-            {user.conditions.filter((c) => c.status === 'active').map((c) => (
+            {conditions.filter((c) => c.status === 'active').map((c) => (
               <div key={c.id} className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full px-3 py-1">
                 <span className="text-xs font-medium text-amber-800 dark:text-amber-300">{c.name} (since {c.since})</span>
                 <button className="text-amber-400 hover:text-amber-600"><X className="w-3 h-3" /></button>
@@ -166,7 +176,7 @@ export default function HistoryProfile() {
           </div>
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mt-3">Past / Resolved</p>
           <div className="flex flex-wrap gap-2">
-            {user.conditions.filter((c) => c.status === 'resolved').map((c) => (
+            {conditions.filter((c) => c.status === 'resolved').map((c) => (
               <div key={c.id} className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1">
                 <span className="text-xs text-gray-500 dark:text-gray-400 line-through">{c.name} ({c.since})</span>
               </div>
@@ -184,7 +194,7 @@ export default function HistoryProfile() {
           </Button>
         </div>
         <div className="space-y-2">
-          {user.allergies.map((a) => (
+          {allergies.map((a) => (
             <div key={a.id} className="flex items-center gap-3 p-2.5 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800">
               <span className="text-red-500 font-bold text-sm">{a.name}</span>
               <Badge variant="red">{a.severity}</Badge>
@@ -203,7 +213,7 @@ export default function HistoryProfile() {
             <Plus className="w-4 h-4" /> Add
           </Button>
         </div>
-        {user.surgeries.map((s) => (
+        {surgeries.map((s) => (
           <div key={s.id} className="flex items-center gap-2 text-sm">
             <span className="text-gray-900 dark:text-white font-medium">{s.name}</span>
             <span className="text-gray-500 dark:text-gray-400">— {s.year}, {s.facility}</span>
@@ -220,7 +230,7 @@ export default function HistoryProfile() {
           </Button>
         </div>
         <div className="space-y-2">
-          {user.vaccinations.map((v) => (
+          {vaccinations.map((v) => (
             <div key={v.id} className="flex items-center gap-2 text-sm">
               <span className="text-emerald-500">✓</span>
               <span className="text-gray-900 dark:text-white">{v.name}</span>

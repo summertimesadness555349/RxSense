@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { mockReportResult } from '../data/mockReports.js';
+// TODO: Replace all mock returns with actual API calls to backend
+import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
 import { mockTimeline } from '../data/mockTimeline.js';
 import { mockUser } from '../data/mockUser.js';
 import { mockCurrentMedications, mockPastMedications } from '../data/mockMedications.js';
@@ -15,82 +15,40 @@ import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '.
 import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-// Axios instance for JSON endpoints
-const api = axios.create({
-  baseURL: `${BASE_URL}/api`,
-  headers: { 'Content-Type': 'application/json' },
-});
+const getAccessToken = () => {
+  const appToken = localStorage.getItem('rxsense_token');
+  if (appToken) return appToken;
 
-// Attach token to every request automatically
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('rxsense_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+  const accessToken = localStorage.getItem('rxsense_access_token');
+  if (accessToken) return accessToken;
 
-// Normalise a backend user object to the shape the UI expects
-const normaliseUser = (backendUser, fallbackName = '') => ({
-  id: backendUser.id,
-  name: backendUser.full_name || fallbackName || backendUser.username,
-  email: backendUser.email,
-  username: backendUser.username,
-  role: 'patient',
-  avatar_url: backendUser.avatar_url || null,
-  subscription_type: backendUser.subscription_type,
-});
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-
-// POST /api/auth/login
-export const login = async (email, password) => {
   try {
-    const res = await api.post('/auth/login', { identifier: email, password });
-    const data = res.data;
-    if (!data.success) throw new Error(data.error || 'Login failed');
-    return {
-      user: normaliseUser(data.user),
-      token: data.tokens.accessToken,
-    };
-  } catch (err) {
-    throw new Error(err.response?.data?.error || err.message || 'Login failed');
+    const stored = JSON.parse(localStorage.getItem('rxsense_user') || '{}');
+    return stored?.token || stored?.tokens?.accessToken || null;
+  } catch {
+    return null;
   }
 };
 
-// POST /api/auth/register
-export const register = async (userData) => {
-  try {
-    // Backend requires a unique username — derive from full name + timestamp tail
-    const username =
-      userData.name.toLowerCase().replace(/\s+/g, '_') +
-      '_' +
-      Date.now().toString().slice(-4);
+const request = async (path, options = {}) => {
+  const token = getAccessToken();
+  const headers = new Headers(options.headers || {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
 
-    const res = await api.post('/auth/register', {
-      username,
-      email: userData.email,
-      password: userData.password,
-    });
-    const data = res.data;
-    if (!data.success) throw new Error(data.error || 'Registration failed');
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
 
-    // Email verification required — no token returned yet
-    if (data.user?.requires_verification) {
-      throw new Error('Account created! Please check your email to verify before logging in.');
-    }
-
-    return {
-      user: normaliseUser(data.user, userData.name),
-      token: data.tokens.accessToken,
-    };
-  } catch (err) {
-    throw new Error(err.response?.data?.error || err.message || 'Registration failed');
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.success === false) {
+    throw new Error(data.error || data.message || 'Request failed');
   }
+  return data;
 };
-
-// ─── Prescription ─────────────────────────────────────────────────────────────
 
 // POST /api/prescription/analyze
 export const analyzePrescription = async (imageFile) => {
@@ -184,8 +142,24 @@ export const analyzePrescription = async (imageFile) => {
 
 // POST /api/report/analyze
 export const analyzeReport = async (file, reportType) => {
-  await delay(2500);
-  return mockReportResult;
+  const formData = new FormData();
+  formData.append('report', file);
+  formData.append('reportType', reportType);
+
+  try {
+    const storedUser = JSON.parse(localStorage.getItem('rxsense_user') || '{}');
+    const patientId = storedUser.patient_id || storedUser.uuid;
+    if (patientId) formData.append('patientId', patientId);
+  } catch {
+    // Optional patient ID only; backend can still analyze without saving.
+  }
+
+  const data = await request('/patient/reports/analyze', {
+    method: 'POST',
+    body: formData,
+  });
+
+  return data.report;
 };
 
 // POST /api/symptoms/check
@@ -223,8 +197,8 @@ export const addTimelineEntry = async (userId, entry) => {
 
 // GET /api/user/:userId/profile
 export const getHealthProfile = async (userId) => {
-  await delay(500);
-  return mockUser;
+  const data = await request('/patient/me');
+  return data.user || null;
 };
 
 // PUT /api/user/:userId/profile
@@ -321,21 +295,17 @@ export const generateEmergencyCard = async (userId) => {
 // };
 
 export const login = async (email, password) => {
-  try {
-    const res = await api.post('/auth/login', { identifier: email, password });
-    const data = res.data || {};
-    if (!data.success) {
-      throw new Error(data.error || 'Login failed');
-    }
+  const data = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: email, password }),
+  });
 
-    const token = data.tokens?.accessToken || data.token || null;
-    const user = data.user || null;
+  const token = data.tokens?.accessToken || data.token || null;
+  const user = data.user || null;
+  if (!token) throw new Error('Login succeeded but no access token was returned');
 
-    return { token, user, raw: data };
-  } catch (err) {
-    const msg = err.response?.data?.error || err.message || 'Login failed';
-    throw new Error(msg);
-  }
+  return { token, user, raw: data };
 };
 
 // POST /api/auth/register

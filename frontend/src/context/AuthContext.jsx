@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem('rxsense_user');
     localStorage.removeItem('rxsense_token');
+    localStorage.removeItem('rxsense_access_token');
   };
 
   return (

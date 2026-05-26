@@ -43,15 +43,25 @@ export default function Report() {
   const handleUpload = async (f) => {
     setFile(f);
     setPhase('processing');
-    for (let i = 0; i < steps.length; i++) {
-      setStepIdx(i);
-      await new Promise((r) => setTimeout(r, 600));
+    try {
+      for (let i = 0; i < steps.length; i++) {
+        setStepIdx(i);
+        await new Promise((r) => setTimeout(r, 350));
+      }
+      const data = await analyzeReport(f, reportType);
+      setResult(data);
+      setPhase('result');
+      addToast(
+        data.autoSaved
+          ? 'Report saved to your Health Record. AI will track these values.'
+          : 'Report analyzed. Add a patient ID to save it to the Health Record.',
+        data.autoSaved ? 'success' : 'info'
+      );
+    } catch (error) {
+      setPhase('upload');
+      setFile(null);
+      addToast(error.message || 'Could not analyze this report.', 'error');
     }
-    // TODO: Replace with actual API call
-    const data = await analyzeReport(f, reportType);
-    setResult(data);
-    setPhase('result');
-    addToast('✓ Report saved to your Health Record! AI will track these values.', 'success');
   };
 
   const reset = () => { setPhase('upload'); setFile(null); setResult(null); setStepIdx(0); };
@@ -81,9 +91,9 @@ export default function Report() {
               </Select>
               <FileDropzone
                 onFileSelect={handleUpload}
-                accept="image/*,.pdf"
+                accept="image/png,image/jpeg,image/webp,image/gif,.pdf"
                 label="Drag & drop your report (PDF or image) here, or click to browse"
-                hint="Supports PDF, JPG, PNG. Both printed and photographed reports work."
+                hint="Supports PDF, JPG, PNG, WEBP, and GIF reports."
               />
             </Card>
           </motion.div>
@@ -116,11 +126,15 @@ export default function Report() {
             <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded-xl">
               <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex-1">
-                ✓ Automatically saved to your Health Record. AI will track these values over time.
+                {result.autoSaved
+                  ? 'Automatically saved to your Health Record. AI will track these values over time.'
+                  : 'Analyzed successfully. Sign in with a patient profile to save this to your Health Record.'}
               </p>
-              <Link to="/history" className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex-shrink-0">
-                View in Timeline →
-              </Link>
+              {result.autoSaved && (
+                <Link to="/history" className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex-shrink-0">
+                  View in Timeline →
+                </Link>
+              )}
             </div>
 
             {/* Urgency */}

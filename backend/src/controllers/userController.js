@@ -408,8 +408,10 @@ class UserController {
                 success: true,
                 message: 'Login successful',
                 user: {
-                    id: user.patient_id,
-                    // uuid: user.uuid,
+                    id: user.id,
+                    uuid: user.uuid,
+                    patient_id: user.patient_id || user.uuid || user.id,
+                    name: user.name || user.full_name || user.username,
                     username: user.username,
                     email: user.email,
                     full_name: user.name,

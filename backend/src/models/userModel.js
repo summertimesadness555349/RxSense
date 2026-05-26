@@ -1,9 +1,28 @@
 const DB_Connection = require('../database/db.js')
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 class UserModel {
     constructor(){
         this.db_connection = new DB_Connection();
     }
+
+    mapPatientUser = (row)=> row ? {
+        id: row.patient_id,
+        uuid: row.patient_id,
+        patient_id: row.patient_id,
+        username: row.username,
+        email: row.email,
+        full_name: row.name,
+        name: row.name,
+        password_hash: row.password,
+        is_active: true,
+        email_verified: true,
+        subscription_type: 'free',
+        last_login: row.last_login,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+    } : null;
 
     create_users_table = async()=>{
         try {
@@ -134,6 +153,17 @@ class UserModel {
 
     getUserById = async(userId)=>{
         try {
+            if(UUID_RE.test(String(userId || ''))){
+                const query = `
+                    SELECT patient_id, name, username, email, password, last_login, created_at, updated_at
+                    FROM patient
+                    WHERE patient_id = $1
+                    LIMIT 1;
+                `;
+                const result = await this.db_connection.query_executor(query, [userId]);
+                return this.mapPatientUser(result.rows[0]);
+            }
+
             const query = `
                 SELECT *
                 FROM users
@@ -152,14 +182,28 @@ class UserModel {
 
     getUserByEmail = async(email)=>{
         try {
-            const query = `
-                SELECT *
+            const patientQuery = `
+                SELECT patient_id, name, username, email, *, last_login, created_at, updated_at
                 FROM patient
                 WHERE email = $1
                 LIMIT 1;
             `;
-            const result = await this.db_connection.query_executor(query, [email]);
-            return result.rows[0];
+            const patientResult = await this.db_connection.query_executor(patientQuery, [email]);
+            if(patientResult.rows[0]) return this.mapPatientUser(patientResult.rows[0]);
+
+            const userQuery = `
+                SELECT *
+                FROM users
+                WHERE email = $1
+                LIMIT 1;
+            `;
+            try {
+                const userResult = await this.db_connection.query_executor(userQuery, [email]);
+                return userResult.rows[0] || null;
+            } catch (error) {
+                if(error.code === '42P01') return null;
+                throw error;
+            }
         } catch (error) {
             console.log(`Finding user by email failed: ${error.message}`);
             throw error;
@@ -168,14 +212,28 @@ class UserModel {
 
     getUserByUsername = async(username)=>{
         try {
-            const query = `
-                SELECT *
+            const patientQuery = `
+                SELECT patient_id, name, username, email, *, last_login, created_at, updated_at
                 FROM patient
                 WHERE username = $1
                 LIMIT 1;
             `;
-            const result = await this.db_connection.query_executor(query, [username]);
-            return result.rows[0];
+            const patientResult = await this.db_connection.query_executor(patientQuery, [username]);
+            if(patientResult.rows[0]) return this.mapPatientUser(patientResult.rows[0]);
+
+            const userQuery = `
+                SELECT *
+                FROM users
+                WHERE username = $1
+                LIMIT 1;
+            `;
+            try {
+                const userResult = await this.db_connection.query_executor(userQuery, [username]);
+                return userResult.rows[0] || null;
+            } catch (error) {
+                if(error.code === '42P01') return null;
+                throw error;
+            }
         } catch (error) {
             console.log(`Finding user by username failed: ${error.message}`);
             throw error;
@@ -242,6 +300,18 @@ class UserModel {
 
     setLastLogin = async(userId)=>{
         try {
+            if(UUID_RE.test(String(userId || ''))){
+                const query = `
+                    UPDATE patient
+                    SET last_login = NOW(),
+                        updated_at = NOW()
+                    WHERE patient_id = $1
+                    RETURNING patient_id AS id
+                `;
+                const result = await this.db_connection.query_executor(query, [userId]);
+                return result.rows[0];
+            }
+
             const query = `
                 UPDATE users
                 SET last_login = NOW(),
@@ -261,6 +331,10 @@ class UserModel {
 
     incrementLoginAttempts = async(userId)=>{
         try {
+            if(UUID_RE.test(String(userId || ''))){
+                return { id: userId, login_attempts: 1 };
+            }
+
             const query = `
                 UPDATE users
                 SET login_attempts = login_attempts + 1,
@@ -280,6 +354,10 @@ class UserModel {
 
     resetLoginAttempts = async(userId)=>{
         try {
+            if(UUID_RE.test(String(userId || ''))){
+                return { id: userId, login_attempts: 0, locked_until: null };
+            }
+
             const query = `
                 UPDATE users
                 SET login_attempts = 0,
@@ -300,6 +378,10 @@ class UserModel {
 
     lockAccount = async(userId, untilTimestamp)=>{
         try {
+            if(UUID_RE.test(String(userId || ''))){
+                return { id: userId, locked_until: untilTimestamp };
+            }
+
             const query = `
                 UPDATE users
                 SET locked_until = $1,
@@ -442,6 +524,10 @@ class UserModel {
 
     updateRefreshToken = async(userId, refreshToken)=> {
         try {
+            if(UUID_RE.test(String(userId || ''))){
+                return { id: userId };
+            }
+
             const query = `
                 UPDATE users 
                 SET refresh_token = $2, updated_at = NOW()

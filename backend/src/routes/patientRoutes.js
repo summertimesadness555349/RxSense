@@ -9,7 +9,7 @@ const authenticateToken = new AuthenticateToken();
 
 patientRouter.use(authenticateToken.authenticateToken);
 
-// patientRouter.get('/get-profile/:userId', patientController.getProfile);
+// patientRouter.post('/reports/analyze', patientController.getProfile);
 
 /**
  * @openapi
@@ -47,6 +47,11 @@ patientRouter.get('/me', patientController.getProfile);
  *       404:
  *         description: Patient not found
  */
-patientRouter.get('/profile/:patientId', patientController.getProfile);
+patientRouter.get('/profile/:patientId', upload.single('report'), patientController.analyzeReport);
+
+module.exports = {
+    patientRouter
+};
+
 
 module.exports = {patientRouter};

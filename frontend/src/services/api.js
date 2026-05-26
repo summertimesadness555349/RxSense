@@ -205,20 +205,27 @@ export const generateEmergencyCard = async (userId) => {
 
 // POST /api/auth/login
 export const login = async (email, password) => {
-  // TODO: Replace with actual API call to backend
-  await delay(1000);
-  if (email && password) {
-    return {
-      token: 'mock_token_abc123',
-      user: {
-        id: 'usr_001',
-        name: 'Rahim Uddin',
-        email: 'rahim@example.com',
-        role: 'patient',
-      },
-    };
-  }
-  throw new Error('Invalid credentials');
+  const data = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: email, password }),
+  });
+
+  const user = data.user || {};
+  const accessToken = data.tokens?.accessToken;
+  if (accessToken) localStorage.setItem('rxsense_access_token', accessToken);
+
+  return {
+    token: accessToken,
+    tokens: data.tokens,
+    user: {
+      ...user,
+      patient_id: user.patient_id || user.uuid || user.id,
+      name: user.name || user.full_name || user.username || user.email,
+      role: user.role || 'patient',
+      tokens: data.tokens,
+    },
+  };
 };
 
 // POST /api/auth/register

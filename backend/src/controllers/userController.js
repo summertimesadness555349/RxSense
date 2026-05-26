@@ -410,6 +410,8 @@ class UserController {
                 user: {
                     id: user.id,
                     uuid: user.uuid,
+                    patient_id: user.patient_id || user.uuid || user.id,
+                    name: user.name || user.full_name || user.username,
                     username: user.username,
                     email: user.email,
                     full_name: user.full_name,

@@ -19,7 +19,7 @@ class PatientController {
             }
 
             const reportType = req.body?.reportType || 'Other';
-            const requestedPatientId = req.body?.patientId || req.user?.patient_id || req.user?.uuid || null;
+            const requestedPatientId = req.user?.patient_id || req.user?.uuid || req.body?.patientId || null;
             const patientId = UUID_RE.test(String(requestedPatientId || '')) ? requestedPatientId : null;
 
             const analysisResult = await this.reportAnalysisUtils.analyze({

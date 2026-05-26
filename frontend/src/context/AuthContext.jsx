@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('rxsense_user');
+    localStorage.removeItem('rxsense_access_token');
   };
 
   return (

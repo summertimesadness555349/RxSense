@@ -9,7 +9,7 @@ const patientRouter = express.Router();
 const patientController = new PatientController();
 const authenticateToken = new AuthenticateToken();
 
-patientRouter.post('/reports/analyze', upload.single('report'), patientController.analyzeReport);
+patientRouter.post('/reports/analyze', authenticateToken.authenticateToken, upload.single('report'), patientController.analyzeReport);
 
 module.exports = {
     patientRouter

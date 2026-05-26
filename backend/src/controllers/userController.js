@@ -18,7 +18,8 @@ class UserController {
         this.access_token_expiry = process.env.ACCESS_TOKEN_TTL;
         this.refresh_token_expiry = process.env.REFRESH_TOKEN_DAYS;
         this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-        this.requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+        // this.requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+        this.requireEmailVerification = false; // Disable email verification for now to simplify registration flow during hackathon
     }
 
     generateTokens = (user) => {
@@ -173,23 +174,23 @@ class UserController {
         try {
             console.log(req.body);
             
-            const { username, email, password } = req.body || {};
-            if (!username || !email || !password) {
-                return res.status(400).json({ success: false, error: 'username, email, password required' });
+            const { name, email, password, phone, role } = req.body || {};
+            if (!name || !email || !password || !phone || !role) {
+                return res.status(400).json({ success: false, error: 'name, email, password, phone number, and role required' });
             }
 
-            const existingUserByUsername = await this.userModel.getUserByUsername(username);
-            if (existingUserByUsername) {
-                return res.status(409).json({ success: false, error: 'Username already taken' });
-            }
+            // const existingUserByUsername = await this.userModel.getUserByUsername(username);
+            // if (existingUserByUsername) {
+            //     return res.status(409).json({ success: false, error: 'Username already taken' });
+            // }
 
-            const existingUserByEmail = await this.userModel.getUserByEmail(email);
+            const existingUserByEmail = (role === 'patient') ? await this.userModel.getPatientByEmail(email) : await this.userModel.getDoctorByEmail(email);
             if (existingUserByEmail) {
                 return res.status(409).json({ success: false, error: 'Email already in use' });
             }
 
             const passwordHash = await bcrypt.hash(password, this.salt_round);
-            const newUser = await this.userModel.createUser({ username, email, passwordHash });
+            const newUser = (role === 'patient') ? await this.userModel.createPatient({ name, email, passwordHash, phone }) : await this.userModel.createDoctor({ name, email, passwordHash, phone });
 
             if(!newUser){
                 return res.status(500).json({
@@ -221,25 +222,28 @@ class UserController {
                     }
                 })
             } else {
-                await this.userModel.setEmailVerified(newUser.id);
-                const { accessToken, refreshToken } = this.generateTokens({
-                    ...newUser,
-                    email_verified: true
-                });
+                // await this.userModel.setEmailVerified(newUser.id);
+                // const { accessToken, refreshToken } = this.generateTokens({
+                //     ...newUser,
+                //     email_verified: true
+                // });
+                const { accessToken, refreshToken } = this.generateTokens(newUser);
 
-                await this.userModel.updateRefreshToken(newUser.id, refreshToken);
+                // await this.userModel.updateRefreshToken(newUser.id, refreshToken);
                 bus.emit(Events.USER_REGISTERED, {userId: newUser.id, email: newUser.email, username: newUser.username});
 
                 return res.status(201).json({
                     success: true,
                     message: 'User registered successfully',
                     user: {
-                        id: newUser.id,
+                        id: newUser.patient_id,
+                        // uuid: user.uuid,
                         username: newUser.username,
                         email: newUser.email,
-                        email_verified: true,
-                        requires_verification: false,
-                        subscription_type: newUser.subscription_type
+                        name: newUser.name,
+                        // is_active: user.is_active,
+                        // avatar_url: user.avatar_url,
+                        // subscription_type: user.subscription_type
                     },
                     tokens: {
                         accessToken,
@@ -357,9 +361,9 @@ class UserController {
                 return res.status(400).json({ success: false, error: 'identifier and password required' });
             }
 
-            let user = await this.userModel.getUserByUsername(identifier);
+            // let user = await this.userModel.getUserByUsername(identifier);
             if (!user && identifier.includes('@')) {
-                user = await this.userModel.getUserByEmail(identifier);
+                user = await this.userModel.getPatientByEmail(identifier);
             }
 
             if (!user) {
@@ -412,7 +416,7 @@ class UserController {
                     // uuid: user.uuid,
                     username: user.username,
                     email: user.email,
-                    full_name: user.name,
+                    name: user.name,
                     // is_active: user.is_active,
                     // avatar_url: user.avatar_url,
                     // subscription_type: user.subscription_type

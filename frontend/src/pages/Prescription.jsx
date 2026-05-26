@@ -104,23 +104,44 @@ export default function Prescription() {
               </Link>
             </div>
 
-            {/* Confidence + Image preview */}
+            {/* Header card */}
             <Card>
               <div className="flex items-start gap-4">
-                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center flex-shrink-0 text-xs text-gray-400 text-center">
-                  📋<br />Prescription<br />Image
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">
+                  📋
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h2 className="font-semibold text-gray-900 dark:text-white">Prescription Analysis</h2>
                     <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-semibold">
                       AI Confidence: {result.confidence}%
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{result.date} • {result.doctor}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{result.hospital}</p>
+                  {result.doctor?.name && (
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {result.doctor.name}
+                      {result.doctor.qualification && <span className="font-normal text-gray-500 dark:text-gray-400"> — {result.doctor.qualification}</span>}
+                    </p>
+                  )}
+                  {result.doctor?.specialization && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{result.doctor.specialization}</p>
+                  )}
+                  {result.hospital?.name && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{result.hospital.name}</p>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{result.date}</p>
                 </div>
               </div>
+
+              {/* Patient info strip */}
+              {result.patient?.name && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">Patient:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{result.patient.name}</span>
+                  {result.patient.age > 0 && <span className="text-gray-500 dark:text-gray-400">Age {result.patient.age}</span>}
+                  {result.patient.gender && <span className="text-gray-500 dark:text-gray-400 capitalize">{result.patient.gender}</span>}
+                </div>
+              )}
             </Card>
 
             {/* Diseases */}
@@ -157,11 +178,30 @@ export default function Prescription() {
               {result.medications.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">No medications detected.</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {result.medications.map((med) => (
-                    <span key={med.id} className="px-3 py-1.5 rounded-full text-sm font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
-                      {med.name}
-                    </span>
+                    <div key={med.id} className="flex items-start gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-gray-900 dark:text-white">{med.name}</p>
+                        {med.generic && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{med.generic}</p>
+                        )}
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                          {med.dosage && (
+                            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">💊 {med.dosage}</span>
+                          )}
+                          {med.frequency && (
+                            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">🕐 {med.frequency}</span>
+                          )}
+                          {med.duration && (
+                            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">📅 {med.duration}</span>
+                          )}
+                          {med.instructions && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 italic">{med.instructions}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -171,6 +211,16 @@ export default function Prescription() {
             <Card>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Plain Language Explanation</h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{result.explanation}</p>
+              {result.notes && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <span className="font-medium">Notes:</span> {result.notes}
+                </p>
+              )}
+              {result.followUp && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <span className="font-medium">Follow-up:</span> {result.followUp}
+                </p>
+              )}
             </Card>
 
             {/* Warnings */}

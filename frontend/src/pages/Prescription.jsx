@@ -123,31 +123,48 @@ export default function Prescription() {
               </div>
             </Card>
 
-            {/* Medications Table */}
+            {/* Diseases */}
+            {result.diseases?.length > 0 && (
+              <Card>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Diagnosis / Conditions</h3>
+                <div className="flex flex-wrap gap-2">
+                  {result.diseases.map((d, i) => (
+                    <span key={i} className="px-3 py-1.5 rounded-full text-sm font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Required Tests */}
+            {result.tests?.length > 0 && (
+              <Card>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Required Tests</h3>
+                <div className="flex flex-wrap gap-2">
+                  {result.tests.map((t, i) => (
+                    <span key={i} className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Medications */}
             <Card>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Extracted Medications</h3>
-              <div className="overflow-x-auto -mx-4 px-4">
-                <table className="w-full text-sm min-w-[500px]">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      {['Drug Name', 'Dosage', 'Frequency', 'Duration', 'Purpose'].map((h) => (
-                        <th key={h} className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 pb-2 pr-3">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {result.medications.map((med) => (
-                      <tr key={med.id}>
-                        <td className="py-2 pr-3 font-medium text-gray-900 dark:text-white">{med.name}</td>
-                        <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{med.dosage}</td>
-                        <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{med.frequency}</td>
-                        <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{med.duration}</td>
-                        <td className="py-2 text-gray-600 dark:text-gray-300 text-xs">{med.purpose}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Prescribed Medications</h3>
+              {result.medications.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No medications detected.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {result.medications.map((med) => (
+                    <span key={med.id} className="px-3 py-1.5 rounded-full text-sm font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
+                      {med.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </Card>
 
             {/* Plain Language Explanation */}

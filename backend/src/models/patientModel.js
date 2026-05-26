@@ -79,7 +79,8 @@ class PatientModel {
                 SELECT
                     condition_id AS id,
                     condition_name AS name,
-                    kc.diagnosed_at AS "since",
+                    kc.diagnosed_at,
+                    TO_CHAR(kc.diagnosed_at, 'YYYY') AS since,
                     kc.status,
                     kc.severity,
                     kc.diagnosed_by AS "doctorId",

@@ -68,17 +68,35 @@ class UserModel {
         }
     }
 
-    createUser = async(userData)=>{
+    createPatient = async(userData)=>{
         try {
-            const {username, email, passwordHash} = userData;
+            const {name, email, passwordHash, phone} = userData;
             
             const query = `
-                INSERT INTO users (username, email, password_hash)
-                VALUES ($1, $2, $3)
-                RETURNING id, username, email, full_name, is_active, email_verified, subscription_type, verification_token, created_at, updated_at;
-            `;
+                INSERT INTO patient (patient_id, name, contact_info, username, email, password)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+                RETURNING *`;
 
-            const params = [username, email, passwordHash];
+            const params = [name, phone, name, email, passwordHash];
+            const result = await this.db_connection.query_executor(query, params);
+
+            return result.rows[0];
+        } catch (error) {
+            console.log(`User insertion failed: ${error.message}`);
+            return {success: false};
+        }
+    }
+
+    createDoctor = async(userData)=>{
+        try {
+            const {name, email, passwordHash, phone} = userData;
+            
+            const query = `
+                INSERT INTO doctor (doctor_id, name, username, email, password)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4)
+                RETURNING *`;
+
+            const params = [name, name, email, passwordHash];
             const result = await this.db_connection.query_executor(query, params);
 
             return result.rows[0];
@@ -181,7 +199,7 @@ class UserModel {
         }
     }
 
-    getUserByEmail = async(email)=>{
+    getPatientByEmail = async(email)=>{
         try {
             const patientQuery = `
                 SELECT patient_id, name, username, email, password, last_login, created_at, updated_at
@@ -205,6 +223,22 @@ class UserModel {
                 if(error.code === '42P01') return null;
                 throw error;
             }
+        } catch (error) {
+            console.log(`Finding user by email failed: ${error.message}`);
+            throw error;
+        }
+    }
+
+    getDoctorByEmail = async(email)=>{
+        try {
+            const query = `
+                SELECT *
+                FROM doctor
+                WHERE email = $1
+                LIMIT 1;
+            `;
+            const result = await this.db_connection.query_executor(query, [email]);
+            return result.rows[0];
         } catch (error) {
             console.log(`Finding user by email failed: ${error.message}`);
             throw error;

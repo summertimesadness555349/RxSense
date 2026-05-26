@@ -52,10 +52,79 @@ const request = async (path, options = {}) => {
 
 // POST /api/prescription/analyze
 export const analyzePrescription = async (imageFile) => {
-  // TODO: Replace with actual API call to backend
-  await delay(2500);
-  return mockPrescriptionResult;
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const token = localStorage.getItem('rxsense_token');
+    const res = await axios.post(`${BASE_URL}/api/prescription/analyze`, formData, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      // Do NOT set Content-Type — axios sets multipart boundary automatically
+    });
+
+    const data = res.data;
+    if (!data.success) throw new Error(data.error || 'Analysis failed');
+
+    const drugs = data.drugs || [];
+
+    // Map confidence string → percentage for the UI gauge
+    const confMap = { high: 100, medium: 70, low: 30 };
+    const avgConf =
+      drugs.length > 0
+        ? Math.round(
+            drugs.reduce((s, d) => s + (confMap[d.confidence] ?? 50), 0) / drugs.length
+          )
+        : 0;
+
+    const medications = drugs.map((d, i) => ({
+      id: i + 1,
+      name: d.matched_brand || d.extracted_name,
+    }));
+
+    const warnings = (data.needs_review || []).map((d) => ({
+      type: 'warning',
+      message: `"${d.extracted_name}" matched with low confidence — please verify with your pharmacist.`,
+    }));
+
+    if (!data.vlm_available) {
+      warnings.push({
+        type: 'info',
+        message: 'Advanced AI vision unavailable — results based on OCR only and may be less accurate.',
+      });
+    }
+
+    const diseaseList = (data.diseases || []).join(', ');
+    const testList = (data.tests || []).join(', ');
+    const explanation =
+      medications.length > 0
+        ? `Your prescription contains ${medications.length} medication${medications.length !== 1 ? 's' : ''}: ` +
+          `${medications.map((m) => m.name).join(', ')}.` +
+          (diseaseList ? ` Diagnosed condition: ${diseaseList}.` : '') +
+          (testList ? ` Required tests: ${testList}.` : '') +
+          ` Consult your doctor or pharmacist if you have any questions.`
+        : 'No medications could be detected. Please ensure the image is clear and well-lit, then try again.';
+
+    return {
+      confidence: avgConf,
+      date: new Date().toLocaleDateString('en-BD', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      doctor: 'From your prescription',
+      hospital: data.vlm_available ? 'Analyzed by MedGemma + EasyOCR' : 'Analyzed by EasyOCR',
+      medications,
+      diseases: data.diseases || [],
+      tests: data.tests || [],
+      explanation,
+      warnings,
+    };
+  } catch (err) {
+    throw new Error(err.response?.data?.error || err.message || 'Analysis failed');
+  }
 };
+
+// ─── Remaining endpoints (mocked until backend routes exist) ──────────────────
 
 // POST /api/report/analyze
 export const analyzeReport = async (file, reportType) => {
@@ -81,26 +150,22 @@ export const analyzeReport = async (file, reportType) => {
 
 // POST /api/symptoms/check
 export const checkSymptoms = async (symptomsText) => {
-  // TODO: Replace with actual API call to backend
   await delay(1500);
-  return mockConversation[2]; // Return AI analysis message
+  return mockConversation[2];
 };
 
 // POST /api/drugs/interactions
 export const checkDrugInteractions = async (drugList) => {
-  // TODO: Replace with actual API call to backend
   await delay(1500);
   return mockDrugInteractionResult;
 };
 
 // GET /api/timeline/:userId
 export const getTimeline = async (userId, filters = {}) => {
-  // TODO: Replace with actual API call to backend
   await delay(800);
   let entries = [...mockTimeline];
-  if (filters.type && filters.type !== 'all') {
+  if (filters.type && filters.type !== 'all')
     entries = entries.filter((e) => e.type === filters.type);
-  }
   if (filters.search) {
     const q = filters.search.toLowerCase();
     entries = entries.filter(
@@ -112,12 +177,11 @@ export const getTimeline = async (userId, filters = {}) => {
 
 // POST /api/timeline/:userId/entry
 export const addTimelineEntry = async (userId, entry) => {
-  // TODO: Replace with actual API call to backend
   await delay(800);
   return { ...entry, id: `tl_${Date.now()}`, date: new Date().toISOString() };
 };
 
-// GET /api/patient/me
+// GET /api/user/:userId/profile
 export const getHealthProfile = async (userId) => {
   const data = await request('/patient/me');
   return data.user || null;
@@ -125,49 +189,42 @@ export const getHealthProfile = async (userId) => {
 
 // PUT /api/user/:userId/profile
 export const updateHealthProfile = async (userId, data) => {
-  // TODO: Replace with actual API call to backend
   await delay(800);
   return { ...mockUser, ...data };
 };
 
 // GET /api/medications/:userId
 export const getMedications = async (userId) => {
-  // TODO: Replace with actual API call to backend
   await delay(600);
   return { current: mockCurrentMedications, past: mockPastMedications };
 };
 
 // POST /api/medications/:userId
 export const addMedication = async (userId, med) => {
-  // TODO: Replace with actual API call to backend
   await delay(800);
   return { ...med, id: `med_${Date.now()}`, status: 'active' };
 };
 
 // PUT /api/medications/:userId/:medId
 export const updateMedication = async (userId, medId, data) => {
-  // TODO: Replace with actual API call to backend
   await delay(600);
   return { id: medId, ...data };
 };
 
 // GET /api/documents/:userId
 export const getDocuments = async (userId) => {
-  // TODO: Replace with actual API call to backend
   await delay(600);
   return mockDocuments;
 };
 
 // POST /api/documents/:userId
 export const uploadDocument = async (userId, file, metadata) => {
-  // TODO: Replace with actual API call to backend
   await delay(1500);
   return { id: `doc_${Date.now()}`, filename: file.name, ...metadata };
 };
 
 // GET /api/insights/:userId
 export const getInsights = async (userId) => {
-  // TODO: Replace with actual API call to backend
   await delay(800);
   return {
     healthScore: mockHealthScore,
@@ -179,28 +236,28 @@ export const getInsights = async (userId) => {
 
 // GET /api/family/:userId
 export const getFamilyHistory = async (userId) => {
-  // TODO: Replace with actual API call to backend
   await delay(600);
-  return { members: mockFamilyMembers, risks: mockHereditaryRisks, geneticScores: mockGeneticRiskScores };
+  return {
+    members: mockFamilyMembers,
+    risks: mockHereditaryRisks,
+    geneticScores: mockGeneticRiskScores,
+  };
 };
 
 // POST /api/family/:userId/member
 export const addFamilyMember = async (userId, member) => {
-  // TODO: Replace with actual API call to backend
   await delay(800);
   return { ...member, id: `fam_${Date.now()}` };
 };
 
 // POST /api/insights/:userId/doctor-summary
 export const generateDoctorSummary = async (userId) => {
-  // TODO: Replace with actual API call to backend
   await delay(2000);
   return mockDoctorSummary;
 };
 
 // POST /api/insights/:userId/emergency-card
 export const generateEmergencyCard = async (userId) => {
-  // TODO: Replace with actual API call to backend
   await delay(1000);
   return { shareUrl: 'https://rxsense.app/emergency/usr_001', expiresIn: '24 hours' };
 };
@@ -239,15 +296,26 @@ export const login = async (email, password) => {
 
 // POST /api/auth/register
 export const register = async (userData) => {
-  // TODO: Replace with actual API call to backend
-  await delay(1200);
-  return {
-    token: 'mock_token_new123',
-    user: {
-      id: `usr_${Date.now()}`,
+  try {
+    const res = await api.post('/auth/register', {
       name: userData.name,
       email: userData.email,
-      role: userData.role || 'patient',
-    },
-  };
+      password: userData.password,
+      phone: userData.phone,
+      role: userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
+    });
+
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    const token = data.tokens?.accessToken || data.token || null;
+    const user = data.user || null;
+
+    return { token, user, raw: data };
+  } catch (err) {
+    const msg = err.response?.data?.error || err.message || 'Registration failed';
+    throw new Error(msg);
+  }
 };

@@ -1,139 +1,241 @@
 const DoctorModel = require('../models/doctorModel.js');
 
+/**
+ * Extracts and parses JSON from the text, handling markdown blocks if present.
+ */
+function extractJSON(text) {
+    if (!text) return null;
+    let cleaned = text.trim();
+    // Check if wrapped in markdown code blocks
+    const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match) {
+        cleaned = match[1];
+    }
+    try {
+        return JSON.parse(cleaned.trim());
+    } catch (e) {
+        console.error("Failed to parse JSON directly. Attempting custom cleaning. Original text:", text);
+        // Fallback: try to find the first '{' and last '}'
+        const start = cleaned.indexOf('{');
+        const end = cleaned.lastIndexOf('}');
+        if (start !== -1 && end !== -1 && end > start) {
+            try {
+                return JSON.parse(cleaned.substring(start, end + 1).trim());
+            } catch (err) {
+                console.error("Secondary JSON parsing attempt failed:", err);
+            }
+        }
+        throw e;
+    }
+}
+
 class LLMUtils {
     constructor() {
         // Initialize doctor model for DB interactions (logs, caches)
         this.doctorModel = new DoctorModel();
-        this.apiKey = process.env.GEMINI_API_KEY;
-        // Use gemini-2.5-flash for safety checks
-        this.modelName = 'gemini-2.5-flash';
-        this.endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent`;
+
+        // Claude API Configuration
+        this.claudeApiKey = process.env.CLAUDE_API_KEY;
+        this.claudeModelName = 'claude-sonnet-4-6';
+        this.claudeEndpoint = 'https://api.anthropic.com/v1/messages';
     }
 
     /**
-     * Perform the drug cross-over and allergy checks using LLM or local fallback.
-     * 
+     * Perform the drug cross-over and allergy checks using Claude (two parallel calls).
      * @param {string} patientId - UUID of the patient
      * @param {Array} allergies - Patient's allergies from patient_allergy table
      * @param {Array} currentMedications - Active prescriptions from prescription_item joined with drug
      * @param {Array} proposedMedications - Array of { drug_id, generic_name, brand_name, drug_class }
      */
     checkPrescriptionSafety = async (patientId, allergies, currentMedications, proposedMedications) => {
-        const inputContext = {
-            allergies: allergies.map(a => ({
-                generic_name: a.generic_name,
-                brand_name: a.brand_name,
-                drug_class: a.drug_class,
-                reaction_type: a.reaction_type,
-                severity: a.severity
-            })),
-            currentMedications: currentMedications.map(m => ({
-                generic_name: m.generic_name,
-                brand_name: m.brand_name,
-                drug_class: m.drug_class,
-                dosage: m.dosage,
-                frequency: m.frequency
-            })),
-            proposedMedications: proposedMedications.map(p => ({
-                generic_name: p.generic_name,
-                brand_name: p.brand_name,
-                drug_class: p.drug_class,
-                dosage: p.dosage || 'Standard',
-                frequency: p.frequency || 'As directed'
-            }))
+        // Compress patient context with dosages/frequencies included for accurate clinical checks
+        const allergyStr = allergies.map(a => `${a.generic_name || a.brand_name || a.drug_class} (severity: ${a.severity || 'moderate'})`).join('; ') || 'None';
+        const currentStr = currentMedications.map(m => `${m.generic_name}${m.dosage ? ` ${m.dosage}` : ''}${m.frequency ? ` ${m.frequency}` : ''}`).join('; ') || 'None';
+        const proposedStr = proposedMedications.map(p => `${p.generic_name}${p.dosage ? ` ${p.dosage}` : ''}${p.frequency ? ` ${p.frequency}` : ''}`).join('; ');
+
+      // Claude Prompt 1 — Drug-drug interactions and dosage analysis
+const interactionPrompt = `You are a clinical pharmacologist AI.
+Check for drug-drug interactions and dosage issues between active and proposed medications. For dose-dependent conflicts, suggest the minimum safe dose/day. Skip allergy checks.
+Active Medications: ${currentStr},Proposed Medications: ${proposedStr}
+Respond in strict JSON only:
+{
+  "has_conflict": boolean,
+  "warnings": [{
+    "type": "drug_interaction",
+    "severity": "mild"|"moderate"|"severe"|"critical",
+    "drugs_involved": string[],
+    "description": string, // <10 words
+    "recommendation": string // <20 words; include safe alternative dose/day if contraindicated
+  }],
+  "summary": string, // <15 words
+  
+}Return raw JSON only. No markdown, no code fences.`;
+
+// Claude Prompt 2 — Allergies and duplicate therapies
+const allergyPrompt = `You are a clinical pharmacologist AI.
+Check proposed medications against patient allergies: generic/brand names, drug class matches, and cross-sensitivities. Skip drug-drug interactions.
+Allergies: ${allergyStr},Proposed Medications: ${proposedStr}
+Respond in strict JSON only:
+{
+  "has_conflict": boolean,
+  "warnings": [{
+    "type": "allergy_conflict"|"other_conflict",
+    "severity": "mild"|"moderate"|"severe"|"critical",
+    "drugs_involved": string[],
+    "description": string, // <10 words
+    "recommendation": string // <20 words; include safe alternative drug/dose
+  }],
+  "summary": string, // <15 words
+  
+}Return raw JSON only. No markdown, no code fences.`;
+
+        const inputContextForLogging = {
+            allergies: allergies.map(a => ({ generic_name: a.generic_name, reaction_type: a.reaction_type, severity: a.severity })),
+            currentMedications: currentMedications.map(m => ({ generic_name: m.generic_name, dosage: m.dosage, frequency: m.frequency })),
+            proposedMedications: proposedMedications.map(p => ({ generic_name: p.generic_name, dosage: p.dosage || 'Standard', frequency: p.frequency || 'As directed' }))
         };
 
-        const prompt = `
-You are a highly advanced clinical pharmacologist AI assistant integrated into a hospital management system.
-Analyze the proposed medications for potential safety risks:
-1. **Allergy Conflict**: Check if any proposed medications (by generic name, brand name, or drug class) conflict with the patient's existing drug allergies. Look for cross-sensitivities (e.g., penicillin allergy and cephalosporins).
-2. **Drug-to-Drug Interaction (Cross-over)**: Check for potential drug interactions between the proposed medications and the patient's current medications, or between the proposed medications themselves.
+        /**
+         * Helper: call Claude with a given prompt and label for logging.
+         */
+        const callClaude = async (prompt, label) => {
+            if (!this.claudeApiKey) {
+                console.log(`Claude API key missing. Skipping ${label} call.`);
+                return null;
+            }
+            console.log(`Calling Claude API (${this.claudeModelName}) for ${label}...`);
+            const response = await globalThis.fetch(this.claudeEndpoint, {
+                method: 'POST',
+                headers: {
+                    'x-api-key': this.claudeApiKey,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: this.claudeModelName,
+                    max_tokens: 1000,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.0
+                })
+            });
 
-Below is the patient clinical context:
-- Patient Allergies:
-${JSON.stringify(inputContext.allergies, null, 2)}
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Claude API returned error code ${response.status}: ${errText}`);
+            }
 
-- Current Active Medications:
-${JSON.stringify(inputContext.currentMedications, null, 2)}
+            const data = await response.json();
+            const rawText = data.content?.[0]?.text;
+            if (!rawText) throw new Error(`Claude API returned empty response content for ${label}.`);
 
-- Proposed Medications to Prescribe:
-${JSON.stringify(inputContext.proposedMedications, null, 2)}
+            const parsed = extractJSON(rawText);
+            const inputTokens = data.usage?.input_tokens || Math.ceil(prompt.length / 4);
+            const outputTokens = data.usage?.output_tokens || Math.ceil(rawText.length / 4);
+            const tUsed = inputTokens + outputTokens;
 
-Provide a safety review in JSON format. The response must follow this schema exactly:
-{
-  "has_conflict": boolean, // true if any allergy or drug-drug interaction warning is found
-  "warnings": [
-    {
-      "type": "drug_interaction" | "allergy_conflict",
-      "severity": "mild" | "moderate" | "severe" | "critical",
-      "drugs_involved": string[], // names of the drugs involved (e.g. ["Aspirin", "Warfarin"])
-      "description": string, // clear details explaining why this is a risk
-      "recommendation": string // clinical recommendation (e.g., alternative drugs or adjustment)
-    }
-  ],
-  "summary": string // overall summary of the safety check result
-}
-Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\`json.
-`;
+            console.log(`[Claude Token Metrics — ${label}] Prompt: ${inputTokens} | Completion: ${outputTokens} | Total: ${tUsed}`);
+            return { parsed, tokensUsed: tUsed };
+        };
+
+        // Run both Claude calls in parallel
+        const [interactionResult, allergyResult] = await Promise.allSettled([
+            callClaude(interactionPrompt, 'drug interaction analysis'),
+            callClaude(allergyPrompt, 'allergy & other checks')
+        ]);
+
+        let interactionData = null;
+        let allergyData = null;
+        let tokensUsed = 0;
+        const modelsUsed = [];
+
+        if (interactionResult.status === 'fulfilled' && interactionResult.value) {
+            interactionData = interactionResult.value.parsed;
+            tokensUsed += interactionResult.value.tokensUsed;
+            modelsUsed.push(`${this.claudeModelName}(interactions)`);
+            console.log("Claude drug interaction analysis success.");
+        } else {
+            const err = interactionResult.status === 'rejected'
+                ? interactionResult.reason?.message || interactionResult.reason
+                : 'Not configured';
+            console.error("Claude drug interaction task failed or skipped:", err);
+        }
+
+        if (allergyResult.status === 'fulfilled' && allergyResult.value) {
+            allergyData = allergyResult.value.parsed;
+            tokensUsed += allergyResult.value.tokensUsed;
+            modelsUsed.push(`${this.claudeModelName}(allergies)`);
+            console.log("Claude allergy check success.");
+        } else {
+            const err = allergyResult.status === 'rejected'
+                ? allergyResult.reason?.message || allergyResult.reason
+                : 'Not configured';
+            console.error("Claude allergy task failed or skipped:", err);
+        }
+
+        const activeModelUsed = modelsUsed.length > 0 ? modelsUsed.join(' + ') : 'local-fallback';
 
         let resultJson;
-        let apiCallSuccessful = false;
-        let tokensUsed = 0;
 
-        if (this.apiKey) {
-            try {
-                console.log("Calling Gemini API for safety check...");
-                const response = await globalThis.fetch(`${this.endpoint}?key=${this.apiKey}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: prompt
-                            }]
-                        }],
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            temperature: 0.1
-                        }
-                    })
-                });
+        if (interactionData || allergyData) {
+            const warnings = [];
+            let has_conflict = false;
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (rawText) {
-                        resultJson = JSON.parse(rawText.trim());
-                        apiCallSuccessful = true;
-                        // Approximate tokens used
-                        tokensUsed = Math.ceil((prompt.length + rawText.length) / 4);
-                    }
-                } else {
-                    const errText = await response.text();
-                    console.error(`Gemini API returned error code ${response.status}:`, errText);
+            if (interactionData) {
+                if (interactionData.warnings && Array.isArray(interactionData.warnings)) {
+                    warnings.push(...interactionData.warnings);
                 }
-            } catch (err) {
-                console.error("Failed to connect to Gemini API, falling back to local checker:", err.message);
+                if (interactionData.has_conflict) has_conflict = true;
             }
+
+            if (allergyData) {
+                if (allergyData.warnings && Array.isArray(allergyData.warnings)) {
+                    warnings.push(...allergyData.warnings);
+                }
+                if (allergyData.has_conflict) has_conflict = true;
+            }
+
+            // Group warning counts for summary
+            const drugInteractionsCount = warnings.filter(w => w.type === 'drug_interaction').length;
+            const allergyConflictsCount = warnings.filter(w => w.type === 'allergy_conflict').length;
+            const otherConflictsCount = warnings.filter(w => w.type === 'other_conflict').length;
+
+            let summary = '';
+            if (has_conflict) {
+                const parts = [];
+                if (drugInteractionsCount > 0) parts.push(`${drugInteractionsCount} drug interaction(s)`);
+                if (allergyConflictsCount > 0) parts.push(`${allergyConflictsCount} allergy conflict(s)`);
+                if (otherConflictsCount > 0) parts.push(`${otherConflictsCount} other warning(s)`);
+                summary = `Safety check completed with: ${parts.join(', ')}. Please review conflicts.`;
+            } else {
+                summary = "No drug-drug interactions or allergy conflicts detected. Proposed items appear safe.";
+            }
+
+            resultJson = {
+                has_conflict,
+                warnings,
+                summary,
+                tokens_used: tokensUsed,
+                tokensUsed: tokensUsed
+            };
         } else {
-            console.log("No GEMINI_API_KEY found in environment variables. Using local rule-based safety checker.");
+            // Local fallback when both Claude calls fail or are unconfigured
+            console.log("Both Claude calls failed or unconfigured. Using local rule-based safety checker.");
+            resultJson = this.performLocalSafetyCheck(inputContextForLogging);
+            resultJson.tokens_used = 0;
+            resultJson.tokensUsed = 0;
         }
 
-        // Fallback to local rule-based safety checker
-        if (!apiCallSuccessful) {
-            resultJson = this.performLocalSafetyCheck(inputContext);
-        }
+        resultJson.model_used = activeModelUsed;
 
         // 1. Audit Log in Database
         try {
             await this.doctorModel.logLLMQuery(
                 patientId,
                 'drug_interaction',
-                JSON.stringify(inputContext),
+                JSON.stringify(inputContextForLogging),
                 resultJson.summary,
-                tokensUsed
+                tokensUsed,
+                activeModelUsed
             );
         } catch (dbErr) {
             console.error("Failed to write LLM query audit log:", dbErr.message);
@@ -147,7 +249,6 @@ Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\
                         const drugAName = warning.drugs_involved[0].toLowerCase();
                         const drugBName = warning.drugs_involved[1].toLowerCase();
 
-                        // Try to find the matching drug UUIDs from our catalog
                         const drugA = (await this.doctorModel.searchDrugs(drugAName))[0];
                         const drugB = (await this.doctorModel.searchDrugs(drugBName))[0];
 
@@ -171,15 +272,11 @@ Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\
     };
 
     /**
-     * Local rule-based safety check when Gemini API is unavailable or unconfigured.
+     * Local rule-based safety check when Claude API is unavailable or unconfigured.
      */
     performLocalSafetyCheck = (context) => {
         const warnings = [];
 
-        // Simple lookup of known dangerous drug combinations (generic name matches)
-        // e.g. Aspirin + Warfarin (Severe bleeding risk)
-        // e.g. Sildenafil + Nitroglycerin (Critical hypotension risk)
-        // e.g. Ibuprofen + Warfarin (Severe GI bleeding risk)
         const dangerousPairs = [
             {
                 drugs: ['aspirin', 'warfarin'],
@@ -207,9 +304,6 @@ Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\
             }
         ];
 
-        // All drugs currently active or proposed
-        const allDrugs = [...context.currentMedications, ...context.proposedMedications];
-
         // Check proposed drugs against allergies
         for (const proposed of context.proposedMedications) {
             const pGeneric = proposed.generic_name.toLowerCase();
@@ -234,7 +328,6 @@ Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\
                     match = true;
                     reason = `belongs to the same class (${allergy.drug_class}) as the patient's allergy`;
                 } else if (pGeneric.includes(aGeneric) || aGeneric.includes(pGeneric)) {
-                    // partial match
                     match = true;
                     reason = `is closely related to the patient's allergy to ${allergy.generic_name}`;
                 }
@@ -261,9 +354,8 @@ Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\
 
                     if (drug1 === drug2) continue;
 
-                    // Search match in dangerousPairs
-                    const match = dangerousPairs.find(pair => 
-                        (pair.drugs[0] === drug1 && pair.drugs[1] === drug2) || 
+                    const match = dangerousPairs.find(pair =>
+                        (pair.drugs[0] === drug1 && pair.drugs[1] === drug2) ||
                         (pair.drugs[0] === drug2 && pair.drugs[1] === drug1)
                     );
 
@@ -280,23 +372,15 @@ Return ONLY valid JSON. Do not include markdown code block formatting like \`\`\
             }
         };
 
-        // 1. Proposed vs Current
         checkInteractions(context.proposedMedications, context.currentMedications);
-        // 2. Proposed vs Proposed (cross-interactions within the new prescription)
         checkInteractions(context.proposedMedications, context.proposedMedications, true);
 
-        // TODO: Future developers can expand the dangerousPairs database or improve local heuristic matching
-
         const has_conflict = warnings.length > 0;
-        const summary = has_conflict 
+        const summary = has_conflict
             ? `Safety check completed with ${warnings.length} warning(s). Please review the conflicts before administering or dispensing these drugs.`
             : "No drug-drug interactions or allergy conflicts detected. The proposed prescription items appear safe based on current records.";
 
-        return {
-            has_conflict,
-            warnings,
-            summary
-        };
+        return { has_conflict, warnings, summary };
     };
 }
 

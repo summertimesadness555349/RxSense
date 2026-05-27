@@ -175,14 +175,59 @@ class PatientModel {
         }
     }
 
-    createMedicalReport = async ({ patientId, doctorId = null, reportType, storagePath = null }) => {
+    createMedicalReport = async ({
+        patientId,
+        doctorId        = null,
+        reportType,
+        storagePath     = null,
+        imageUrl        = null,
+        imagePublicId   = null,
+        rawAnalysis     = null,
+        reportDate      = null,
+        facility        = null,
+        orderingDoctor  = null,
+        patientNameRep  = null,
+    }) => {
         const query = `
-            INSERT INTO medical_report (patient_id, doctor_id, report_type, storage_path)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO medical_report
+                (patient_id, doctor_id, report_type, storage_path,
+                 image_url, image_public_id, raw_analysis,
+                 report_date, facility, ordering_doctor, patient_name_rep)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *;
         `;
-        const result = await this.db_connection.query_executor(query, [patientId, doctorId, reportType, storagePath]);
+        const params = [
+            patientId, doctorId, reportType, storagePath,
+            imageUrl, imagePublicId,
+            rawAnalysis ? JSON.stringify(rawAnalysis) : null,
+            reportDate, facility, orderingDoctor, patientNameRep,
+        ];
+        const result = await this.db_connection.query_executor(query, params);
         return result.rows[0] || null;
+    };
+
+    // Fuzzy lookup in lab_test_info by lowercased label.
+    // Priority: prefix-starts-with match first, then trigram similarity.
+    findLabTestInfo = async (labelLower) => {
+        const query = `
+            SELECT reference_range, normal_meaning, high_meaning, low_meaning
+            FROM   lab_test_info
+            WHERE  name_lower LIKE $1 || '%'
+               OR  similarity(name_lower, $1) > 0.3
+            ORDER BY
+                CASE WHEN name_lower = $1                  THEN 0
+                     WHEN name_lower LIKE $1 || ' %'       THEN 1
+                     ELSE 2
+                END,
+                similarity(name_lower, $1) DESC
+            LIMIT 1;
+        `;
+        try {
+            const result = await this.db_connection.query_executor(query, [labelLower]);
+            return result.rows[0] || null;
+        } catch {
+            return null;
+        }
     };
 
     addReportMetric = async ({ reportId, parameterName, value, unit, referenceRange, status, llmFlagged }) => {

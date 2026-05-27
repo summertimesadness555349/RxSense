@@ -1,24 +1,15 @@
-const path = require('path');
+'use strict';
 
-const REPORT_TYPE_TO_ENUM = {
-    'Complete Blood Count (CBC)': 'CBC',
-    'Lipid Panel': 'lipid_panel',
-    'Liver Function Test (LFT)': 'metabolic_panel',
-    'Kidney Function Test (KFT)': 'metabolic_panel',
-    'HbA1c / Diabetes Panel': 'metabolic_panel',
-    'Thyroid Panel': 'thyroid',
-    'Urine Analysis': 'urine_analysis',
-    Other: 'other'
-};
-
-const EXTRACTION_PROMPT = `You are a medical data extraction assistant.
-Extract ALL information from this medical report and return a JSON object.
-Use null for any field not present in the report.
-
-IMPORTANT: Return ONLY raw JSON. No markdown, no code fences, no explanation.
-Your response must start with { and end with }
+const EXTRACTION_PROMPT = `You are a medical data extraction specialist.
+Extract ALL information visible in this medical report and return it as structured JSON.
+Include every piece of data — leave nothing out, even if the fields seem unusual.
+Return ONLY raw JSON starting with { and ending with }. No markdown, no code fences, no explanation.
 
 {
+  "report_type": "type of report e.g. CBC, Lipid Panel, X-Ray, Ultrasound, ECG, Urine Analysis",
+  "report_date": "date as written in the report, or null",
+  "facility": "lab, clinic, or hospital name, or null",
+  "ordering_doctor": "doctor name who ordered the report, or null",
   "patient": {
     "name": null,
     "age": null,
@@ -26,275 +17,67 @@ Your response must start with { and end with }
     "patient_id": null,
     "date_of_birth": null
   },
-  "report": {
-    "report_date": null,
-    "report_type": null,
-    "facility": null,
-    "doctor": null
-  },
-  "diagnoses": [],
-  "lab_results": [
+  "sections": [
     {
-      "test": "exact test name from report",
-      "value": "numeric value",
-      "unit": "unit of measurement",
-      "reference_range": "ONLY fill if explicitly written in the report, else null",
-      "status": "normal or abnormal or critical - ONLY if stated in report, else null",
-      "conclusion": "any conclusion or interpretation written in the report, else null"
+      "title": "section heading exactly as in report e.g. Complete Blood Count, Biochemistry, Findings, Impression",
+      "type": "lab_results or imaging or vitals or medications or narrative or other",
+      "entries": [
+        {
+          "label": "parameter or test name",
+          "value": "value exactly as printed",
+          "unit": "unit of measurement, or null",
+          "reference_range": "normal range exactly as printed in the report, or null",
+          "flag": "H or L or HH or LL or * or null — exactly as printed on the report",
+          "status": "normal or high or low or critical or borderline or null"
+        }
+      ],
+      "narrative": "free-text content for imaging/impression/narrative sections, null for table sections"
     }
   ],
-  "medications": [
-    {"name": null, "dosage": null, "frequency": null}
-  ],
-  "vitals": {
-    "blood_pressure": null,
-    "heart_rate": null,
-    "temperature": null,
-    "weight": null,
-    "height": null,
-    "bmi": null,
-    "oxygen_saturation": null
-  },
-  "clinical_notes": null,
-  "recommendations": [],
-  "follow_up": null
-}`;
+  "overall_impression": "overall conclusion or impression from the report, or null",
+  "diagnoses": ["list of diagnoses if mentioned"],
+  "recommendations": ["list of recommendations or advice if mentioned"],
+  "clinical_notes": "any other clinical notes or comments, or null",
+  "follow_up": "follow-up instructions, or null"
+}
 
-const REFERENCE_RANGE_PROMPT = `You are a medical reference expert.
+Rules:
+- For sections with tabular data (blood counts, chemistry panels, etc.) use type "lab_results" and populate "entries"
+- For sections with free text (findings, impression, history) use type "narrative" and put text in "narrative", leave "entries" as []
+- For vitals (BP, HR, temp, weight, SpO2) use type "vitals" and populate "entries"
+- Preserve original values and units exactly as written
+- If the report is an image and text is unclear, do your best — include partial info rather than omitting`;
 
-A lab test result needs its standard reference range.
-Test name: {test_name}
-Value: {value}
-Unit: {unit}
-Patient age: {age}
-Patient gender: {gender}
-
-Provide the standard medical reference range for this test for this patient profile.
-Use your medical knowledge. If you are not confident, say so.
-
-Return ONLY a raw JSON object. No markdown, no explanation.
-{
-  "reference_range": "e.g. 4.5-11.0",
-  "unit": "e.g. x10^3/uL",
-  "source": "medical_knowledge or web_search",
-  "confidence": "high or medium or low",
-  "notes": "any important notes about this range e.g. varies by lab"
-}`;
-
-const REFERENCE_RANGE_WEB_PROMPT = `You are a medical reference expert. Use web search to find the standard reference range for this lab test.
-
-Test: {test_name}
-Unit: {unit}
-Patient age: {age}
-Patient gender: {gender}
-
-Search for the standard reference range and return ONLY a raw JSON object:
-{
-  "reference_range": "e.g. 4.5-11.0",
-  "unit": "e.g. x10^3/uL",
-  "source": "web_search",
-  "confidence": "high or medium or low",
-  "notes": "source website or guideline name"
-}`;
-
-const ANALYSIS_PROMPT = `You are an experienced clinician analyzing lab results.
-
-Patient: Age={age}, Gender={gender}
-
-Lab results with reference ranges:
-{lab_json}
-
-For EACH lab result:
-1. Compare the value against the reference range
-2. Determine status: normal / abnormal (high) / abnormal (low) / critical
-3. Identify what the abnormality could indicate clinically
-4. Note any patterns if multiple results are abnormal together
-
-Return ONLY a raw JSON array. No markdown, no explanation.
-[
-  {
-    "test": "test name",
-    "value": "value with unit",
-    "reference_range": "range used",
-    "status": "normal / abnormal (high) / abnormal (low) / critical",
-    "deviation": "how far from normal e.g. slightly elevated / significantly low",
-    "possible_causes": ["cause1", "cause2"],
-    "clinical_significance": "what this means medically in 1-2 sentences",
-    "action_needed": true
-  }
-]`;
-
-const SUMMARY_PROMPT = `You are a compassionate doctor writing a report summary readable by BOTH doctors and patients.
-
-Patient: {patient_name}, Age={age}, Gender={gender}
-Report type: {report_type}
-Date: {report_date}
-
-Full analysis data:
-{analysis_json}
-
-Diagnoses from report: {diagnoses}
-Clinical notes: {clinical_notes}
-Recommendations: {recommendations}
-Follow-up: {follow_up}
-
-Write a comprehensive summary with TWO sections:
-
-SECTION 1 - CLINICAL SUMMARY (for doctors): Technical, concise, uses medical terms
-SECTION 2 - PATIENT SUMMARY (for patients): Warm, simple language, no jargon
-
-Return ONLY a raw JSON object. No markdown, no code fences.
-{
-  "overall_status": "Normal / Needs Attention / Concerning / Critical",
-  "overall_status_marker": "OK or WARNING or URGENT",
-  "abnormal_count": 0,
-  "total_tests": 0,
-
-  "clinical_summary": {
-    "impression": "one paragraph clinical impression",
-    "significant_findings": ["finding1", "finding2"],
-    "suggested_followup": "clinical follow-up recommendation"
-  },
-
-  "patient_summary": {
-    "headline": "one friendly sentence summarizing overall health",
-    "what_this_report_is": "plain English explanation of what this report tests",
-    "good_news": ["thing1 is normal", "thing2 is fine"],
-    "needs_attention": [
-      {"test": "test name", "finding": "what was found", "simple_explanation": "what it means in plain words", "what_to_do": "simple action"}
-    ],
-    "diagnoses_explained": ["plain English explanation of each diagnosis"],
-    "medications_explained": ["what each medication is for in simple words"],
-    "next_steps": "simple friendly advice on what to do next",
-    "encouraging_note": "warm closing message"
-  },
-
-  "full_plain_text_summary": "3-4 paragraph easy-to-read summary of the entire report for the patient"
-}`;
-
-const SUPPORTED_MIME_TYPES = new Set([
+const SUPPORTED_CLAUDE_TYPES = new Set([
     'application/pdf',
     'image/png',
     'image/jpeg',
     'image/webp',
-    'image/gif'
+    'image/gif',
 ]);
 
-const fillTemplate = (template, values) => Object.entries(values).reduce(
-    (text, [key, value]) => text.replaceAll(`{${key}}`, value ?? ''),
-    template
-);
-
-const parseJsonResponse = (rawText, label = '') => {
-    const raw = String(rawText || '')
-        .trim()
-        .replace(/```(?:json|JSON)?\s*/g, '')
-        .replace(/```/g, '')
-        .trim();
-
-    try {
-        return JSON.parse(raw);
-    } catch {
-        // Continue into object/array extraction.
-    }
-
-    const extractBalanced = (openChar, closeChar) => {
-        const start = raw.indexOf(openChar);
-        if (start < 0) return null;
-        let depth = 0;
-        for (let i = start; i < raw.length; i++) {
-            if (raw[i] === openChar) depth++;
-            if (raw[i] === closeChar) depth--;
-            if (depth === 0) return raw.slice(start, i + 1);
-        }
-        return null;
-    };
-
-    for (const candidate of [extractBalanced('{', '}'), extractBalanced('[', ']')]) {
-        if (!candidate) continue;
-        try {
-            return JSON.parse(candidate);
-        } catch {
-            // Try the next balanced shape.
-        }
-    }
-
-    console.error(`Could not parse Claude JSON response [${label}]:`, raw.slice(0, 2000));
-    throw new Error(`Could not parse JSON from Claude [${label}]`);
-};
-
-const extractTextFromResponse = (responseJson) => (responseJson.content || [])
-    .filter((block) => block.type === 'text' && block.text)
-    .map((block) => block.text)
-    .join('\n')
-    .trim();
-
-const normalizeStatus = (status) => {
-    const value = String(status || 'normal').toLowerCase();
-    if (value.includes('critical') && value.includes('low')) return 'critical_low';
-    if (value.includes('critical') && value.includes('high')) return 'critical_high';
-    if (value.includes('critical')) return 'critical_high';
-    if (value.includes('low')) return 'low';
-    if (value.includes('high')) return 'high';
-    return 'normal';
-};
-
-const toUiStatus = (status) => {
-    const value = normalizeStatus(status);
-    if (value === 'critical_low') return 'low';
-    if (value === 'critical_high') return 'high';
-    return value;
-};
+// Labels that are derived ratios/indices — skip reference lookup
+const SKIP_LABEL_PATTERNS = /ratio|index|vldl|pcv/i;
 
 class ReportAnalysisUtils {
     constructor() {
-        this.apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-        this.modelName = process.env.CLAUDE_REPORT_MODEL || process.env.ANTHROPIC_REPORT_MODEL || 'claude-sonnet-4-6';
-        this.endpoint = 'https://api.anthropic.com/v1/messages';
-        this.tokensUsed = 0;
+        this.apiKey    = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+        this.modelName = process.env.CLAUDE_REPORT_MODEL || 'claude-sonnet-4-6';
+        this.endpoint  = 'https://api.anthropic.com/v1/messages';
+        this._refLookup = null;
     }
 
-    getReportTypeEnum = (reportType) => REPORT_TYPE_TO_ENUM[reportType] || 'other';
-
-    validateFile = (file) => {
-        if (!file) throw new Error('No report file was uploaded');
-        if (!SUPPORTED_MIME_TYPES.has(file.mimetype)) {
-            const ext = path.extname(file.originalname || '').toLowerCase();
-            throw new Error(`Unsupported file type${ext ? `: ${ext}` : ''}. Upload PDF, PNG, JPG, JPEG, WEBP, or GIF.`);
-        }
-    };
-
-    message = async ({ content, maxTokens = 4096, tools }) => {
+    validateApiKey() {
         if (!this.apiKey || this.apiKey === 'your_claude_api_key_here') {
-            throw new Error('CLAUDE_API_KEY is missing or still set to the placeholder value');
+            throw new Error('CLAUDE_API_KEY is missing or still set to the placeholder value. Add it to .env to enable report analysis.');
         }
+    }
 
-        const response = await globalThis.fetch(this.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': this.apiKey,
-                'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-                model: this.modelName,
-                max_tokens: maxTokens,
-                tools,
-                messages: [{ role: 'user', content }]
-            })
-        });
+    isSupportedType(mimetype) {
+        return SUPPORTED_CLAUDE_TYPES.has(mimetype?.toLowerCase());
+    }
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Claude report analysis failed (${response.status}): ${errorText}`);
-        }
-
-        const data = await response.json();
-        this.tokensUsed += data.usage ? (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0) : 0;
-        return data;
-    };
-
-    fileContent = (file) => {
+    buildContent(file) {
         if (file.mimetype === 'application/pdf') {
             return [
                 {
@@ -302,230 +85,265 @@ class ReportAnalysisUtils {
                     source: {
                         type: 'base64',
                         media_type: 'application/pdf',
-                        data: file.buffer.toString('base64')
-                    }
+                        data: file.buffer.toString('base64'),
+                    },
                 },
-                { type: 'text', text: EXTRACTION_PROMPT }
+                { type: 'text', text: EXTRACTION_PROMPT },
             ];
         }
-
         return [
             {
                 type: 'image',
                 source: {
                     type: 'base64',
                     media_type: file.mimetype,
-                    data: file.buffer.toString('base64')
-                }
+                    data: file.buffer.toString('base64'),
+                },
             },
-            { type: 'text', text: EXTRACTION_PROMPT }
+            { type: 'text', text: EXTRACTION_PROMPT },
         ];
+    }
+
+    parseJson(rawText) {
+        const clean = String(rawText || '')
+            .replace(/```(?:json|JSON)?\s*/g, '')
+            .replace(/```/g, '')
+            .trim();
+
+        try { return JSON.parse(clean); } catch {}
+
+        const findBalanced = (open, close) => {
+            const start = clean.indexOf(open);
+            if (start < 0) return null;
+            let depth = 0;
+            for (let i = start; i < clean.length; i++) {
+                if (clean[i] === open) depth++;
+                if (clean[i] === close) depth--;
+                if (depth === 0) return clean.slice(start, i + 1);
+            }
+            return null;
+        };
+
+        for (const [o, c] of [['{', '}'], ['[', ']']]) {
+            const candidate = findBalanced(o, c);
+            if (!candidate) continue;
+            try { return JSON.parse(candidate); } catch {}
+        }
+
+        console.error('[Report] Could not parse Claude JSON:', clean.slice(0, 500));
+        throw new Error('Could not parse report extraction response');
+    }
+
+    extract = async (file) => {
+        this.validateApiKey();
+
+        const response = await fetch(this.endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type':      'application/json',
+                'x-api-key':         this.apiKey,
+                'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+                model:      this.modelName,
+                max_tokens: 4096,
+                messages:   [{ role: 'user', content: this.buildContent(file) }],
+            }),
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Claude extraction failed (${response.status}): ${text}`);
+        }
+
+        const data    = await response.json();
+        const rawText = (data.content || [])
+            .filter(b => b.type === 'text')
+            .map(b => b.text)
+            .join('\n')
+            .trim();
+
+        return this.parseJson(rawText);
     };
 
-    step1Extract = async (file) => {
-        const response = await this.message({
-            content: this.fileContent(file),
-            maxTokens: 4096
-        });
-        return parseJsonResponse(extractTextFromResponse(response), 'extraction');
-    };
+    // Maps any status/flag string to the DB metric_status enum
+    normalizeMetricStatus(status, flag) {
+        const s = String(status || flag || 'normal').toLowerCase();
+        if (s.includes('critical') || flag === 'HH' || flag === 'LL') {
+            return s.includes('low') || flag === 'LL' ? 'critical_low' : 'critical_high';
+        }
+        if (s.includes('high') || flag === 'H')    return 'high';
+        if (s.includes('low')  || flag === 'L')    return 'low';
+        if (s.includes('borderline'))              return 'high';
+        return 'normal';
+    }
 
-    getReferenceRange = async ({ testName, value, unit, age, gender }) => {
-        const prompt = fillTemplate(REFERENCE_RANGE_PROMPT, {
-            test_name: testName,
-            value,
-            unit,
-            age,
-            gender
-        });
+    getReportTypeEnum(reportType) {
+        const MAP = {
+            'Complete Blood Count (CBC)': 'CBC',
+            'Lipid Panel':                'lipid_panel',
+            'Liver Function Test (LFT)':  'metabolic_panel',
+            'Kidney Function Test (KFT)': 'metabolic_panel',
+            'HbA1c / Diabetes Panel':     'metabolic_panel',
+            'Thyroid Panel':              'thyroid',
+            'Urine Analysis':             'urine_analysis',
+        };
+        return MAP[reportType] || 'other';
+    }
 
-        const response = await this.message({
-            content: prompt,
-            maxTokens: 512
-        });
-        let result = parseJsonResponse(extractTextFromResponse(response), `ref_range:${testName}`);
+    // ── Reference range enrichment ────────────────────────────────────────────
 
-        if (String(result.confidence || '').toLowerCase() === 'low') {
-            const webPrompt = fillTemplate(REFERENCE_RANGE_WEB_PROMPT, {
-                test_name: testName,
-                unit,
-                age,
-                gender
-            });
+    _normKey(s) {
+        return String(s || '')
+            .toLowerCase()
+            .replace(/\(.*?\)/g, ' ')          // strip parentheticals
+            .replace(/\bserum\b|\bs\.\s*/g, ' ') // strip "serum" / "s."
+            .replace(/[./\-]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
-            try {
-                const webResponse = await this.message({
-                    content: webPrompt,
-                    maxTokens: 512,
-                    tools: [{ type: 'web_search_20250305', name: 'web_search' }]
-                });
-                const webText = extractTextFromResponse(webResponse);
-                if (webText) {
-                    result = parseJsonResponse(webText, `web_ref_range:${testName}`);
+    _initRefLookup() {
+        if (this._refLookup) return;
+        const data = require('../data/lab_reference_ranges.json');
+        const lookup = new Map();
+
+        const put = (key, info) => {
+            const k = this._normKey(key);
+            if (k && !lookup.has(k)) lookup.set(k, info);
+        };
+
+        for (const [testKey, testVal] of Object.entries(data.tests)) {
+            put(testKey, testVal);
+            if (testVal.full_name) put(testVal.full_name, testVal);
+            if (testVal.components) {
+                for (const [ck, cv] of Object.entries(testVal.components)) {
+                    put(ck, cv);
                 }
-            } catch (error) {
-                console.warn(`Web reference lookup failed for ${testName}:`, error.message);
             }
         }
 
-        return result;
-    };
+        // Common alternative labels
+        const ALIASES = {
+            'sgpt':                    'alt',
+            'sgot':                    'ast',
+            'hb':                      'hemoglobin',
+            'hgb':                     'hemoglobin',
+            'haemoglobin':             'hemoglobin',
+            'haematocrit':             'hematocrit',
+            'plt':                     'platelets',
+            'total cholesterol':       'cholesterol',
+            'ldl cholesterol':         'ldl',
+            'hdl cholesterol':         'hdl',
+            'triglyceride':            'triglycerides',
+            'blood urea':              'bun',
+            'fasting blood glucose':   'fbs',
+            'fasting blood sugar':     'fbs',
+            'random blood glucose':    'rbs',
+            'random blood sugar':      'rbs',
+            'glycosylated hemoglobin': 'hba1c',
+            'ft4':                     'free t4',
+            'uric acid':               'uric acid',  // after norm of "S. Uric Acid"
+        };
 
-    step2FillReferenceRanges = async (extracted) => {
-        const labResults = extracted.lab_results || [];
-        const age = extracted.patient?.age || 'unknown';
-        const gender = extracted.patient?.gender || 'unknown';
-
-        for (const lab of labResults) {
-            if (lab.reference_range) {
-                lab.range_source = 'report';
-                continue;
-            }
-
-            const ref = await this.getReferenceRange({
-                testName: lab.test || '',
-                value: lab.value || '',
-                unit: lab.unit || '',
-                age,
-                gender
-            });
-
-            lab.reference_range = ref.reference_range || 'N/A';
-            lab.unit = lab.unit || ref.unit || null;
-            lab.range_source = ref.source || 'lookup';
-            lab.range_confidence = ref.confidence || 'unknown';
-            lab.range_notes = ref.notes || '';
+        for (const [alias, target] of Object.entries(ALIASES)) {
+            const tk = this._normKey(target);
+            if (lookup.has(tk)) put(alias, lookup.get(tk));
         }
 
-        extracted.lab_results = labResults;
+        this._refLookup = lookup;
+    }
+
+    _findRef(label) {
+        if (SKIP_LABEL_PATTERNS.test(label)) return null;
+        this._initRefLookup();
+        const key = this._normKey(label);
+        if (!key || key.length < 2) return null;
+
+        if (this._refLookup.has(key)) return this._refLookup.get(key);
+
+        // Prefix fallback: e.g. "wbc count" matches lookup key "wbc"
+        for (const [k, v] of this._refLookup) {
+            if (k.length >= 3 && (key.startsWith(k + ' ') || key.endsWith(' ' + k))) return v;
+        }
+        return null;
+    }
+
+    _getNormalRange(info, gender, age) {
+        const isFemale = String(gender || '').toLowerCase().includes('f');
+        const a = parseInt(age) || 0;
+
+        // CBC component: { range: {min, max, unit} }
+        if (info.range) return info.range;
+
+        // Direct gender split on the info object (CBC.Hemoglobin, CBC.RBC)
+        if (info.male && info.female) return isFemale ? info.female : info.male;
+
+        if (!info.ranges) return null;
+        const r = info.ranges;
+
+        // ESR-style: age + gender combined key
+        const ageG = a >= 50 ? 'over50' : 'under50';
+        const ekey = `${isFemale ? 'female' : 'male'}_${ageG}`;
+        if (r[ekey]) return r[ekey];
+
+        // Gender split within ranges (ALT, GGT, Ferritin, etc.)
+        if (r.male && r.female) return isFemale ? r.female : r.male;
+
+        // Named single range
+        if (r.normal) return r.normal;
+        if (r.adult)  return r.adult;
+        if (r.morning_8am) return r.morning_8am; // Cortisol
+
+        // Multi-threshold: pick the "healthy" upper bound
+        // Vitamin D → sufficient, Cholesterol → desirable, LDL → optimal
+        return r.sufficient || r.desirable || r.optimal || null;
+    }
+
+    _rangeText(range) {
+        if (!range) return null;
+        const { min, max, unit } = range;
+        const u = unit ? ` ${unit}` : '';
+        if (min !== undefined && max !== undefined) return `${min} – ${max}${u}`;
+        if (min !== undefined) return `≥ ${min}${u}`;
+        if (max !== undefined) return `≤ ${max}${u}`;
+        return null;
+    }
+
+    _computeStatus(valueStr, range) {
+        const num = parseFloat(String(valueStr).replace(/[<>≥≤~\s,]/g, ''));
+        if (isNaN(num)) return null; // qualitative (Positive/Negative, etc.)
+        const { min, max } = range;
+        if (max !== undefined && num > max) return 'high';
+        if (min !== undefined && num < min) return 'low';
+        return 'normal';
+    }
+
+    // Post-extraction enrichment: fills missing reference_range strings and
+    // computes status for entries where Claude left it null.
+    enrichWithReferenceRanges(extracted) {
+        const gender = extracted.patient?.gender || null;
+        const age    = extracted.patient?.age    || null;
+
+        for (const section of (extracted.sections || [])) {
+            if (section.type !== 'lab_results' && section.type !== 'vitals') continue;
+            for (const entry of (section.entries || [])) {
+                const info  = this._findRef(entry.label);
+                if (!info) continue;
+                const range = this._getNormalRange(info, gender, age);
+                if (!range) continue;
+
+                if (!entry.reference_range) {
+                    entry.reference_range = this._rangeText(range);
+                }
+                if (!entry.status || entry.status === 'null') {
+                    const s = this._computeStatus(entry.value, range);
+                    if (s) entry.status = s;
+                }
+            }
+        }
         return extracted;
-    };
-
-    step3Analyze = async (extracted) => {
-        const labResults = extracted.lab_results || [];
-        if (labResults.length === 0) return [];
-
-        const prompt = fillTemplate(ANALYSIS_PROMPT, {
-            age: extracted.patient?.age || 'unknown',
-            gender: extracted.patient?.gender || 'unknown',
-            lab_json: JSON.stringify(labResults, null, 2)
-        });
-
-        const response = await this.message({
-            content: prompt,
-            maxTokens: 4096
-        });
-        return parseJsonResponse(extractTextFromResponse(response), 'analysis');
-    };
-
-    step4Summary = async (extracted, analysis) => {
-        const patient = extracted.patient || {};
-        const report = extracted.report || {};
-        const prompt = fillTemplate(SUMMARY_PROMPT, {
-            patient_name: patient.name || 'Patient',
-            age: patient.age || 'unknown',
-            gender: patient.gender || 'unknown',
-            report_type: report.report_type || 'Medical Report',
-            report_date: report.report_date || 'unknown',
-            analysis_json: JSON.stringify(analysis, null, 2),
-            diagnoses: JSON.stringify(extracted.diagnoses || []),
-            clinical_notes: extracted.clinical_notes || 'None',
-            recommendations: JSON.stringify(extracted.recommendations || []),
-            follow_up: extracted.follow_up || 'None'
-        });
-
-        const response = await this.message({
-            content: prompt,
-            maxTokens: 4096
-        });
-        return parseJsonResponse(extractTextFromResponse(response), 'summary');
-    };
-
-    analyze = async ({ file }) => {
-        this.tokensUsed = 0;
-        this.validateFile(file);
-
-        const extracted = await this.step1Extract(file);
-        const extractedWithRanges = await this.step2FillReferenceRanges(extracted);
-        const analysis = await this.step3Analyze(extractedWithRanges);
-        const summary = await this.step4Summary(extractedWithRanges, analysis);
-
-        return {
-            extracted_data: extractedWithRanges,
-            analysis,
-            summary,
-            _meta: {
-                model_used: this.modelName,
-                tokens_used: this.tokensUsed
-            }
-        };
-    };
-
-    toFrontendResult = ({ analysisResult, reportRecord }) => {
-        const labResults = analysisResult.extracted_data?.lab_results || [];
-        const summary = analysisResult.summary || {};
-        const report = analysisResult.extracted_data?.report || {};
-        const clinical = summary.clinical_summary || {};
-        const patientSummary = summary.patient_summary || {};
-
-        const values = labResults.map((item, index) => ({
-            id: item.metric_id || `metric_${index + 1}`,
-            parameter: item.test,
-            value: [item.value, item.unit].filter(Boolean).join(' '),
-            normalRange: item.reference_range ? [item.reference_range, item.unit].filter(Boolean).join(' ') : 'Not provided',
-            status: toUiStatus(item.status),
-            numericValue: Number.parseFloat(String(item.value).replace(/,/g, '')),
-            trend: [],
-            conclusion: item.conclusion,
-            rangeSource: item.range_source
-        }));
-
-        const risks = (analysisResult.analysis || [])
-            .filter((item) => item.action_needed || !String(item.status || '').toLowerCase().includes('normal'))
-            .map((item) => ({
-                level: String(item.status || '').toLowerCase().includes('critical') ? 'high' : 'moderate',
-                condition: item.test,
-                message: item.clinical_significance || item.deviation || 'Review with a clinician.'
-            }));
-
-        if (risks.length === 0 && clinical.impression) {
-            risks.push({
-                level: summary.overall_status === 'Normal' ? 'low' : 'moderate',
-                condition: summary.overall_status || 'Report review',
-                message: clinical.impression
-            });
-        }
-
-        const recommendations = analysisResult.extracted_data?.recommendations?.length
-            ? analysisResult.extracted_data.recommendations
-            : [clinical.suggested_followup, patientSummary.next_steps].filter(Boolean);
-
-        const status = String(summary.overall_status || '').toLowerCase();
-        const urgencyLevel = status.includes('critical') || status.includes('concerning')
-            ? 'high'
-            : status.includes('normal')
-                ? 'low'
-                : 'moderate';
-
-        return {
-            id: reportRecord?.report_id || `rep_${Date.now()}`,
-            date: report.report_date || new Date().toISOString().slice(0, 10),
-            type: report.report_type || reportRecord?.report_type || 'Medical Report',
-            lab: report.facility || 'Unknown facility',
-            urgencyLevel,
-            urgencyMessage: urgencyLevel === 'high' ? 'Seek urgent medical care' : urgencyLevel === 'moderate' ? 'Review with a doctor' : 'No urgent action flagged',
-            autoSaved: Boolean(reportRecord?.report_id),
-            values,
-            risks,
-            recommendations,
-            plainSummary: summary.full_plain_text_summary || patientSummary.headline || clinical.impression || 'No summary available.',
-            extractedData: analysisResult.extracted_data,
-            analysis: analysisResult.analysis,
-            summary
-        };
-    };
-
-    normalizeMetricStatus = normalizeStatus;
+    }
 }
 
 module.exports = ReportAnalysisUtils;

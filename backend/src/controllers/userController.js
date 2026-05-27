@@ -23,7 +23,7 @@ class UserController {
     }
 
     generateTokens = (user) => {
-        const subject = user.patient_id || user.uuid || user.id;
+        const subject = user.id || user.patient_id || user.uuid;
         const accessPayload = {
             sub: subject,
             username: user.username,
@@ -180,12 +180,7 @@ class UserController {
                 return res.status(400).json({ success: false, error: 'name, email, password, phone number, and role required' });
             }
 
-            // const existingUserByUsername = await this.userModel.getUserByUsername(username);
-            // if (existingUserByUsername) {
-            //     return res.status(409).json({ success: false, error: 'Username already taken' });
-            // }
-
-            const existingUserByEmail = (role === 'patient') ? await this.userModel.getPatientByEmail(email) : await this.userModel.getDoctorByEmail(email);
+            const existingUserByEmail = await this.userModel.getUserByEmail(email);
             if (existingUserByEmail) {
                 return res.status(409).json({ success: false, error: 'Email already in use' });
             }
@@ -362,9 +357,12 @@ class UserController {
                 return res.status(400).json({ success: false, error: 'identifier and password required' });
             }
 
-            // let user = await this.userModel.getUserByUsername(identifier);
-            if (!user && identifier.includes('@')) {
+            let user = null;
+            if (identifier.includes('@')) {
                 user = await this.userModel.getPatientByEmail(identifier);
+            }
+            if (!user) {
+                user = await this.userModel.getUserByUsername(identifier);
             }
 
             if (!user) {

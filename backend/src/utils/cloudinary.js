@@ -29,6 +29,46 @@ const uploadAvatarBuffer = (buffer, userId) => {
     });
 };
 
+const uploadPrescriptionBuffer = (buffer, userId) => {
+    return new Promise((resolve, reject) => {
+        const folder = `${process.env.CLOUDINARY_FOLDER || 'RxSense'}/prescriptions`;
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder,
+                public_id: `rx_${userId}_${Date.now()}`,
+                resource_type: 'image',
+                transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+            },
+            (err, result) => {
+                if (err) return reject(err);
+                resolve(result);
+            }
+        );
+        stream.end(buffer);
+    });
+};
+
+const uploadReportBuffer = (buffer, userId) => {
+    return new Promise((resolve, reject) => {
+        const folder = `${process.env.CLOUDINARY_FOLDER || 'RxSense'}/reports`;
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder,
+                public_id:     `rpt_${userId}_${Date.now()}`,
+                resource_type: 'image',
+                transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+            },
+            (err, result) => {
+                if (err) return reject(err);
+                resolve(result);
+            }
+        );
+        stream.end(buffer);
+    });
+};
+
 module.exports = {
-    uploadAvatarBuffer
+    uploadAvatarBuffer,
+    uploadPrescriptionBuffer,
+    uploadReportBuffer,
 }

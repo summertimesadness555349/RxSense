@@ -1,8 +1,22 @@
-const { matchAllTokens } = require('../utils/drugMatcher.js');
+const sharp                        = require('sharp');
+const { matchAllTokens }           = require('../utils/drugMatcher.js');
+const { uploadPrescriptionBuffer } = require('../utils/cloudinary.js');
+const DB_Connection                = require('../database/db.js');
 
-const PRESCRIPTO_URL    = 'https://www.prescriptoai.com/api/v1/prescription/extract';
+// Formats PrescriptoAI cannot handle — convert to JPEG first
+const UNSUPPORTED_MIMETYPES = new Set([
+    'image/avif', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp',
+]);
+
+async function toJpeg(buffer) {
+    return sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+}
+
+const PRESCRIPTO_URL     = 'https://www.prescriptoai.com/api/v1/prescription/extract';
 const PRESCRIPTO_API_KEY = process.env.PRESCRIPTO_API_KEY;
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 async function callPrescriptoAI(fileBuffer, mimetype, filename) {
     const form = new FormData();
@@ -56,7 +70,50 @@ async function callMedGemmaDosages(fileBuffer, mimetype, filename, drugNames) {
     }
 }
 
+async function saveScan(db, { userId, imageUrl, imagePublicId, data, drugs, confidence, modelsUsed }) {
+    const rx = data.prescription || {};
+    const isUUID = UUID_RE.test(String(userId || ''));
+
+    try {
+        const result = await db.query_executor(
+            `INSERT INTO prescription_scan
+                (user_id, patient_id, image_url, image_public_id,
+                 doctor_name, doctor_specialty, hospital_name, patient_name_rx,
+                 rx_date, diseases, tests, medications,
+                 notes, follow_up, confidence, models_used)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+             RETURNING scan_id, created_at`,
+            [
+                isUUID ? null : parseInt(userId) || null,           // user_id (integer)
+                isUUID ? userId : null,                              // patient_id (UUID)
+                imageUrl,
+                imagePublicId || null,
+                data.doctor?.name        || null,
+                data.doctor?.specialization || null,
+                data.clinic?.name        || null,
+                data.patient?.name       || null,
+                rx.date                  || null,
+                JSON.stringify(rx.diagnosis ? [rx.diagnosis] : []),
+                JSON.stringify(rx.tests   || []),
+                JSON.stringify(drugs),
+                rx.notes    || null,
+                rx.followUp || null,
+                confidence  || null,
+                JSON.stringify(modelsUsed || []),
+            ]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.warn('[Prescription] Failed to save scan to DB:', err.message);
+        return null;
+    }
+}
+
 class PrescriptionController {
+    constructor() {
+        this.db = DB_Connection.getInstance();
+    }
+
     analyzePrescription = async (req, res) => {
         try {
             if (!req.file) {
@@ -67,16 +124,40 @@ class PrescriptionController {
                 return res.status(500).json({ success: false, error: 'PRESCRIPTO_API_KEY not configured' });
             }
 
+            const userId = req.user?.id || null;
+
             console.log(`[Prescription] Received: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
 
-            // 1. Call PrescriptoAI
-            console.log(`[Prescription] Calling PrescriptoAI...`);
-            const t0 = Date.now();
-            const data = await callPrescriptoAI(req.file.buffer, req.file.mimetype, req.file.originalname);
+            // Convert unsupported formats (AVIF, HEIC, etc.) to JPEG for PrescriptoAI
+            let apiBuffer   = req.file.buffer;
+            let apiMimetype = req.file.mimetype;
+            let apiFilename = req.file.originalname;
+            if (UNSUPPORTED_MIMETYPES.has(req.file.mimetype?.toLowerCase())) {
+                console.log(`[Prescription] Converting ${req.file.mimetype} → JPEG for API compatibility`);
+                apiBuffer   = await toJpeg(req.file.buffer);
+                apiMimetype = 'image/jpeg';
+                apiFilename = req.file.originalname.replace(/\.[^.]+$/, '.jpg');
+            }
 
-            console.log(`\n── PrescriptoAI Output (${((Date.now() - t0) / 1000).toFixed(1)}s) ────────────────────`);
+            // 1. Upload image to Cloudinary + call PrescriptoAI in parallel
+            console.log(`[Prescription] Uploading to Cloudinary + calling PrescriptoAI...`);
+            const t0 = Date.now();
+
+            const [cloudResult, data] = await Promise.all([
+                uploadPrescriptionBuffer(req.file.buffer, userId || 'anon').catch(err => {
+                    console.warn('[Prescription] Cloudinary upload failed:', err.message);
+                    return null;
+                }),
+                callPrescriptoAI(apiBuffer, apiMimetype, apiFilename),
+            ]);
+
+            const imageUrl       = cloudResult?.secure_url || null;
+            const imagePublicId  = cloudResult?.public_id  || null;
+
+            console.log(`[Prescription] PrescriptoAI + Cloudinary done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+            console.log(`\n── PrescriptoAI Output ────────────────────────────────────────────`);
             console.log(JSON.stringify(data, null, 2));
-            console.log(`─────────────────────────────────────────────────────────────────\n`);
+            console.log(`──────────────────────────────────────────────────────────────────\n`);
 
             const medications = data.prescription?.medications || [];
             const diagnosis   = data.prescription?.diagnosis   || null;
@@ -93,8 +174,15 @@ class PrescriptionController {
             console.log(`[Prescription] ${tokens.length} drug token(s): ${tokens.join(', ')}`);
 
             if (tokens.length === 0) {
+                const scanRow = imageUrl ? await saveScan(this.db, {
+                    userId, imageUrl, imagePublicId, data,
+                    drugs: [], confidence: 0, modelsUsed: ['prescriptoai'],
+                }) : null;
+
                 return res.status(200).json({
-                    success: true,
+                    success:   true,
+                    scan_id:   scanRow?.scan_id   || null,
+                    image_url: imageUrl,
                     drugs: [],
                     needs_review: [],
                     patient:  data.patient || null,
@@ -121,37 +209,18 @@ class PrescriptionController {
 
             console.log(`[Prescription] Parallel calls done in ${((Date.now() - t1) / 1000).toFixed(1)}s`);
 
-            // Index MedGemma results by lowercased name for fast lookup
+            // Index MedGemma results by lowercased name
             const dosageMap = {};
             for (const d of medGemmaDosages) {
                 if (d.name) dosageMap[d.name.toLowerCase()] = d;
             }
 
-            console.log(`\n── Fuzzy Match Results ───────────────────────────────────────────`);
-            for (const [token, matches] of Object.entries(candidates)) {
-                if (matches.length === 0) {
-                    console.log(`  "${token}" → no matches`);
-                } else {
-                    const top = matches[0];
-                    const sim = Math.max(top.brand_sim ?? 0, top.generic_sim ?? 0).toFixed(2);
-                    console.log(`  "${token}" → ${top.brand} (${top.generic || '?'}) ${top.strength || ''} sim=${sim}`);
-                }
-            }
-            if (medGemmaDosages.length) {
-                console.log(`\n── MedGemma Dosage Output ────────────────────────────────────────`);
-                medGemmaDosages.forEach(d => {
-                    console.log(`  ${d.name}: dosage=${d.dosage || '?'} freq=${d.frequency || '?'} duration=${d.duration || '?'}`);
-                });
-            }
-            console.log(`─────────────────────────────────────────────────────────────────\n`);
-
             // 4. Build final drugs list
-            //    Priority: MedGemma dosage > PrescriptoAI dosage (MedGemma sees the actual image)
             const drugs = medications.map(med => {
-                const name      = (med.name || '').trim();
-                const topMatch  = candidates[name]?.[0];
-                const sim       = topMatch ? Math.max(topMatch.brand_sim ?? 0, topMatch.generic_sim ?? 0) : 0;
-                const gemma     = dosageMap[name.toLowerCase()] || {};
+                const name     = (med.name || '').trim();
+                const topMatch = candidates[name]?.[0];
+                const sim      = topMatch ? Math.max(topMatch.brand_sim ?? 0, topMatch.generic_sim ?? 0) : 0;
+                const gemma    = dosageMap[name.toLowerCase()] || {};
 
                 return {
                     extracted_name:           name,
@@ -170,10 +239,24 @@ class PrescriptionController {
             const needs_review = drugs.filter(d => d.confidence === 'low');
             const models_used  = ['prescriptoai', ...(medGemmaDosages.length ? ['medgemma'] : [])];
 
-            console.log(`[Prescription] Done — ${drugs.length} drug(s), ${needs_review.length} need review, models: ${models_used.join('+')}`);
+            // Average confidence score (0-100)
+            const confMap = { high: 100, medium: 70, low: 30 };
+            const confidence = drugs.length
+                ? Math.round(drugs.reduce((s, d) => s + (confMap[d.confidence] ?? 50), 0) / drugs.length)
+                : 0;
+
+            // 5. Save to DB (non-blocking path — result returned regardless)
+            const scanRow = imageUrl ? await saveScan(this.db, {
+                userId, imageUrl, imagePublicId, data,
+                drugs, confidence, modelsUsed: models_used,
+            }) : null;
+
+            console.log(`[Prescription] Done — ${drugs.length} drug(s), scan_id=${scanRow?.scan_id || 'not saved'}`);
 
             return res.status(200).json({
                 success: true,
+                scan_id:   scanRow?.scan_id   || null,
+                image_url: imageUrl,
                 drugs,
                 needs_review,
                 patient:  data.patient || null,
@@ -189,7 +272,45 @@ class PrescriptionController {
             });
 
         } catch (error) {
-            console.error('Prescription analysis error:', error);
+            console.error('[Prescription] Analysis error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    getPrescriptionHistory = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, error: 'Unauthorized' });
+            }
+
+            const isUUID = UUID_RE.test(String(userId));
+            const whereClause = isUUID
+                ? 'WHERE patient_id = $1'
+                : 'WHERE user_id = $1';
+            const param = isUUID ? userId : parseInt(userId);
+
+            const limit  = Math.min(parseInt(req.query.limit  || '50'), 100);
+            const offset = Math.max(parseInt(req.query.offset || '0'), 0);
+
+            const result = await this.db.query_executor(
+                `SELECT scan_id, image_url, doctor_name, doctor_specialty, hospital_name,
+                        patient_name_rx, rx_date, diseases, tests, medications,
+                        notes, follow_up, confidence, models_used, created_at
+                 FROM prescription_scan
+                 ${whereClause}
+                 ORDER BY created_at DESC
+                 LIMIT $2 OFFSET $3`,
+                [param, limit, offset]
+            );
+
+            return res.status(200).json({
+                success: true,
+                scans:   result.rows,
+                total:   result.rowCount,
+            });
+        } catch (error) {
+            console.error('[Prescription] History error:', error);
             return res.status(500).json({ success: false, error: error.message });
         }
     };

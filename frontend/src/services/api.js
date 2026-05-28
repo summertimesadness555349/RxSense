@@ -1,4 +1,3 @@
-// TODO: Replace all mock returns with actual API calls to backend
 import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
 import { mockTimeline } from '../data/mockTimeline.js';
 import { mockUser } from '../data/mockUser.js';
@@ -16,7 +15,7 @@ import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 const getAccessToken = () => {
   const appToken = localStorage.getItem('rxsense_token');
@@ -56,12 +55,15 @@ export const analyzePrescription = async (imageFile) => {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const data = await request('/api/prescription/analyze', {
+    const token = getAccessToken();
+    const response = await fetch(`${API_BASE_URL}/prescription/analyze`, {
       method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     });
 
-    if (!data.success) throw new Error(data.error || 'Analysis failed');
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Analysis failed');
 
     const drugs = data.drugs || [];
 
@@ -117,7 +119,9 @@ export const analyzePrescription = async (imageFile) => {
       ? new Date(data.date).toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' })
       : new Date().toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    return {
+    const result = {
+      scan_id:    data.scan_id   || null,
+      image_url:  data.image_url || null,
       confidence: avgConf,
       date:       rxDate,
       patient,
@@ -131,14 +135,107 @@ export const analyzePrescription = async (imageFile) => {
       explanation,
       warnings,
     };
+
+    // Persist to localStorage prescription history
+    savePrescriptionToLocal(result);
+
+    return result;
   } catch (err) {
     throw new Error(err.message || 'Analysis failed');
   }
 };
 
+const PRESCRIPTION_HISTORY_KEY = 'rxsense_prescription_history';
+const MAX_LOCAL_HISTORY = 30;
+
+function savePrescriptionToLocal(result) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const entry = {
+      scan_id:     result.scan_id,
+      image_url:   result.image_url,
+      date:        result.date,
+      savedAt:     new Date().toISOString(),
+      confidence:  result.confidence,
+      doctor:      result.doctor,
+      hospital:    result.hospital,
+      diseases:    result.diseases,
+      tests:       result.tests,
+      medications: result.medications,
+      notes:       result.notes,
+      followUp:    result.followUp,
+    };
+    const updated = [entry, ...existing].slice(0, MAX_LOCAL_HISTORY);
+    localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+export const getPrescriptionHistoryLocal = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+// GET /api/prescription/history
+export const getPrescriptionHistory = async ({ limit = 50, offset = 0 } = {}) => {
+  const data = await request(`/prescription/history?limit=${limit}&offset=${offset}`);
+  return data.scans || [];
+};
+
+// POST /api/prescription/chat
+export const chatWithPrescription = async ({ messages, prescription, question }) => {
+  const data = await request('/prescription/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, prescription, question }),
+  });
+  return data; // { reply, drugs_context }
+};
+
 // ─── Remaining endpoints (mocked until backend routes exist) ──────────────────
 
-// POST /api/report/analyze
+const REPORT_HISTORY_KEY = 'rxsense_report_history';
+const MAX_LOCAL_REPORTS  = 20;
+
+function saveReportToLocal(report) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
+    const entry = {
+      id:                 report.id,
+      image_url:          report.image_url,
+      type:               report.type,
+      date:               report.date,
+      savedAt:            new Date().toISOString(),
+      facility:           report.facility,
+      ordering_doctor:    report.ordering_doctor,
+      patient:            report.patient,
+      sections:           report.sections,
+      overall_impression: report.overall_impression,
+      diagnoses:          report.diagnoses,
+      recommendations:    report.recommendations,
+      clinical_notes:     report.clinical_notes,
+      follow_up:          report.follow_up,
+    };
+    const updated = [entry, ...existing].slice(0, MAX_LOCAL_REPORTS);
+    localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+export const getReportHistoryLocal = () => {
+  try {
+    return JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+// POST /api/patient/reports/analyze
 export const analyzeReport = async (file, reportType) => {
   const formData = new FormData();
   formData.append('report', file);
@@ -149,17 +246,27 @@ export const analyzeReport = async (file, reportType) => {
     const patientId = storedUser.patient_id || storedUser.uuid;
     if (patientId) formData.append('patientId', patientId);
   } catch {
-    // Optional patient ID only; backend can still analyze without saving.
+    // Optional — backend analyzes without saving if no patientId
   }
 
-  const data = await request('/api/patient/reports/analyze', {
+  const data = await request('/patient/reports/analyze', {
     method: 'POST',
     body: formData,
   });
 
-  // Backend now returns { success, reportRecord, savedMetrics }
-  // Return the full payload so callers can adapt to the new shape.
-  return data;
+  const report = data.report;
+  saveReportToLocal(report);
+  return report;
+};
+
+// POST /api/patient/reports/chat
+export const chatWithReport = async ({ messages, report, question }) => {
+  const data = await request('/patient/reports/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, report, question }),
+  });
+  return data; // { reply }
 };
 
 // POST /api/symptoms/check
@@ -276,26 +383,9 @@ export const generateEmergencyCard = async (userId) => {
   return { shareUrl: 'https://rxsense.app/emergency/usr_001', expiresIn: '24 hours' };
 };
 
-// POST /api/auth/login
-// export const login = async (email, password) => {
-//   // TODO: Replace with actual API call to backend
-//   await delay(1000);
-//   if (email && password) {
-//     return {
-//       token: 'mock_token_abc123',
-//       user: {
-//         id: 'usr_001',
-//         name: 'Rahim Uddin',
-//         email: 'rahim@example.com',
-//         role: 'patient',
-//       },
-//     };
-//   }
-//   throw new Error('Invalid credentials');
-// };
 
 export const login = async (email, password) => {
-  const data = await request('/api/auth/login', {
+  const data = await request('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier: email, password }),
@@ -310,20 +400,22 @@ export const login = async (email, password) => {
 
 // POST /api/auth/register
 export const register = async (userData) => {
-  const payload = {
-    name: userData.name,
-    email: userData.email,
-    password: userData.password,
-    phone: userData.phone,
-    role: userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
-  };
-
   try {
-    const data = await request('/api/auth/register', {
+    const data = await request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        name:     userData.name,
+        email:    userData.email,
+        password: userData.password,
+        phone:    userData.phone || '',
+        role:     userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
+      }),
     });
+
+    if (data.user?.requires_verification) {
+      throw new Error('Account created! Please check your email to verify before logging in.');
+    }
 
     const token = data.tokens?.accessToken || data.token || null;
     const user = data.user || null;

@@ -86,26 +86,24 @@ WITH matches AS (
         d.{drug_id_col} AS drug_id,
         dbd.{drugbank_name_col} AS drugbank_name,
         ROW_NUMBER() OVER (
-            PARTITION BY d.{drug_id_col}
-            ORDER BY
-                CASE
-                    WHEN lower(dbd.{drugbank_name_col}) = lower(d.{generic_col}) THEN 0
-                    WHEN dbd.{drugbank_name_col} ILIKE d.{generic_col} || '%' THEN 1
-                    WHEN dbd.{drugbank_name_col} ILIKE '%' || d.{generic_col} THEN 2
-                    ELSE 3
-                END,
-                length(dbd.{drugbank_name_col})
-        ) AS rn
+                PARTITION BY d.{drug_id_col}
+                ORDER BY
+                    CASE
+                        WHEN lower(dbd.{drugbank_name_col}) = lower(d.{generic_col}) THEN 0
+                        ELSE 1
+                    END,
+                    length(dbd.{drugbank_name_col})
+            ) AS rn
     FROM {drug_table} d
     JOIN {drugbank_table} dbd
         ON (
-            dbd.{drugbank_name_col} ILIKE '%' || d.{generic_col} || '%'
+            lower(dbd.{drugbank_name_col}) = lower(d.{generic_col})
             OR EXISTS (
                 SELECT 1
                 FROM jsonb_array_elements_text(
                     COALESCE(dbd.{drugbank_syn_col}, '[]'::jsonb)
                 ) s
-                WHERE s ILIKE '%' || d.{generic_col} || '%'
+                WHERE lower(s) = lower(d.{generic_col})
             )
         )
     WHERE d.{generic_col} IS NOT NULL

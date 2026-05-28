@@ -255,7 +255,73 @@ export const analyzeReport = async (file, reportType) => {
     body: formData,
   });
 
-  const report = data.report;
+  const dbReport = data.report || {};
+
+  const mapDbReportToUi = (db) => {
+    if (!db) return null;
+    const fmtDate = (raw) => {
+      if (!raw) return null;
+      try {
+        const d = new Date(raw);
+        return isNaN(d) ? String(raw) : d.toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' });
+      } catch {
+        return String(raw);
+      }
+    };
+
+    const type = db.type || db.report_type || null;
+    const date = fmtDate(db.report_date || db.date);
+    const image_url = db.image_url || db.imageUrl || null;
+
+    const sections = (Array.isArray(db.sections) && db.sections.length > 0)
+      ? db.sections.map((s) => ({
+          title: s.title || s.name || '',
+          type: s.type || 'other',
+          narrative: s.narrative || null,
+          entries: (s.entries || []).map((e) => ({
+            label: e.label || e.parameterName || e.parameter_name || e.name || '',
+            value: e.value ?? null,
+            unit: e.unit || null,
+            reference_range: e.reference_range || e.referenceRange || null,
+            flag: e.flag || null,
+            status: e.status || null,
+            note: e.note || null,
+          })),
+        }))
+      : (Array.isArray(db.metrics) && db.metrics.length > 0)
+        ? [{
+            title: 'Results',
+            type: 'lab_results',
+            narrative: null,
+            entries: db.metrics.map((m) => ({
+              label: m.parameterName || m.parameter_name || '',
+              value: m.value ?? null,
+              unit: m.unit || null,
+              reference_range: m.referenceRange || m.reference_range || null,
+              flag: null,
+              status: m.status || null,
+            })),
+          }]
+        : [];
+
+    return {
+      id: db.report_id || db.id || null,
+      image_url,
+      type,
+      date,
+      facility: db.facility || null,
+      ordering_doctor: db.ordering_doctor || db.orderingDoctor || null,
+      patient: db.patient || {},
+      sections,
+      overall_impression: db.overall_impression || db.impression || null,
+      diagnoses: Array.isArray(db.diagnoses) ? db.diagnoses : (db.diagnoses ? [db.diagnoses] : []),
+      recommendations: Array.isArray(db.recommendations) ? db.recommendations : (db.recommendations ? [db.recommendations] : []),
+      clinical_notes: db.clinical_notes || db.clinicalNotes || null,
+      follow_up: db.follow_up || db.followUp || null,
+    };
+  };
+
+  const report = mapDbReportToUi(dbReport);
   saveReportToLocal(report);
   return report;
 };

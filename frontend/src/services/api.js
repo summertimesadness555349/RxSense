@@ -343,8 +343,57 @@ export const checkSymptoms = async (symptomsText) => {
 
 // POST /api/drugs/interactions
 export const checkDrugInteractions = async (drugList) => {
-  await delay(1500);
-  return mockDrugInteractionResult;
+  // Expecting drugList: [{ id?, name, dosage? }, ...]
+  try {
+    const payload = { drugs: (Array.isArray(drugList) ? drugList : []).map(d => ({ name: d.name || d })) };
+    const data = await request('/drugs/interactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    // Map backend shape to frontend expected shape
+    const canonical = data.canonical || [];
+    const matrix = data.matrix || [];
+    const summary = data.summary || { safe: 0, warning: 0, danger: 0 };
+
+    const inputs = payload.drugs.map(d => d.name);
+    const names = canonical.length ? canonical : inputs;
+    const drugs = names.map((n, idx) => ({
+      id: `d${idx+1}`,
+      name: n,
+      inputName: inputs[idx] || n,
+      dosage: drugList[idx]?.dosage || '',
+    }));
+
+    const interactions = (data.interactions || []).map((it) => {
+      const aInput = (drugs.find(d => d.name.toLowerCase() === it.drugA.toLowerCase()) || {}).inputName || it.drugA;
+      const bInput = (drugs.find(d => d.name.toLowerCase() === it.drugB.toLowerCase()) || {}).inputName || it.drugB;
+      return {
+        id: it.id || `${it.drugA}_${it.drugB}`,
+        drug1: it.drugA,
+        drug2: it.drugB,
+        drug1_input: aInput,
+        drug2_input: bInput,
+        severity: it.category || (it.severity || 'warning'),
+        title: `${it.drugA} (${aInput}) + ${it.drugB} (${bInput})`,
+        description: it.description || '',
+        recommendation: null,
+      };
+    });
+
+    return {
+      drugs,
+      interactions,
+      matrix,
+      summary,
+      dataSource: data.dataSource || 'Local drug interactions database',
+    };
+  } catch (err) {
+    // Fallback to mock data on error
+    await delay(500);
+    return mockDrugInteractionResult;
+  }
 };
 
 // GET /api/timeline/:userId

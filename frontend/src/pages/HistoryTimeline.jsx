@@ -1,21 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import TimelineEntry from '../components/history/TimelineEntry.jsx';
 import AddEntryModal from '../components/history/AddEntryModal.jsx';
-import { mockTimeline } from '../data/mockTimeline.js';
+import { getTimeline } from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
-const typeFilters = ['All', 'Report', 'Prescription', 'Symptom', 'Visit', 'Note', 'Medication'];
+const typeFilters = ['All', 'Report', 'Prescription', 'Symptom', 'Visit', 'Surgery', 'Note', 'Medication'];
 
 export default function HistoryTimeline() {
-  const [entries, setEntries] = useState(mockTimeline);
+  const { user, loading: authLoading } = useAuth();
+  const [entries, setEntries] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const userId = user?.patient_id || user?.uuid || user?.id || null;
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadTimeline = async () => {
+      if (authLoading) return;
+      if (!userId) {
+        if (alive) {
+          setEntries([]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (alive) {
+          setLoading(true);
+          setError('');
+        }
+        const data = await getTimeline(userId);
+        if (alive) setEntries(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (alive) {
+          setError(err?.message || 'Failed to load timeline.');
+          setEntries([]);
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    loadTimeline();
+    return () => {
+      alive = false;
+    };
+  }, [authLoading, userId]);
 
   const filtered = entries.filter((e) => {
     const matchType = activeFilter === 'All' || e.type === activeFilter.toLowerCase();
-    const matchSearch = !search || e.title.toLowerCase().includes(search.toLowerCase()) || e.summary.toLowerCase().includes(search.toLowerCase());
+    const titleText = String(e.title || '').toLowerCase();
+    const summaryText = String(e.summary || '').toLowerCase();
+    const q = search.toLowerCase();
+    const matchSearch = !search || titleText.includes(q) || summaryText.includes(q);
     return matchType && matchSearch;
   });
 
@@ -62,7 +107,17 @@ export default function HistoryTimeline() {
       </div>
 
       {/* Timeline */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-12 text-gray-400">
+          <p className="text-lg mb-1">Loading timeline...</p>
+          <p className="text-sm">Please wait a moment.</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 text-gray-400">
+          <p className="text-lg mb-1">Unable to load timeline</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p className="text-lg mb-1">No entries found</p>
           <p className="text-sm">Try adjusting your filters or add a new entry.</p>

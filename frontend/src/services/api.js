@@ -1,6 +1,5 @@
 
 import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
-import { mockTimeline } from '../data/mockTimeline.js';
 import { mockUser } from '../data/mockUser.js';
 import { mockCurrentMedications, mockPastMedications } from '../data/mockMedications.js';
 import { mockDocuments } from '../data/mockDocuments.js';
@@ -350,8 +349,15 @@ export const checkDrugInteractions = async (drugList) => {
 
 // GET /api/timeline/:userId
 export const getTimeline = async (userId, filters = {}) => {
-  await delay(800);
-  let entries = [...mockTimeline];
+  if (!userId) return [];
+
+  const params = new URLSearchParams();
+  if (filters.limit) params.set('limit', filters.limit);
+
+  const query = params.toString();
+  const data = await request(`/patient/timeline${query ? `?${query}` : ''}`);
+  let entries = data.timeline || [];
+
   if (filters.type && filters.type !== 'all')
     entries = entries.filter((e) => e.type === filters.type);
   if (filters.search) {
@@ -360,6 +366,7 @@ export const getTimeline = async (userId, filters = {}) => {
       (e) => e.title.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q)
     );
   }
+
   return entries;
 };
 

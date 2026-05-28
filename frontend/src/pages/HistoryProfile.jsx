@@ -36,7 +36,7 @@ function calculateAge(dob) {
 }
 
 function formatDateOnly(value) {
-  if (!value) return '';
+  if (!value) return '-';
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -44,6 +44,16 @@ function formatDateOnly(value) {
   }
 
   return date.toISOString().slice(0, 10);
+}
+
+function displayValue(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  return value;
+}
+
+function formatMeasurement(value, unit) {
+  if (value === null || value === undefined || value === '') return '-';
+  return `${value} ${unit}`;
 }
 
 export default function HistoryProfile() {
@@ -120,27 +130,27 @@ export default function HistoryProfile() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {[
             { label: 'Full Name', value: user.name },
-            { label: 'Date of Birth', value: formatDateOnly(user.dateOfBirth) },
-            { label: 'Age', value: `${user.age} years` },
-            { label: 'Gender', value: user.gender },
-            { label: 'Blood Group', value: user.bloodGroup },
-            { label: 'Phone', value: user.phone },
+              { label: 'Date of Birth', value: formatDateOnly(user.dateOfBirth) },
+              { label: 'Age', value: user.age != null ? `${user.age} years` : '-' },
+              { label: 'Gender', value: user.gender },
+              { label: 'Blood Group', value: user.bloodGroup },
+              { label: 'Phone', value: user.phone },
           ].map(({ label, value }) => (
             <div key={label}>
               <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{label}</p>
               {editMode ? (
-                <input defaultValue={value} className="w-full text-sm border-b border-gray-300 dark:border-gray-700 bg-transparent text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 py-0.5" />
+                  <input defaultValue={displayValue(value)} className="w-full text-sm border-b border-gray-300 dark:border-gray-700 bg-transparent text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 py-0.5" />
               ) : (
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{value}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayValue(value)}</p>
               )}
             </div>
           ))}
         </div>
         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-4">
           {[
-            { label: 'Height', value: `${user.height} cm` },
-            { label: 'Weight', value: `${user.weight} kg` },
-            { label: 'BMI', value: bmi != null ? bmi.toFixed(1) : '—', extra: bmiInfo },
+            { label: 'Height', value: formatMeasurement(user.height, 'cm') },
+            { label: 'Weight', value: formatMeasurement(user.weight, 'kg') },
+            { label: 'BMI', value: bmi != null ? bmi.toFixed(1) : '-', extra: bmiInfo },
           ].map(({ label, value, extra }) => (
             <div key={label} className="text-center bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>

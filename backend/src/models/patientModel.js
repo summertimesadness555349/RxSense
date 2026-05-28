@@ -1,5 +1,7 @@
 const DB_Connection = require('../database/db.js');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 class PatientModel {
     constructor() {
         this.db_connection = new DB_Connection();
@@ -260,6 +262,172 @@ class PatientModel {
         `;
         const result = await this.db_connection.query_executor(query, [reportId]);
         return result.rows;
+    };
+
+    resolvePatientIdentity = async (userIdOrUuid) => {
+        if (!userIdOrUuid) return { patientId: null, userId: null };
+
+        if (UUID_RE.test(String(userIdOrUuid))) {
+            const result = await this.db_connection.query_executor(
+                `SELECT patient_id, user_id
+                 FROM patient
+                 WHERE patient_id = $1
+                 LIMIT 1;`,
+                [userIdOrUuid]
+            );
+            return {
+                patientId: result.rows[0]?.patient_id || null,
+                userId: result.rows[0]?.user_id || null,
+            };
+        }
+
+        const userId = parseInt(userIdOrUuid, 10);
+        if (Number.isNaN(userId)) return { patientId: null, userId: null };
+
+        const result = await this.db_connection.query_executor(
+            `SELECT patient_id
+             FROM patient
+             WHERE user_id = $1
+             LIMIT 1;`,
+            [userId]
+        );
+        return {
+            patientId: result.rows[0]?.patient_id || null,
+            userId,
+        };
+    };
+
+    getTimelineReports = async (patientId, limit = 50) => {
+        const query = `
+            SELECT
+                report_id,
+                report_type,
+                report_date,
+                facility,
+                ordering_doctor,
+                raw_analysis,
+                uploaded_at
+            FROM medical_report
+            WHERE patient_id = $1
+            ORDER BY uploaded_at DESC
+            LIMIT $2;
+        `;
+        const result = await this.db_connection.query_executor(query, [patientId, limit]);
+        return result.rows || [];
+    };
+
+    getTimelineReportMetrics = async (reportIds = []) => {
+        if (!reportIds.length) return [];
+        const query = `
+            SELECT
+                report_id,
+                parameter_name,
+                value,
+                unit,
+                status,
+                llm_flagged
+            FROM report_metric
+            WHERE report_id = ANY($1::uuid[])
+            ORDER BY created_at ASC;
+        `;
+        const result = await this.db_connection.query_executor(query, [reportIds]);
+        return result.rows || [];
+    };
+
+    getTimelinePrescriptionScans = async ({ patientId, userId, limit = 50 } = {}) => {
+        const where = [];
+        const params = [];
+        let idx = 1;
+
+        if (patientId) {
+            where.push(`patient_id = $${idx++}`);
+            params.push(patientId);
+        }
+
+        if (userId) {
+            where.push(`user_id = $${idx++}`);
+            params.push(userId);
+        }
+
+        if (where.length === 0) return [];
+
+        const query = `
+            SELECT
+                scan_id,
+                doctor_name,
+                doctor_specialty,
+                hospital_name,
+                rx_date,
+                medications,
+                created_at
+            FROM prescription_scan
+            WHERE ${where.join(' OR ')}
+            ORDER BY created_at DESC
+            LIMIT $${idx};
+        `;
+        params.push(limit);
+
+        const result = await this.db_connection.query_executor(query, params);
+        return result.rows || [];
+    };
+
+    getTimelineSymptoms = async (patientId, limit = 50) => {
+        const query = `
+            SELECT
+                sl.log_id,
+                sl.logged_at,
+                sl.symptoms_data,
+                sl.body_system,
+                ara.risk_level,
+                ara.recommendation,
+                ara.possible_conditions
+            FROM symptom_log sl
+            LEFT JOIN ai_risk_assessment ara ON ara.log_id = sl.log_id
+            WHERE sl.patient_id = $1
+            ORDER BY sl.logged_at DESC
+            LIMIT $2;
+        `;
+        const result = await this.db_connection.query_executor(query, [patientId, limit]);
+        return result.rows || [];
+    };
+
+    getTimelineVaccinations = async (patientId, limit = 50) => {
+        const query = `
+            SELECT
+                vr.vaccination_id,
+                vr.vaccine_name,
+                vr.dose_number,
+                vr.total_doses,
+                vr.administered_at,
+                h.name AS facility
+            FROM vaccination_record vr
+            LEFT JOIN hospital h ON h.hospital_id = vr.hospital_id
+            WHERE vr.patient_id = $1
+            ORDER BY vr.administered_at DESC
+            LIMIT $2;
+        `;
+        const result = await this.db_connection.query_executor(query, [patientId, limit]);
+        return result.rows || [];
+    };
+
+    getTimelineConditions = async (patientId, limit = 50) => {
+        const query = `
+            SELECT
+                kc.condition_id,
+                kc.condition_name,
+                kc.diagnosed_at,
+                kc.notes,
+                d.name AS doctor_name,
+                d.specialty AS doctor_specialty,
+                kc.created_at
+            FROM known_condition kc
+            LEFT JOIN doctor d ON d.doctor_id = kc.diagnosed_by
+            WHERE kc.patient_id = $1
+            ORDER BY COALESCE(kc.diagnosed_at, kc.created_at) DESC
+            LIMIT $2;
+        `;
+        const result = await this.db_connection.query_executor(query, [patientId, limit]);
+        return result.rows || [];
     };
 }
 

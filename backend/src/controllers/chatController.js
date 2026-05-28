@@ -76,9 +76,16 @@ class ChatController {
             ).join('\n');
 
             let system =
-`You are a compassionate medical assistant helping a patient understand their prescription. \
-Use very simple, everyday language — assume the patient has no medical background. \
-Be warm, clear, and concise. Always remind the patient to consult their doctor or pharmacist \
+`CRITICAL LANGUAGE RULE — READ THIS FIRST:
+You MUST write every response entirely in Bengali (বাংলা) Unicode script.
+Banglish is strictly forbidden. Do NOT write Bangla words using English letters (e.g. "apnar", "osudh", "kivabe", "asha kori", "khaben", "doctor er sathe" are all forbidden).
+Every single Bangla word must use Bengali Unicode characters (যেমন: আপনার, ওষুধ, কীভাবে, আশা করি, খাবেন, ডাক্তারের সাথে).
+Exception: medicine names, brand names, dosages, numeric values, units, and medical/scientific terms may remain in English inside the Bengali sentence.
+If the user explicitly writes "please reply in English" or "English-e bolo", only then switch to English.
+
+You are a compassionate medical assistant helping a patient understand their prescription.
+Use very simple, everyday language — assume the patient has no medical background.
+Be warm, clear, and concise. Always remind the patient to consult their doctor or pharmacist
 for personalised medical advice.
 
 PRESCRIPTION DETAILS:
@@ -110,7 +117,7 @@ ${rx.followUp ? `FOLLOW-UP: ${rx.followUp}` : ''}`;
 
             system += '\n\nIMPORTANT: Keep responses concise (3-5 sentences, or a short bullet list when helpful). Always end with a one-sentence reminder to consult the prescribing doctor or pharmacist.';
 
-            system += '\n\nLANGUAGE: Always respond in Bengali (Bangla) script. Keep medicine names, brand names, test names, medical terms, dosages, and numbers in English as-is within the Bangla text. Use very simple, everyday spoken Bangla that an illiterate rural patient can understand — as if explaining to a village grandmother. Avoid all technical jargon.';
+            system += '\n\nREMINDER: Your response must be in Bengali Unicode script only — no Banglish. Use simple everyday Bangla.';
 
             const completion = await this.openai.chat.completions.create({
                 model:       process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',

@@ -1,18 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, MessageSquare } from 'lucide-react';
 import { chatWithPrescription } from '../../services/api.js';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 
-const SUGGESTIONS = (rx) => {
+const SUGGESTIONS = (rx, lang) => {
   const meds = rx?.medications || [];
-  return [
-    meds[0] ? `What is ${meds[0].name} used for?` : null,
-    meds.length > 1 ? `Are there interactions between my medications?` : null,
-    `What side effects should I watch for?`,
-    `How and when should I take these medicines?`,
-  ].filter(Boolean);
+  return lang === 'bn'
+    ? [
+        meds[0] ? `${meds[0].name} কিসের জন্য ব্যবহার করা হয়?` : null,
+        meds.length > 1 ? `আমার ওষুধগুলোর মধ্যে কি কোনো ইন্টারঅ্যাকশন আছে?` : null,
+        `কোন পার্শ্বপ্রতিক্রিয়াগুলো লক্ষ্য রাখতে হবে?`,
+        `এই ওষুধগুলো কীভাবে ও কখন খেতে হবে?`,
+      ].filter(Boolean)
+    : [
+        meds[0] ? `What is ${meds[0].name} used for?` : null,
+        meds.length > 1 ? `Are there interactions between my medications?` : null,
+        `What side effects should I watch for?`,
+        `How and when should I take these medicines?`,
+      ].filter(Boolean);
 };
 
 export default function PrescriptionChatbot({ prescription }) {
+  const { lang } = useLanguage();
   const [messages, setMessages]   = useState([]);
   const [input, setInput]         = useState('');
   const [loading, setLoading]     = useState(false);
@@ -80,7 +89,7 @@ export default function PrescriptionChatbot({ prescription }) {
     ? `Dr. ${prescription.doctor.name} — ${prescription.date || ''}`
     : `Prescription — ${prescription.date || ''}`;
 
-  const suggestions = SUGGESTIONS(prescription);
+  const suggestions = SUGGESTIONS(prescription, lang);
 
   // ── Chat UI ───────────────────────────────────────────────────────────────
   return (
@@ -109,7 +118,9 @@ export default function PrescriptionChatbot({ prescription }) {
         {messages.length === 0 && (
           <div className="space-y-3">
             <p className="text-xs text-center text-gray-400 dark:text-gray-500 py-2">
-              Ask anything about this prescription — I'll explain it in plain language.
+              {lang === 'bn'
+                ? 'প্রেসক্রিপশন সম্পর্কে যেকোনো প্রশ্ন করুন — সহজ বাংলায় উত্তর পাবেন।'
+                : 'Ask anything about this prescription — you will get the answer in Bangla.'}
             </p>
             <div className="space-y-2">
               {suggestions.map((s, i) => (
@@ -179,7 +190,7 @@ export default function PrescriptionChatbot({ prescription }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Ask about your medications..."
+            placeholder={lang === 'bn' ? 'আপনার ওষুধ সম্পর্কে প্রশ্ন করুন...' : 'Ask about your medications...'}
             className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none leading-snug"
             style={{ maxHeight: '96px', overflowY: 'auto' }}
           />

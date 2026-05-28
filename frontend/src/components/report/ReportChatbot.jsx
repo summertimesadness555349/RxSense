@@ -1,23 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, MessageSquare } from 'lucide-react';
 import { chatWithReport } from '../../services/api.js';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 
-const SUGGESTIONS = (report) => {
+const SUGGESTIONS = (report, lang) => {
   if (!report) return [];
   const abnormals = (report.sections || [])
     .flatMap(s => s.entries || [])
     .filter(e => e.status && e.status !== 'normal' || e.flag)
     .slice(0, 2)
-    .map(e => `${e.label} ${e.value}${e.unit ? ' ' + e.unit : ''} মানে কী?`);
+    .map(e => lang === 'bn'
+      ? `${e.label} ${e.value}${e.unit ? ' ' + e.unit : ''} মানে কী?`
+      : `What does ${e.label} ${e.value}${e.unit ? ' ' + e.unit : ''} mean?`
+    );
 
-  return [
-    ...abnormals,
-    'আমার রিপোর্টে কি কোনো সমস্যা আছে?',
-    'এরপর আমার কী করা উচিত?',
-  ].filter(Boolean).slice(0, 4);
+  return lang === 'bn'
+    ? [...abnormals, 'আমার রিপোর্টে কি কোনো সমস্যা আছে?', 'এরপর আমার কী করা উচিত?'].filter(Boolean).slice(0, 4)
+    : [...abnormals, 'Are there any problems in my report?', 'What should I do next?'].filter(Boolean).slice(0, 4);
 };
 
 export default function ReportChatbot({ report }) {
+  const { lang } = useLanguage();
   const [messages, setMessages] = useState([]);
   const [input, setInput]       = useState('');
   const [loading, setLoading]   = useState(false);
@@ -77,7 +80,7 @@ export default function ReportChatbot({ report }) {
     ? `${report.type || 'Report'} — ${report.facility}`
     : `${report.type || 'Medical Report'} — ${report.date || ''}`;
 
-  const suggestions = SUGGESTIONS(report);
+  const suggestions = SUGGESTIONS(report, lang);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -104,7 +107,9 @@ export default function ReportChatbot({ report }) {
         {messages.length === 0 && (
           <div className="space-y-3">
             <p className="text-xs text-center text-gray-400 dark:text-gray-500 py-2">
-              রিপোর্ট সম্পর্কে যেকোনো প্রশ্ন করুন — সহজ বাংলায় উত্তর পাবেন।
+              {lang === 'bn'
+                ? 'রিপোর্ট সম্পর্কে যেকোনো প্রশ্ন করুন — সহজ বাংলায় উত্তর পাবেন।'
+                : 'Ask anything about this report — you will get the answer in Bangla.'}
             </p>
             <div className="space-y-2">
               {suggestions.map((s, i) => (
@@ -167,7 +172,7 @@ export default function ReportChatbot({ report }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="রিপোর্ট সম্পর্কে প্রশ্ন করুন..."
+            placeholder={lang === 'bn' ? 'রিপোর্ট সম্পর্কে প্রশ্ন করুন...' : 'Ask about your report...'}
             className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-snug"
             style={{ maxHeight: '96px', overflowY: 'auto' }}
           />

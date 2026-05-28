@@ -25,6 +25,7 @@ const {userRouter} = require('./routes/userRoutes.js');
 const {patientRouter} = require('./routes/patientRoutes.js');
 const {doctorRouter} = require('./routes/doctorRoutes.js');
 const {prescriptionRouter} = require('./routes/prescriptionRoutes.js');
+const {familyRouter}       = require('./routes/familyRoutes.js');
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
 const socketLayer = createSocketServer(server);
@@ -132,6 +133,7 @@ app.use('/api/user', apiLimiter, userRouter);
 app.use('/api/patient', apiLimiter, patientRouter);
 app.use('/api/doctor', apiLimiter, doctorRouter);
 app.use('/api/prescription', apiLimiter, prescriptionRouter);
+app.use('/api/family',       apiLimiter, familyRouter);
 
 const options = {
   transports: [

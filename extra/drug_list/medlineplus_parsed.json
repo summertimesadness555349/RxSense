@@ -1,0 +1,2387 @@
+[
+  {
+    "name": "17-Hydroxyprogesterone",
+    "source": "https://medlineplus.gov/lab-tests/17-hydroxyprogesterone/",
+    "reference_range": null,
+    "normal": "A normal result for 17-Hydroxyprogesterone suggests that you or your child likely do not have the most common type of congenital adrenal hyperplasia (CAH) caused by a lack of 21-hydroxylase. If there are symptoms present, further testing may be needed to determine the cause.",
+    "high": "Elevated levels of 17-Hydroxyprogesterone may indicate that you or your child has congenital adrenal hyperplasia (CAH). Additional tests may be ordered to assess the impact of CAH.",
+    "low": null
+  },
+  {
+    "name": "Acetaminophen Level",
+    "source": "https://medlineplus.gov/lab-tests/acetaminophen-level/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of acetaminophen may indicate a risk for liver damage and could require immediate treatment. Your healthcare provider may suggest further tests or treatments based on the results.",
+    "low": null
+  },
+  {
+    "name": "Acid-Fast Bacillus (AFB) Tests",
+    "source": "https://medlineplus.gov/lab-tests/acid-fast-bacillus-afb-tests/",
+    "reference_range": null,
+    "normal": "A negative result on an AFB test suggests that you likely do not have active tuberculosis (TB). However, it is possible that the sample did not contain enough bacteria for a clear diagnosis.",
+    "high": "A positive result on an AFB smear or culture indicates that you likely have TB or another mycobacterial infection, but further testing is needed to confirm this.",
+    "low": null
+  },
+  {
+    "name": "ADHD Screening",
+    "source": "https://medlineplus.gov/lab-tests/adhd-screening/",
+    "reference_range": null,
+    "normal": "A normal result means that the screening did not find enough symptoms to diagnose ADHD. This suggests that the individual is likely functioning well without significant attention or hyperactivity issues.",
+    "high": "A high result indicates that the screening found enough symptoms to diagnose ADHD. This means the individual may be experiencing challenges with attention, hyperactivity, or impulsivity that could affect their daily life.",
+    "low": null
+  },
+  {
+    "name": "Adrenocorticotropic Hormone (ACTH)",
+    "source": "https://medlineplus.gov/lab-tests/adrenocorticotropic-hormone-acth/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high ACTH level may indicate a pituitary tumor that produces excess ACTH, leading to high cortisol levels, a condition known as Cushing's disease. It could also be caused by rare tumors in other organs or a condition called multiple endocrine neoplasia.",
+    "low": "A low ACTH level may suggest that the pituitary gland is not producing enough ACTH, which can occur due to a pituitary tumor or damage. This can result in insufficient cortisol production by the adrenal glands."
+  },
+  {
+    "name": "Albumin Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/albumin-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high albumin level may indicate dehydration, which can occur due to severe diarrhea or other conditions. It is important to consider this result along with other tests and symptoms.",
+    "low": "Low albumin levels may suggest several issues, including liver disease, kidney disease, malnutrition, infections, or digestive problems. It is essential to evaluate these results in the context of other tests and your overall health."
+  },
+  {
+    "name": "Alcohol Use Screening Tests",
+    "source": "https://medlineplus.gov/lab-tests/alcohol-use-screening-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result indicates that you have a severe level of Alcohol Use Disorder (AUD), which means you have six or more symptoms. This may require more intensive treatment options like seeing a specialist or joining support groups.",
+    "low": "A low result suggests a mild level of Alcohol Use Disorder (AUD), indicating you have two to three symptoms. This pattern of drinking may still pose health risks and could lead to more serious issues in the future."
+  },
+  {
+    "name": "Aldosterone Test",
+    "source": "https://medlineplus.gov/lab-tests/aldosterone-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "Elevated aldosterone levels may indicate conditions like primary aldosteronism, kidney disease, or heart failure. It suggests that your adrenal glands are producing too much aldosterone, which could be due to various health issues.",
+    "low": "Low aldosterone levels may suggest conditions such as Addison disease or secondary adrenal insufficiency. This means your adrenal glands are not producing enough aldosterone, which can be caused by damage or other health problems."
+  },
+  {
+    "name": "Alkaline Phosphatase",
+    "source": "https://medlineplus.gov/lab-tests/alkaline-phosphatase/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High levels of alkaline phosphatase may indicate issues with the liver or bones. Your doctor may need to conduct further tests to determine the exact cause.",
+    "low": "Low levels of alkaline phosphatase can suggest conditions such as zinc deficiency, malnutrition, or certain genetic disorders affecting bones and teeth."
+  },
+  {
+    "name": "Allergy Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/allergy-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high total IgE test result suggests that you may have an allergy, while a high specific IgE test indicates a possible allergy to the tested allergen. However, these results do not indicate the severity of your allergy.",
+    "low": null
+  },
+  {
+    "name": "Allergy Skin Test",
+    "source": "https://medlineplus.gov/lab-tests/allergy-skin-test/",
+    "reference_range": null,
+    "normal": "A negative result means you likely do not have an allergy to the tested substances. This suggests that your immune system is not reacting to those allergens.",
+    "high": "A positive result indicates that you probably have an allergy to the substances tested. The size of the reaction can help determine the severity of the allergy.",
+    "low": null
+  },
+  {
+    "name": "Alpha-1 Antitrypsin Testing",
+    "source": "https://medlineplus.gov/lab-tests/alpha-1-antitrypsin-testing/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": "Low levels of AAT may indicate a deficiency, which could lead to lung and liver issues. If you have low levels, further testing may be needed to confirm the deficiency and assess your health."
+  },
+  {
+    "name": "Alpha-Fetoprotein (AFP) Test",
+    "source": "https://medlineplus.gov/lab-tests/alpha-fetoprotein-afp-test/",
+    "reference_range": null,
+    "normal": "A normal AFP test result suggests that your baby is unlikely to have certain birth defects or genetic disorders. However, it is still possible for a normal result to miss an existing problem.",
+    "high": "Higher than normal AFP levels may indicate an increased risk of serious conditions such as neural tube defects or abdominal defects in your baby.",
+    "low": "Lower than normal AFP levels may suggest an increased risk of genetic disorders like Down syndrome or Edwards syndrome."
+  },
+  {
+    "name": "Alpha Fetoprotein (AFP) Tumor Marker Test",
+    "source": "https://medlineplus.gov/lab-tests/alpha-fetoprotein-afp-tumor-marker-test/",
+    "reference_range": null,
+    "normal": "A normal AFP level suggests you are less likely to have a cancer that raises AFP levels, but it doesn't completely rule out cancer since some people with cancer can still have normal levels.",
+    "high": "High AFP levels may indicate the presence of cancers such as liver, ovarian, or testicular cancer, but they can also result from non-cancerous liver conditions.",
+    "low": null
+  },
+  {
+    "name": "ALT Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/alt-blood-test/",
+    "reference_range": null,
+    "normal": "A normal ALT level suggests that your liver is functioning well and there are no signs of liver damage. It indicates that your liver enzymes are within the expected range.",
+    "high": "A high ALT level may indicate liver damage or disease, such as hepatitis or cirrhosis. It could also be influenced by factors like medications, intense exercise, or other health conditions.",
+    "low": "A low ALT level is uncommon and may suggest a deficiency in vitamin B6 or chronic kidney disease. Further testing may be needed to understand the cause."
+  },
+  {
+    "name": "Ammonia Levels",
+    "source": "https://medlineplus.gov/lab-tests/ammonia-levels/",
+    "reference_range": null,
+    "normal": "Normal ammonia levels are generally low and indicate good health. If your results are normal, your doctor may look for other reasons for your symptoms.",
+    "high": "High ammonia levels suggest that your body is struggling to eliminate ammonia, which can be linked to various health issues like liver disease or kidney failure.",
+    "low": null
+  },
+  {
+    "name": "Amniocentesis (amniotic fluid test)",
+    "source": "https://medlineplus.gov/lab-tests/amniocentesis-amniotic-fluid-test/",
+    "reference_range": null,
+    "normal": "A normal result means that it is very unlikely your baby has the tested disorder. However, it does not guarantee that your baby will not have any health issues.",
+    "high": "An abnormal result indicates that your baby likely has the disorder that was tested for.",
+    "low": null
+  },
+  {
+    "name": "Amylase Test",
+    "source": "https://medlineplus.gov/lab-tests/amylase-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High levels of amylase may indicate conditions such as acute pancreatitis, a blockage in the pancreas, or tumors in the pancreas. It is important to consult with your healthcare provider for further evaluation.",
+    "low": "Low levels of amylase are rare but can suggest chronic pancreatitis, kidney disease, cystic fibrosis, liver disease, or pre-eclampsia. Discussing these results with your healthcare provider is recommended."
+  },
+  {
+    "name": "ANA (Antinuclear Antibody) Test",
+    "source": "https://medlineplus.gov/lab-tests/ana-antinuclear-antibody-test/",
+    "reference_range": null,
+    "normal": "A negative ANA test result means that antinuclear antibodies were not detected in your blood, suggesting you are less likely to have an autoimmune disorder. However, it does not completely rule out the possibility of having one.",
+    "high": "A positive ANA test result indicates that antinuclear antibodies were found in your blood. This may suggest the presence of an autoimmune disorder, a viral infection, or other health conditions.",
+    "low": null
+  },
+  {
+    "name": "Anion Gap Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/anion-gap-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high anion gap result may indicate acidosis, which can be caused by conditions such as dehydration, kidney diseases, or diabetes. It suggests that there may be an imbalance in the body's acid-base levels.",
+    "low": "A low anion gap result may suggest alkalosis, but this is rare. It is often linked to low levels of albumin, which can indicate issues like malnutrition or kidney problems."
+  },
+  {
+    "name": "Anoscopy",
+    "source": "https://medlineplus.gov/lab-tests/anoscopy/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result may indicate the presence of issues such as hemorrhoids, anal fissures, anal polyps, infections, or cancer. Further testing or treatment may be necessary based on the findings.",
+    "low": null
+  },
+  {
+    "name": "Anti-MÃ¼llerian Hormone Test",
+    "source": "https://medlineplus.gov/lab-tests/anti-mullerian-hormone-test/",
+    "reference_range": null,
+    "normal": "A normal AMH level indicates that you have a healthy number of eggs available, which is important for fertility. It suggests that your reproductive health is in good shape.",
+    "high": "A high AMH level may indicate that you have more eggs available, which can be a positive sign for fertility. However, it can also suggest the presence of polycystic ovary syndrome (PCOS).",
+    "low": "A low AMH level suggests that your egg supply is decreasing, which may shorten your time to conceive. It can also indicate that you are approaching menopause or have primary ovarian insufficiency if you are under 40."
+  },
+  {
+    "name": "Antibiotic Sensitivity Test",
+    "source": "https://medlineplus.gov/lab-tests/antibiotic-sensitivity-test/",
+    "reference_range": null,
+    "normal": "A susceptible result means the antibiotic effectively killed the bacteria or fungus, making it a suitable treatment option. An intermediate result suggests that a higher dose or more frequent use may be necessary.",
+    "high": "A resistant result indicates that the antibiotic did not work against the bacteria or fungus, so it is not a good treatment choice. If all tested antibiotics are resistant, alternative medications may be needed.",
+    "low": null
+  },
+  {
+    "name": "Antibody Serology Tests",
+    "source": "https://medlineplus.gov/lab-tests/antibody-serology-tests/",
+    "reference_range": null,
+    "normal": "A normal result may indicate that you have antibodies, suggesting you have either had an infection or received a vaccination. It shows that your immune system has responded to a pathogen.",
+    "high": "A high result indicates that you have a significant level of antibodies, which may suggest a recent infection or a strong response to a vaccination.",
+    "low": "A low result may suggest that your antibody levels are insufficient for adequate protection, indicating that you might need a booster shot."
+  },
+  {
+    "name": "Antineutrophil Cytoplasmic Antibodies (ANCA) Test",
+    "source": "https://medlineplus.gov/lab-tests/antineutrophil-cytoplasmic-antibodies-anca-test/",
+    "reference_range": null,
+    "normal": "A negative result indicates that no ANCAs were detected in your blood, suggesting that your symptoms are likely not due to autoimmune vasculitis. This means you may not have the condition being tested for.",
+    "high": "A positive result means that ANCAs were found in your blood, which may indicate the presence of autoimmune vasculitis. This result can help your provider determine the specific type of vasculitis you may have.",
+    "low": null
+  },
+  {
+    "name": "Appendicitis Tests",
+    "source": "https://medlineplus.gov/lab-tests/appendicitis-tests/",
+    "reference_range": null,
+    "normal": "A normal result may suggest that you do not have appendicitis, but it does not completely rule it out. Other conditions could still be causing your symptoms.",
+    "high": "A high result may indicate that you have an infection or inflammation, which could be due to appendicitis or another condition. Further evaluation is needed to determine the exact cause.",
+    "low": null
+  },
+  {
+    "name": "Arterial Blood Gas (ABG) Test",
+    "source": "https://medlineplus.gov/lab-tests/arterial-blood-gas-abg-test/",
+    "reference_range": {
+      "O2Sat": "95-100%",
+      "PaO2": "75-100 mmHg",
+      "PaCO2": "35-45 mmHg",
+      "pH": "7.35-7.45",
+      "HCO3": "22-26 mEq/L"
+    },
+    "normal": "Normal results indicate that your oxygen and carbon dioxide levels are balanced, and your body's acid-base balance is within the healthy range. This suggests that your lungs and kidneys are functioning properly.",
+    "high": "High results may indicate issues with your lungs, such as respiratory problems, or metabolic disorders that affect how your body processes energy. It's important to discuss these results with your healthcare provider.",
+    "low": "Low results could suggest that your lungs are not effectively exchanging gases or that there are metabolic issues affecting your body's balance. Further evaluation by your healthcare provider is recommended."
+  },
+  {
+    "name": "AST Test",
+    "source": "https://medlineplus.gov/lab-tests/ast-test/",
+    "reference_range": null,
+    "normal": "Low levels of AST in the blood are typically normal and do not indicate any health issues. It suggests that your liver is functioning well.",
+    "high": "High levels of AST may suggest liver disease or other health problems related to the liver, heart, or pancreas. It is important to discuss these results with your healthcare provider for further evaluation.",
+    "low": null
+  },
+  {
+    "name": "Autism Spectrum Disorder (ASD) Screening",
+    "source": "https://medlineplus.gov/lab-tests/autism-spectrum-disorder-asd-screening/",
+    "reference_range": null,
+    "normal": "A low or medium risk score suggests that there are no significant signs of Autism Spectrum Disorder (ASD) at this time. However, if you still have concerns, it's important to discuss them with your healthcare provider.",
+    "high": "A high risk score indicates that there are signs of Autism Spectrum Disorder (ASD), which may require further testing to confirm the diagnosis. It's advisable to consult a specialist for a comprehensive evaluation.",
+    "low": null
+  },
+  {
+    "name": "Autoantibody Testing",
+    "source": "https://medlineplus.gov/lab-tests/autoantibody-testing/",
+    "reference_range": null,
+    "normal": "A negative result indicates that there are few or no autoantibodies in your blood, suggesting that an autoimmune disease is less likely. However, this does not completely rule out the possibility of such a disease.",
+    "high": "A positive result means that some autoantibodies were detected in your blood, which may suggest an autoimmune disease, but it is not definitive. Some healthy individuals can also have autoantibodies.",
+    "low": null
+  },
+  {
+    "name": "Autonomic Testing",
+    "source": "https://medlineplus.gov/lab-tests/autonomic-testing/",
+    "reference_range": null,
+    "normal": "A normal result suggests that your autonomic nervous system is functioning properly. This means there are no identified issues affecting your body's automatic functions.",
+    "high": "If your results are high, it may indicate a problem with your autonomic nervous system. Further evaluation by your healthcare provider will be necessary to determine the cause.",
+    "low": null
+  },
+  {
+    "name": "Bacteria Culture Test",
+    "source": "https://medlineplus.gov/lab-tests/bacteria-culture-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Bacterial Vaginosis Test",
+    "source": "https://medlineplus.gov/lab-tests/bacterial-vaginosis-test/",
+    "reference_range": "pH ≤ 4.5",
+    "normal": "A normal result indicates that your vaginal pH is 4.5 or lower, suggesting that you do not have a bacterial infection. This means your symptoms may be due to another cause.",
+    "high": "A high result, with a pH over 4.5, suggests that you may have a bacterial infection called bacterial vaginosis (BV). This means further evaluation and treatment may be necessary.",
+    "low": null
+  },
+  {
+    "name": "Balance Tests",
+    "source": "https://medlineplus.gov/lab-tests/balance-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result may indicate that you have a balance disorder, which could require further testing or treatment. Your provider will determine the best course of action based on the specific disorder identified.",
+    "low": null
+  },
+  {
+    "name": "Barium Swallow",
+    "source": "https://medlineplus.gov/lab-tests/barium-swallow/",
+    "reference_range": null,
+    "normal": "A normal result indicates that your upper GI tract appears healthy with no abnormalities detected in size, shape, or movement.",
+    "high": "An abnormal result may suggest conditions such as a hiatal hernia, ulcers, tumors, polyps, diverticula, or esophageal stricture.",
+    "low": null
+  },
+  {
+    "name": "Basic Metabolic Panel (BMP)",
+    "source": "https://medlineplus.gov/lab-tests/basic-metabolic-panel-bmp/",
+    "reference_range": null,
+    "normal": null,
+    "high": "An elevated result in the BMP may suggest issues such as kidney disease, respiratory problems, or complications related to diabetes. Further testing may be needed to determine the exact cause.",
+    "low": null
+  },
+  {
+    "name": "BCR-ABL1 Genetic Test",
+    "source": "https://medlineplus.gov/lab-tests/bcr-abl1-genetic-test/",
+    "reference_range": null,
+    "normal": "A normal result typically indicates that the BCR-ABL1 gene is not present, suggesting that you may not have chronic myeloid leukemia or Philadelphia chromosome-positive acute lymphoblastic leukemia. This can be a sign that your treatment is effective if you are undergoing therapy.",
+    "high": "A high result means that the BCR-ABL1 gene is present, which may indicate a diagnosis of chronic myeloid leukemia or Philadelphia chromosome-positive acute lymphoblastic leukemia. It could also suggest that your cancer treatment is not working effectively.",
+    "low": null
+  },
+  {
+    "name": "Beta 2 Microglobulin (B2M) Tumor Marker Test",
+    "source": "https://medlineplus.gov/lab-tests/beta-2-microglobulin-b2m-tumor-marker-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "Elevated B2M levels may indicate a higher amount of cancer in the body and are often associated with faster-growing cancers. In patients with multiple myeloma, high levels can also suggest kidney issues.",
+    "low": null
+  },
+  {
+    "name": "Bilirubin Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/bilirubin-blood-test/",
+    "reference_range": null,
+    "normal": "A normal bilirubin level indicates that your liver is functioning properly and that there are no issues with bile flow. It suggests that your body is effectively processing bilirubin.",
+    "high": "Elevated bilirubin levels may suggest liver problems, such as liver disease or blockage in the bile ducts. It could also be related to conditions like hemolytic anemia.",
+    "low": "Low bilirubin levels are generally not a concern and may result from certain medications or other factors. They usually do not indicate a health issue."
+  },
+  {
+    "name": "Bilirubin in Urine",
+    "source": "https://medlineplus.gov/lab-tests/bilirubin-in-urine/",
+    "reference_range": null,
+    "normal": null,
+    "high": "Finding bilirubin in your urine may indicate a liver disease or a blockage in your bile ducts. It's important to discuss these results with your healthcare provider for further evaluation.",
+    "low": null
+  },
+  {
+    "name": "Blood Alcohol Level",
+    "source": "https://medlineplus.gov/lab-tests/blood-alcohol-level/",
+    "reference_range": "Null",
+    "normal": "A normal blood alcohol level is typically below 0.08%, which means you are likely not impaired and can function normally. You may feel relaxed but should not experience significant effects from alcohol.",
+    "high": "A high blood alcohol level indicates increased impairment and can lead to serious effects such as slurred speech and difficulty walking. Levels above 0.31% are particularly dangerous and may result in loss of consciousness or even be fatal.",
+    "low": "A low blood alcohol level suggests minimal to no impairment, which is generally safe. However, if it is too low after drinking, it may indicate that the alcohol has been metabolized quickly or that you have a low tolerance."
+  },
+  {
+    "name": "Blood Differential",
+    "source": "https://medlineplus.gov/lab-tests/blood-differential/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high white blood cell count may indicate an infection, inflammation, or other medical conditions like leukemia. It is important to discuss these results with your healthcare provider for further evaluation.",
+    "low": "A low white blood cell count can suggest issues such as bone marrow diseases or the effects of certain medications. It is advisable to consult your healthcare provider to understand the implications of this result."
+  },
+  {
+    "name": "Blood Glucose Test",
+    "source": "https://medlineplus.gov/lab-tests/blood-glucose-test/",
+    "reference_range": null,
+    "normal": "A normal blood glucose level indicates that your body is effectively managing sugar levels, which is important for overall health. It suggests that you are not at risk for diabetes at this time.",
+    "high": "High blood glucose levels may indicate that you have or are at risk for diabetes. Other potential causes include thyroid issues, stress from serious illness, or certain medications.",
+    "low": "Low blood glucose levels can occur due to various factors, including certain medications, not eating enough, or underlying health conditions. If you do not have diabetes, low levels are less common and may indicate other health issues."
+  },
+  {
+    "name": "Blood in Urine",
+    "source": "https://medlineplus.gov/lab-tests/blood-in-urine/",
+    "reference_range": null,
+    "normal": "A normal result means there is no blood in your urine, which is typically a sign of good health. It suggests that there are no underlying issues affecting your urinary system.",
+    "high": "A positive result indicates that there is blood in your urine, which may require further investigation to determine the cause. This could be due to various factors, some of which may need medical attention.",
+    "low": null
+  },
+  {
+    "name": "Blood Smear",
+    "source": "https://medlineplus.gov/lab-tests/blood-smear/",
+    "reference_range": null,
+    "normal": "A normal blood smear result means that your blood cells appear healthy and are present in the expected amounts. This suggests that there are no immediate concerns regarding your blood health.",
+    "high": "A high result in red or white blood cells may indicate conditions like anemia or infections, while a high platelet count could suggest a risk of blood clots. Further testing may be needed to determine the exact cause.",
+    "low": "A low result in red blood cells may suggest anemia, while a low platelet count could increase your risk of bleeding. It's important to discuss these results with your provider for further evaluation."
+  },
+  {
+    "name": "Bone Density Scan",
+    "source": "https://medlineplus.gov/lab-tests/bone-density-scan/",
+    "reference_range": "T-score of -1.0 or higher is considered normal bone density.",
+    "normal": "A normal result means your bone density is healthy and you have a lower risk of fractures. This is indicated by a T-score of -1.0 or higher.",
+    "high": null,
+    "low": "A low result indicates that you have reduced bone density, which may increase your risk of osteoporosis and fractures. This is shown by a T-score between -1.0 and -2.4."
+  },
+  {
+    "name": "Bone Marrow Tests",
+    "source": "https://medlineplus.gov/lab-tests/bone-marrow-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "BRAF Genetic Test",
+    "source": "https://medlineplus.gov/lab-tests/braf-genetic-test/",
+    "reference_range": null,
+    "normal": "A normal result means there is no change in your BRAF gene, which may lead your provider to recommend a different treatment for your cancer. If you do not have cancer, a normal result indicates no increased risk of developing cancer from this gene.",
+    "high": "A high result indicates a change in your BRAF gene, which may lead to targeted treatments for your cancer. If you do not have cancer, it suggests a higher risk of developing cancer in the future.",
+    "low": null
+  },
+  {
+    "name": "BRCA Genetic Test",
+    "source": "https://medlineplus.gov/lab-tests/brca-test/",
+    "reference_range": null,
+    "normal": "A negative result means no harmful changes were found in your BRCA genes, which generally suggests a lower risk for certain cancers. However, your overall risk may still depend on your personal and family health history.",
+    "high": "A positive result indicates that you have a harmful gene variant that is known to increase your risk of certain cancers. This does not guarantee that you will develop cancer, but it suggests a higher risk compared to those without the variant.",
+    "low": null
+  },
+  {
+    "name": "Breast Biopsy",
+    "source": "https://medlineplus.gov/lab-tests/breast-biopsy/",
+    "reference_range": null,
+    "normal": "A normal result means no cancer or abnormal cells were found in the biopsy. This is a reassuring outcome.",
+    "high": "An abnormal result indicating changes that increase your risk for breast cancer suggests that while no cancer is present, you may need closer monitoring or further evaluation.",
+    "low": null
+  },
+  {
+    "name": "Bronchoscopy and Bronchoalveolar Lavage (BAL)",
+    "source": "https://medlineplus.gov/lab-tests/bronchoscopy-and-bronchoalveolar-lavage-bal/",
+    "reference_range": null,
+    "normal": null,
+    "high": "Abnormal results may indicate a lung disorder, such as a blockage, tumor, or narrowing of the airways. It could also suggest lung cancer or an infection like tuberculosis or bacterial pneumonia.",
+    "low": null
+  },
+  {
+    "name": "BUN (Blood Urea Nitrogen)",
+    "source": "https://medlineplus.gov/lab-tests/bun-blood-urea-nitrogen/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high BUN level may indicate that your kidneys are not functioning properly. It can also be caused by dehydration, a high-protein diet, or certain medications.",
+    "low": "A low BUN level may suggest a lack of protein in your diet, malnutrition, or liver disease."
+  },
+  {
+    "name": "Burn Evaluation",
+    "source": "https://medlineplus.gov/lab-tests/burn-evaluation/",
+    "reference_range": null,
+    "normal": "A minor burn is typically not serious and usually heals well without needing hospitalization. It may still be painful and can temporarily affect daily activities.",
+    "high": "A moderate burn may require hospitalization but usually does not need specialized burn center treatment. It covers a larger area than a minor burn but still involves only first and/or second-degree burns.",
+    "low": "A severe burn indicates a serious injury that requires specialized care at a burn center. This may involve extensive damage and complications, necessitating advanced treatment."
+  },
+  {
+    "name": "C. diff Testing",
+    "source": "https://medlineplus.gov/lab-tests/c-diff-testing/",
+    "reference_range": null,
+    "normal": "A negative test result generally indicates that there are no signs of a C. diff infection in your stool sample. This suggests that your symptoms are likely due to another cause.",
+    "high": "A positive test result may indicate that toxins from C. diff bacteria are present and causing your symptoms. This could mean you have a C. diff infection.",
+    "low": null
+  },
+  {
+    "name": "C-Peptide Test",
+    "source": "https://medlineplus.gov/lab-tests/c-peptide-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high C-peptide level usually indicates that your body is producing too much insulin, which can be caused by conditions like Type 2 diabetes or certain tumors in the pancreas.",
+    "low": "A low C-peptide level may suggest that your body is not producing enough insulin, which can occur in conditions like Type 1 diabetes or after taking too much insulin."
+  },
+  {
+    "name": "C-Reactive Protein (CRP) Test",
+    "source": "https://medlineplus.gov/lab-tests/c-reactive-protein-crp-test/",
+    "reference_range": "0.8-1.0 mg/dL",
+    "normal": "A normal CRP level indicates that there is little to no inflammation in your body. This is generally a sign of good health.",
+    "high": "A high CRP level suggests that there is inflammation present in your body, which could be due to various conditions such as infections or chronic diseases.",
+    "low": null
+  },
+  {
+    "name": "CA-125 Blood Test (Ovarian Cancer)",
+    "source": "https://medlineplus.gov/lab-tests/ca-125-blood-test-ovarian-cancer/",
+    "reference_range": null,
+    "normal": "A normal CA-125 test result suggests that there may not be any current issues related to ovarian cancer. However, it does not completely rule out the possibility of cancer.",
+    "high": "High CA-125 levels may indicate the presence of ovarian cancer or that the cancer may be returning after treatment. Further testing is usually needed to confirm a diagnosis.",
+    "low": null
+  },
+  {
+    "name": "CA 19-9 Blood Test (Pancreatic Cancer)",
+    "source": "https://medlineplus.gov/lab-tests/ca-19-9-blood-test-pancreatic-cancer/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of CA 19-9 may indicate that your tumor is growing or that your treatment is not effective. It could also be associated with other conditions like pancreatitis or gallstones.",
+    "low": null
+  },
+  {
+    "name": "Calcitonin Test",
+    "source": "https://medlineplus.gov/lab-tests/calcitonin-test/",
+    "reference_range": null,
+    "normal": "A normal calcitonin level suggests that you likely do not have medullary thyroid cancer or C-cell hyperplasia, but it doesn't completely rule them out. Additional tests may be needed for a definitive diagnosis.",
+    "high": "A high calcitonin level indicates that the thyroid's C cells are producing too much calcitonin, which could suggest the presence of medullary thyroid cancer or C-cell hyperplasia. However, other conditions may also cause elevated levels.",
+    "low": "A low calcitonin level is generally not considered a medical concern and does not indicate any specific problem."
+  },
+  {
+    "name": "Calcium Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/calcium-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high calcium level may indicate conditions such as overactive parathyroid glands, certain cancers, or excessive vitamin D intake. It's important to discuss these results with your healthcare provider.",
+    "low": "A low calcium level may suggest issues like low blood protein, underactive parathyroid glands, or deficiencies in diet or vitamins. Consulting with your healthcare provider is recommended for further evaluation."
+  },
+  {
+    "name": "Calcium in Urine Test",
+    "source": "https://medlineplus.gov/lab-tests/calcium-in-urine-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "Elevated calcium levels in urine may indicate conditions such as kidney stones, overactive parathyroid glands, or certain cancers. It could also suggest bone disorders like Paget's disease or osteoporosis.",
+    "low": "Lower calcium levels in urine might suggest kidney disease, underactive parathyroid glands, or a deficiency in vitamin D or magnesium. It can also indicate malabsorption issues or malnutrition."
+  },
+  {
+    "name": "Calprotectin Stool Test",
+    "source": "https://medlineplus.gov/lab-tests/calprotectin-stool-test/",
+    "reference_range": null,
+    "normal": "Normal or low levels of calprotectin suggest that your intestines are not inflamed, indicating that you likely do not have inflammatory bowel disease (IBD). Your symptoms may be due to a non-inflammatory condition.",
+    "high": "High levels of calprotectin indicate that your intestines are inflamed. This could be due to several conditions, including inflammatory bowel disease, infections, or cancer.",
+    "low": null
+  },
+  {
+    "name": "Carbon Dioxide (CO2) in Blood",
+    "source": "https://medlineplus.gov/lab-tests/carbon-dioxide-co2-in-blood/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of carbon dioxide in the blood may indicate that your lungs or kidneys are not functioning properly, which can be due to various conditions like lung diseases or kidney failure.",
+    "low": "A low level of carbon dioxide in the blood may suggest issues such as diabetic ketoacidosis or respiratory alkalosis, which can occur due to rapid breathing or other serious health problems."
+  },
+  {
+    "name": "Catecholamine Tests",
+    "source": "https://medlineplus.gov/lab-tests/catecholamine-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High levels of catecholamines may indicate the presence of certain tumors, such as pheochromocytoma or neuroblastoma. It can also suggest that treatment for these tumors is not effective.",
+    "low": null
+  },
+  {
+    "name": "CCP Antibody Test",
+    "source": "https://medlineplus.gov/lab-tests/ccp-antibody-test/",
+    "reference_range": null,
+    "normal": "A negative result means that no CCP antibodies were found in your blood, suggesting you are less likely to have rheumatoid arthritis.",
+    "high": "A positive result indicates that CCP antibodies were found, which may suggest rheumatoid arthritis, especially if accompanied by other positive tests.",
+    "low": null
+  },
+  {
+    "name": "CD4 Lymphocyte Count",
+    "source": "https://medlineplus.gov/lab-tests/cd4-lymphocyte-count/",
+    "reference_range": "500 to 1,200 cells per cubic millimeter",
+    "normal": "A normal CD4 count indicates a healthy immune system. It suggests that your body is well-equipped to fight infections.",
+    "high": "A high CD4 count may suggest the presence of an infection or a blood cancer. It could indicate that your immune system is responding to a health issue.",
+    "low": "A low CD4 count can mean that your immune system is weakened, which may be due to HIV or other factors like infections or certain medications."
+  },
+  {
+    "name": "CEA Test",
+    "source": "https://medlineplus.gov/lab-tests/cea-test/",
+    "reference_range": null,
+    "normal": "A low CEA level may indicate that your tumor is small and the cancer has not spread. However, some cancers may not produce much CEA, so other tests may be needed.",
+    "high": "A high CEA level may suggest a larger tumor or that the cancer has spread. Additional tests are necessary to determine the seriousness of the condition.",
+    "low": null
+  },
+  {
+    "name": "Celiac Disease Screening",
+    "source": "https://medlineplus.gov/lab-tests/celiac-disease-screening/",
+    "reference_range": null,
+    "normal": "A negative result means you likely do not have celiac disease.",
+    "high": "A positive result suggests that you probably have celiac disease.",
+    "low": null
+  },
+  {
+    "name": "Cerebrospinal Fluid (CSF) Analysis",
+    "source": "https://medlineplus.gov/lab-tests/cerebrospinal-fluid-csf-analysis/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result may indicate the presence of an infection, an autoimmune disorder like multiple sclerosis, or another condition affecting the brain or spinal cord.",
+    "low": null
+  },
+  {
+    "name": "Ceruloplasmin Test",
+    "source": "https://medlineplus.gov/lab-tests/ceruloplasmin-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High ceruloplasmin levels may be associated with conditions like heart disease, rheumatoid arthritis, or infections. However, elevated levels can also occur due to pregnancy or certain medications.",
+    "low": "Low ceruloplasmin levels may indicate that your body is not using copper properly and could suggest conditions such as Wilson disease, Menkes syndrome, or severe liver disease."
+  },
+  {
+    "name": "Chickenpox and Shingles Tests",
+    "source": "https://medlineplus.gov/lab-tests/chickenpox-and-shingles-tests/",
+    "reference_range": null,
+    "normal": "A negative result means you likely do not have chickenpox or shingles. It may also indicate that you have not been exposed to the virus or vaccinated.",
+    "high": "A positive result suggests that you have chickenpox or shingles, especially if you have symptoms. It may also indicate a past infection or vaccination if you are asymptomatic.",
+    "low": null
+  },
+  {
+    "name": "Chlamydia Test",
+    "source": "https://medlineplus.gov/lab-tests/chlamydia-test/",
+    "reference_range": null,
+    "normal": "A negative result means you do not have a chlamydia infection at the time of testing. This indicates that you are currently free from the infection.",
+    "high": "A positive result means you have a chlamydia infection. This indicates that you will need to take antibiotics to treat the infection and inform your sexual partners.",
+    "low": null
+  },
+  {
+    "name": "Chloride Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/chloride-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High chloride levels may indicate dehydration, kidney disease, or metabolic acidosis, which can lead to symptoms like nausea and fatigue.",
+    "low": "Low chloride levels may suggest heart failure, lung disease, or Addison disease, and can cause symptoms such as weakness, dizziness, and dehydration."
+  },
+  {
+    "name": "Cholesterol Levels",
+    "source": "https://medlineplus.gov/lab-tests/cholesterol-levels/",
+    "reference_range": {
+      "age_19_or_younger": {
+        "total_cholesterol": "<170 mg/dL",
+        "non_hdl": "<120 mg/dL",
+        "ldl": "<110 mg/dL",
+        "hdl": ">45 mg/dL"
+      },
+      "men_age_20_or_older": {
+        "total_cholesterol": "<200 mg/dL",
+        "non_hdl": "<130 mg/dL",
+        "ldl": "<100 mg/dL",
+        "hdl": ">=60 mg/dL (best), <40 mg/dL (considered low)"
+      },
+      "women_age_20_or_older": {
+        "total_cholesterol": "<200 mg/dL",
+        "non_hdl": "<130 mg/dL",
+        "ldl": "<100 mg/dL"
+      }
+    },
+    "normal": "A normal cholesterol level indicates a lower risk for heart disease. Maintaining healthy cholesterol levels is important for overall heart health.",
+    "high": "High cholesterol levels may increase your risk of heart disease and other cardiovascular issues. It is important to discuss these results with your healthcare provider to determine the best course of action.",
+    "low": "Low cholesterol levels, particularly low HDL, can also be a concern and may indicate other health issues. It's advisable to consult with your healthcare provider for further evaluation."
+  },
+  {
+    "name": "Chorionic Villus Sampling (CVS)",
+    "source": "https://medlineplus.gov/lab-tests/chorionic-villus-sampling-cvs/",
+    "reference_range": null,
+    "normal": "A normal result suggests that it is unlikely your baby has the disorder tested for, but it doesn't rule out all health issues.",
+    "high": "An abnormal result may indicate that your baby has a chromosome or genetic disorder, such as Down syndrome or cystic fibrosis.",
+    "low": null
+  },
+  {
+    "name": "Chymotrypsin in Stool",
+    "source": "https://medlineplus.gov/lab-tests/chymotrypsin-in-stool/",
+    "reference_range": null,
+    "normal": "A positive result indicates that the amount of chymotrypsin in your stool is normal, suggesting healthy pancreatic function. If tested, it may also indicate a normal amount of trypsin.",
+    "high": null,
+    "low": "A negative result means that the levels of chymotrypsin and/or trypsin in your stool are below normal, which may suggest pancreatic insufficiency. However, this result alone does not confirm any specific disorders."
+  },
+  {
+    "name": "Coagulation Factor Tests",
+    "source": "https://medlineplus.gov/lab-tests/coagulation-factor-tests/",
+    "reference_range": null,
+    "normal": "A normal result indicates that your clotting factors are at healthy levels, which means your blood can clot properly. This suggests you do not have a bleeding disorder.",
+    "high": "A high result may indicate that your blood is clotting more than it should, which could lead to an increased risk of blood clots. Your provider may suggest treatments or lifestyle changes to manage this risk.",
+    "low": "A low result may suggest that you have a bleeding disorder, which means your blood may not clot properly. This could be due to missing or low levels of one or more clotting factors."
+  },
+  {
+    "name": "Cognitive Testing",
+    "source": "https://medlineplus.gov/lab-tests/cognitive-testing/",
+    "reference_range": null,
+    "normal": "A normal test score suggests that your cognitive function is generally okay, but it doesn't rule out all potential issues. If you or your family have concerns, it's important to discuss further testing with your healthcare provider.",
+    "high": null,
+    "low": "A score lower than normal typically indicates some level of cognitive impairment. However, a diagnosis cannot be made based solely on this score, and further evaluation may be necessary."
+  },
+  {
+    "name": "Cold Stimulation Test",
+    "source": "https://medlineplus.gov/lab-tests/cold-stimulation-test/",
+    "reference_range": null,
+    "normal": "A normal result means your finger temperature returns to normal in less than 20 minutes after the ice water bath, indicating no signs of Raynaud phenomenon.",
+    "high": "If it takes 20 minutes or more for your finger temperature to return to normal, it may indicate you have Raynaud phenomenon, which could be primary or secondary depending on your age and symptoms.",
+    "low": null
+  },
+  {
+    "name": "Colorectal Cancer Screening Tests",
+    "source": "https://medlineplus.gov/lab-tests/colorectal-cancer-screening-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "Abnormal results may indicate the presence of colorectal polyps or abnormal tissue, which could require further testing like a colonoscopy to determine if cancer is present. It's important to follow up with your healthcare provider for additional evaluations.",
+    "low": null
+  },
+  {
+    "name": "Colposcopy",
+    "source": "https://medlineplus.gov/lab-tests/colposcopy/",
+    "reference_range": null,
+    "normal": "A normal biopsy result means there are no abnormal cells in your cervix, vagina, or vulva that could lead to cancer. However, your doctor may still want to keep an eye on your health with regular check-ups.",
+    "high": "If your results show precancerous cells or an HPV infection, it may indicate an increased risk for developing cancer in the cervix, vagina, or vulva. Your doctor will discuss the next steps for monitoring or treatment.",
+    "low": null
+  },
+  {
+    "name": "Complement Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/complement-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of complement proteins may indicate that your body is experiencing inflammation or fighting off a condition like cancer or ulcerative colitis. If you are being treated for an autoimmune disease, it might suggest that your treatment is effective.",
+    "low": "Low levels of complement proteins could suggest that your body is dealing with foreign substances or attacking its own tissues. This may be linked to conditions such as lupus, rheumatoid arthritis, or certain types of kidney disease."
+  },
+  {
+    "name": "Complete Blood Count (CBC)",
+    "source": "https://medlineplus.gov/lab-tests/complete-blood-count-cbc/",
+    "reference_range": null,
+    "normal": "A normal CBC result indicates that your blood cell levels are within the expected range, suggesting good overall health. It means your body is producing the right amount of red and white blood cells.",
+    "high": "A high result in your CBC may suggest an infection or a reaction to medication. It could indicate that your body is responding to some form of stress or illness.",
+    "low": "A low result in your CBC might indicate issues such as anemia, an autoimmune disorder, or a bone marrow problem. It suggests that your body may not be producing enough blood cells."
+  },
+  {
+    "name": "Comprehensive Metabolic Panel (CMP)",
+    "source": "https://medlineplus.gov/lab-tests/comprehensive-metabolic-panel-cmp/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result in one or more substances may indicate a potential health issue, such as high blood glucose suggesting diabetes. Further testing may be needed for a clear diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Concussion Tests",
+    "source": "https://medlineplus.gov/lab-tests/concussion-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result indicates that a concussion has been detected, which means the head injury has affected brain function. It's important to follow a recovery plan to allow the brain to heal properly.",
+    "low": null
+  },
+  {
+    "name": "Cord Blood Testing and Banking",
+    "source": "https://medlineplus.gov/lab-tests/cord-blood-testing-and-banking/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Cortisol Test",
+    "source": "https://medlineplus.gov/lab-tests/cortisol-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High cortisol levels may indicate conditions like Cushing's syndrome, which can be caused by long-term use of steroid medications or tumors that affect cortisol production. Further testing is usually needed to determine the exact cause.",
+    "low": "Low cortisol levels may suggest Addison disease or secondary adrenal insufficiency, which can result from autoimmune diseases or issues with the pituitary gland. Additional evaluation is necessary to understand the underlying cause."
+  },
+  {
+    "name": "Creatine Kinase",
+    "source": "https://medlineplus.gov/lab-tests/creatine-kinase/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high CK level usually indicates some type of muscle damage, which could be due to injury, disease, or intense exercise. It may require further testing to determine the exact cause and location of the damage.",
+    "low": null
+  },
+  {
+    "name": "Creatinine Test",
+    "source": "https://medlineplus.gov/lab-tests/creatinine-test/",
+    "reference_range": null,
+    "normal": "A normal creatinine level suggests that your kidneys are functioning well, but it doesn't guarantee kidney health. Other tests may be needed to fully assess kidney function.",
+    "high": "A high creatinine level may indicate kidney disease, injury, or other conditions affecting kidney function. It could also result from dehydration, intense exercise, or a high-protein diet.",
+    "low": "A low creatinine level may suggest malnutrition or conditions that cause muscle loss. It can also be associated with serious liver disease, although low levels are uncommon."
+  },
+  {
+    "name": "Crystals in Urine",
+    "source": "https://medlineplus.gov/lab-tests/crystals-in-urine/",
+    "reference_range": null,
+    "normal": "A normal result means that no crystals were found in your urine, which is generally a good sign of kidney health. It suggests that your body is effectively managing waste without forming stones.",
+    "high": "A high result indicates that there are crystals present in your urine, which could suggest potential issues like kidney stones or metabolic problems. It's important to discuss these results with your healthcare provider for further evaluation.",
+    "low": null
+  },
+  {
+    "name": "CSF Immunoglobulin G (IgG) Index",
+    "source": "https://medlineplus.gov/lab-tests/csf-immunoglobulin-g-igg-index/",
+    "reference_range": null,
+    "normal": "A normal CSF IgG index indicates that your body is producing enough IgG antibodies, which helps protect against infections. This means your central nervous system is likely functioning well.",
+    "high": "A high CSF IgG index may suggest an infection or an inflammatory or autoimmune condition affecting your central nervous system, such as multiple sclerosis or Guillain-Barre syndrome.",
+    "low": "A low CSF IgG index may indicate that your body is not producing enough IgG antibodies, which could make you more susceptible to infections."
+  },
+  {
+    "name": "Cytomegalovirus (CMV) Tests",
+    "source": "https://medlineplus.gov/lab-tests/cytomegalovirus-cmv-tests/",
+    "reference_range": null,
+    "normal": "A negative result means that you have not had a CMV infection. This is generally a good sign, especially if you are pregnant or have a weakened immune system.",
+    "high": "A positive result indicates that you have had a CMV infection at some point. This may require further testing or monitoring, especially if you are pregnant or have health concerns.",
+    "low": null
+  },
+  {
+    "name": "D-Dimer Test",
+    "source": "https://medlineplus.gov/lab-tests/d-dimer-test/",
+    "reference_range": null,
+    "normal": "Normal D-dimer levels suggest that you likely do not have a clotting disorder. However, if you are on blood thinners, the test may not be accurate.",
+    "high": "Elevated D-dimer levels may indicate a clotting disorder, but they can also be caused by other factors like pregnancy or recent surgery. Further testing will be needed to determine the exact cause.",
+    "low": null
+  },
+  {
+    "name": "Dengue Fever Test",
+    "source": "https://medlineplus.gov/lab-tests/dengue-fever-test/",
+    "reference_range": null,
+    "normal": "A negative result means that the dengue virus or its antibodies were not found in your blood, suggesting you likely do not have dengue fever. However, it is possible that the test was done too early for your body to produce detectable antibodies.",
+    "high": "A positive result indicates that the test found either the dengue virus or its antibodies in your blood, suggesting you likely have a dengue infection. Further testing may be needed to confirm the specific type of viral infection.",
+    "low": null
+  },
+  {
+    "name": "Dental Exam",
+    "source": "https://medlineplus.gov/lab-tests/dental-exam/",
+    "reference_range": null,
+    "normal": "A normal dental exam means your teeth and gums are healthy, and no immediate treatment is needed. Good oral hygiene practices are usually sufficient to maintain your oral health.",
+    "high": "If the exam reveals issues like cavities or gum disease, it may indicate that you need further treatment or improved dental care habits.",
+    "low": null
+  },
+  {
+    "name": "Depression Screening",
+    "source": "https://medlineplus.gov/lab-tests/depression-screening/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Developmental and Behavioral Screening Tests",
+    "source": "https://medlineplus.gov/lab-tests/developmental-and-behavioral-screening-tests/",
+    "reference_range": null,
+    "normal": "A normal result means your child is developing at a rate similar to other children their age. This is a positive sign of healthy development.",
+    "high": "If the results indicate that your child is not developing at the same rate as peers, it may suggest a need for further evaluation by a specialist.",
+    "low": null
+  },
+  {
+    "name": "DHEA Sulfate Test",
+    "source": "https://medlineplus.gov/lab-tests/dhea-sulfate-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High levels of DHEAS may indicate conditions such as congenital adrenal hyperplasia, adrenal tumors, or polycystic ovary syndrome (PCOS), which can affect fertility in women.",
+    "low": "Low levels of DHEAS may suggest Addison disease or hypopituitarism, conditions where the adrenal glands or pituitary gland do not produce enough hormones."
+  },
+  {
+    "name": "Diabetes Tests",
+    "source": "https://medlineplus.gov/lab-tests/diabetes-tests/",
+    "reference_range": null,
+    "normal": "A normal result means your glucose levels are healthy, indicating you are likely not at risk for diabetes.",
+    "high": "A high result suggests you may have prediabetes or diabetes, which means your glucose levels are above what is considered healthy.",
+    "low": null
+  },
+  {
+    "name": "Diabetic Foot Exam",
+    "source": "https://medlineplus.gov/lab-tests/diabetic-foot-exam/",
+    "reference_range": null,
+    "normal": "A normal result means that your risk of developing foot ulcers and infections is low. This suggests that your feet are in good condition and do not require frequent examinations.",
+    "high": "A high result indicates an increased risk of foot ulcers and infections, which may require more frequent check-ups and monitoring by your healthcare provider.",
+    "low": null
+  },
+  {
+    "name": "Differential Diagnosis",
+    "source": "https://medlineplus.gov/lab-tests/differential-diagnosis/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Doppler Ultrasound",
+    "source": "https://medlineplus.gov/lab-tests/doppler-ultrasound/",
+    "reference_range": null,
+    "normal": "A normal Doppler ultrasound indicates that your blood vessels are healthy, showing no narrowing or clots, and that blood flow is normal.",
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Down Syndrome Tests",
+    "source": "https://medlineplus.gov/lab-tests/down-syndrome-tests/",
+    "reference_range": null,
+    "normal": "A negative result indicates that your baby is unlikely to have Down syndrome. However, it does not guarantee that your baby is free from the condition.",
+    "high": "A positive result suggests that your baby has a higher than average chance of having Down syndrome, but it does not confirm the diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Drug Testing",
+    "source": "https://medlineplus.gov/lab-tests/drug-testing/",
+    "reference_range": null,
+    "normal": "A negative drug test result means that no drugs were detected in your sample, or only a very small amount was found that isn't considered significant. This suggests that you are not using or misusing drugs.",
+    "high": "A positive drug test result indicates that one or more drugs were detected in your sample, suggesting possible drug use or misuse. Follow-up testing is usually done to confirm the result.",
+    "low": null
+  },
+  {
+    "name": "Drug Use Screening Tests",
+    "source": "https://medlineplus.gov/lab-tests/drug-use-screening-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result may indicate that you have a substance use disorder, which could require further evaluation and treatment.",
+    "low": null
+  },
+  {
+    "name": "Dysphagia Tests",
+    "source": "https://medlineplus.gov/lab-tests/dysphagia-tests/",
+    "reference_range": null,
+    "normal": "A normal result indicates that you do not have any significant swallowing difficulties. This means you can chew and swallow food without issues.",
+    "high": "A high result suggests that you may have a type of dysphagia, which could indicate problems in the mouth, throat, or esophagus that affect your ability to swallow.",
+    "low": null
+  },
+  {
+    "name": "Elastography",
+    "source": "https://medlineplus.gov/lab-tests/elastography/",
+    "reference_range": "F0 to F1 for fibrosis; 5% or less for fat in the liver.",
+    "normal": "A normal result indicates little or no scarring in your liver and a fat percentage of 5% or less, suggesting a healthy liver.",
+    "high": "A high fibrosis score (F2 to F4) may indicate varying degrees of liver scarring, which could be due to conditions like fatty liver disease or cirrhosis.",
+    "low": null
+  },
+  {
+    "name": "Electrocardiogram",
+    "source": "https://medlineplus.gov/lab-tests/electrocardiogram/",
+    "reference_range": null,
+    "normal": "A normal EKG result indicates that your heartbeat and rhythm are steady, suggesting that your heart is functioning well. This is a positive sign for your overall heart health.",
+    "high": "An abnormal EKG result may indicate a potential heart condition, but the specific issue depends on which part of the EKG is not normal. Further testing may be needed for a clear diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Electrolyte Panel",
+    "source": "https://medlineplus.gov/lab-tests/electrolyte-panel/",
+    "reference_range": null,
+    "normal": "Normal electrolyte levels indicate that your body is maintaining a proper balance of essential minerals. This balance is crucial for various bodily functions, including hydration, muscle function, and nerve signaling.",
+    "high": "High levels of an electrolyte may suggest conditions such as dehydration, kidney disease, or other medical issues that require further investigation. It is important to discuss these results with your healthcare provider.",
+    "low": "Low levels of an electrolyte can indicate problems like dehydration, malnutrition, or certain medical conditions. It's essential to consult with your healthcare provider to understand the implications of these results."
+  },
+  {
+    "name": "Electromyography (EMG) and Nerve Conduction Studies",
+    "source": "https://medlineplus.gov/lab-tests/electromyography-emg-and-nerve-conduction-studies/",
+    "reference_range": null,
+    "normal": null,
+    "high": "An abnormal result may indicate various conditions affecting your nerves or muscles, such as carpal tunnel syndrome, herniated disk, or Guillain-Barré syndrome. These conditions can cause symptoms like numbness, tingling, or weakness.",
+    "low": null
+  },
+  {
+    "name": "Epithelial Cells in Urine",
+    "source": "https://medlineplus.gov/lab-tests/epithelial-cells-in-urine/",
+    "reference_range": null,
+    "normal": "A normal result shows a few epithelial cells in the urine, which is generally not a cause for concern. This indicates that there are no significant issues with the urinary tract.",
+    "high": "A high number of epithelial cells, described as moderate or many, may suggest a potential medical condition such as a urinary tract infection or other issues. Further testing may be needed to determine the exact cause.",
+    "low": null
+  },
+  {
+    "name": "Erythrocyte Sedimentation Rate (ESR)",
+    "source": "https://medlineplus.gov/lab-tests/erythrocyte-sedimentation-rate-esr/",
+    "reference_range": null,
+    "normal": "A normal ESR result indicates that your red blood cells are settling at a typical rate, suggesting no significant inflammation in your body. However, normal levels can vary based on factors like age and sex.",
+    "high": "A high ESR result means your red blood cells are sinking faster than usual, which may indicate inflammation due to various conditions such as arthritis, infections, or certain cancers.",
+    "low": "A low ESR result suggests that your red blood cells are settling more slowly than normal, which could be due to conditions like polycythemia or heart failure."
+  },
+  {
+    "name": "Esophageal pH Test",
+    "source": "https://medlineplus.gov/lab-tests/esophageal-ph-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High acid levels may indicate conditions such as acid reflux, esophagitis, strictures, or Barrett's esophagus. These conditions can lead to symptoms like difficulty swallowing and may increase the risk of esophageal cancer if not treated.",
+    "low": null
+  },
+  {
+    "name": "Estrogen Levels Test",
+    "source": "https://medlineplus.gov/lab-tests/estrogen-levels-test/",
+    "reference_range": null,
+    "normal": "A normal estrogen level indicates that your hormone balance is typical for your age and sex. This is important for overall health and reproductive function.",
+    "high": "A high estrogen level may suggest a health issue, such as infertility or the presence of an estrogen-producing tumor. It's important to discuss these results with your healthcare provider.",
+    "low": null
+  },
+  {
+    "name": "Estrogen Receptor, Progesterone Receptor Tests",
+    "source": "https://medlineplus.gov/lab-tests/estrogen-receptor-progesterone-receptor-tests/",
+    "reference_range": null,
+    "normal": "A negative result means that less than 1% of the cells have hormone receptors, indicating that hormone-based treatments may not work for your cancer. This is referred to as hormone receptor-negative.",
+    "high": "A positive result indicates that at least 1% of the cells have hormone receptors, suggesting that the cancer may be using hormones to grow. This is known as hormone receptor-positive, and certain treatments may be more effective.",
+    "low": null
+  },
+  {
+    "name": "Fall Risk Assessment",
+    "source": "https://medlineplus.gov/lab-tests/fall-risk-assessment/",
+    "reference_range": null,
+    "normal": "A low risk of falling means you are less likely to experience a fall. This indicates good strength, balance, and gait.",
+    "high": "A high risk of falling suggests that you may have significant issues with balance, strength, or gait. This could lead to a higher chance of falling and may require intervention.",
+    "low": "A moderate risk of falling indicates that there are some concerns with your balance or strength, but you are not at the highest risk. It may be beneficial to take steps to improve these areas."
+  },
+  {
+    "name": "Fecal Occult Blood Test (FOBT)",
+    "source": "https://medlineplus.gov/lab-tests/fecal-occult-blood-test-fobt/",
+    "reference_range": null,
+    "normal": "A normal result means there is no blood detected in your stool, which is generally a good sign for your digestive health.",
+    "high": "A high result indicates that blood has been found in your stool, which could suggest bleeding in your digestive tract. This does not automatically mean you have cancer, as other conditions may also cause this.",
+    "low": null
+  },
+  {
+    "name": "Ferritin Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/ferritin-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high ferritin level may indicate that you have too much iron in your body or other conditions such as inflammation, liver disease, or cancer. It's important to discuss these results with your healthcare provider for further evaluation.",
+    "low": "Low ferritin levels may suggest that you have iron deficiency anemia, which means your body isn't producing enough red blood cells. This can lead to various health issues if not addressed."
+  },
+  {
+    "name": "Fetal Alcohol Spectrum Disorders (FASD) Screening",
+    "source": "https://medlineplus.gov/lab-tests/fetal-alcohol-spectrum-disorders-fasd-screening/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Flu (Influenza) Test",
+    "source": "https://medlineplus.gov/lab-tests/flu-influenza-test/",
+    "reference_range": null,
+    "normal": "A negative result means you likely do not have the flu, but other viruses or bacteria could be causing your symptoms. However, it's still possible to have the flu despite a negative test result.",
+    "high": "A positive result indicates that you most likely have the seasonal flu, and it's important to limit contact with others to prevent spreading the virus.",
+    "low": null
+  },
+  {
+    "name": "Fluoroscopy",
+    "source": "https://medlineplus.gov/lab-tests/fluoroscopy/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Follicle-Stimulating Hormone (FSH) Levels Test",
+    "source": "https://medlineplus.gov/lab-tests/follicle-stimulating-hormone-fsh-levels-test/",
+    "reference_range": null,
+    "normal": "Normal FSH levels indicate that your reproductive glands are functioning properly and producing the right amount of sex hormones. This is important for reproductive health in both men and women.",
+    "high": "Elevated FSH levels may suggest a problem with the reproductive glands, such as ovarian insufficiency in women or testicular damage in men. It can also indicate conditions like menopause or certain tumors.",
+    "low": "Low FSH levels may indicate issues with the pituitary gland or hypothalamus, which can affect hormone production. In women, it may also be linked to extreme weight loss or excessive exercise."
+  },
+  {
+    "name": "Food Allergy Testing",
+    "source": "https://medlineplus.gov/lab-tests/food-allergy-testing/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result indicates that you or your child has a food allergy, meaning you should avoid the specific food that triggers symptoms. It's important to communicate this allergy to anyone who may prepare or serve food.",
+    "low": null
+  },
+  {
+    "name": "Free Light Chains",
+    "source": "https://medlineplus.gov/lab-tests/free-light-chains/",
+    "reference_range": null,
+    "normal": "A normal result means that the levels of lambda and kappa free light chains in your blood are within the expected range, indicating no signs of a plasma cell disorder.",
+    "high": "A high level of free light chains may suggest a plasma cell disorder, such as multiple myeloma or amyloidosis, but it could also indicate a kidney condition.",
+    "low": null
+  },
+  {
+    "name": "Fungal Culture Test",
+    "source": "https://medlineplus.gov/lab-tests/fungal-culture-test/",
+    "reference_range": null,
+    "normal": "A negative result means that no fungi were detected in your sample, suggesting that something else may be causing your symptoms.",
+    "high": "A positive result indicates that a fungus was found in your sample, which likely means you have a fungal infection.",
+    "low": null
+  },
+  {
+    "name": "G6PD Test",
+    "source": "https://medlineplus.gov/lab-tests/g6pd-test/",
+    "reference_range": null,
+    "normal": "A normal result means you have adequate levels of G6PD, indicating you are unlikely to have a deficiency. If you are a man, this suggests you do not have a G6PD deficiency.",
+    "high": null,
+    "low": "A low result indicates a G6PD deficiency, which can lead to symptoms like hemolytic anemia depending on your health history and triggers. Women with slightly low levels may be carriers without symptoms."
+  },
+  {
+    "name": "Galactosemia Tests",
+    "source": "https://medlineplus.gov/lab-tests/galactosemia-tests/",
+    "reference_range": null,
+    "normal": "A negative result means your baby does not have galactosemia, which is a metabolic disorder. This is a good outcome as it indicates normal processing of galactose.",
+    "high": "A positive result suggests that your baby may have galactosemia, and further testing will be needed to confirm this condition.",
+    "low": null
+  },
+  {
+    "name": "Gamma-glutamyl Transferase (GGT) Test",
+    "source": "https://medlineplus.gov/lab-tests/gamma-glutamyl-transferase-ggt-test/",
+    "reference_range": null,
+    "normal": "Normal or low levels of GGT suggest that you likely do not have liver disease. This means your liver is functioning properly.",
+    "high": "Elevated levels of GGT may indicate liver damage, which could be caused by various conditions such as hepatitis, cirrhosis, or alcohol use disorder.",
+    "low": null
+  },
+  {
+    "name": "Gastric Emptying Tests",
+    "source": "https://medlineplus.gov/lab-tests/gastric-emptying-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A longer-than-normal gastric emptying time may indicate that you have gastroparesis, a condition where the stomach takes too long to empty its contents.",
+    "low": "A shorter-than-normal gastric emptying time may suggest that you have dumping syndrome, which occurs when food moves too quickly from the stomach to the small intestine."
+  },
+  {
+    "name": "Glaucoma Tests",
+    "source": "https://medlineplus.gov/lab-tests/glaucoma-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result may indicate that you have glaucoma or are at increased risk for developing it. This means that your eye pressure may be elevated, which can lead to vision loss if not treated.",
+    "low": null
+  },
+  {
+    "name": "Globulin Test",
+    "source": "https://medlineplus.gov/lab-tests/globulin-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High globulin levels may indicate an infection, inflammatory disease, or an immune disorder. It could also suggest certain cancers or other conditions.",
+    "low": "Low globulin levels may suggest liver disease, kidney disease, or malnutrition."
+  },
+  {
+    "name": "Glomerular Filtration Rate (GFR) Test",
+    "source": "https://medlineplus.gov/lab-tests/glomerular-filtration-rate-gfr-test/",
+    "reference_range": null,
+    "normal": "A normal eGFR suggests that your kidneys are functioning well and you likely do not have kidney disease.",
+    "high": null,
+    "low": "A low eGFR may indicate that you have kidney disease, and a very low eGFR could suggest kidney failure."
+  },
+  {
+    "name": "Glucagon Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/glucagon-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high glucagon level may indicate conditions such as diabetes, pancreatitis, or a glucagonoma, which is a type of pancreatic tumor.",
+    "low": "A low glucagon level may suggest hypoglycemia, which is a condition characterized by abnormally low blood sugar levels."
+  },
+  {
+    "name": "Glucose in Urine Test",
+    "source": "https://medlineplus.gov/lab-tests/glucose-in-urine-test/",
+    "reference_range": null,
+    "normal": "A normal result means there is little to no glucose in your urine. However, this does not rule out diabetes, as you can still have high blood glucose levels.",
+    "high": "A high level of glucose in your urine may indicate diabetes or that your diabetes is not well controlled. It could also suggest pregnancy or a kidney disorder.",
+    "low": null
+  },
+  {
+    "name": "Gonorrhea Test",
+    "source": "https://medlineplus.gov/lab-tests/gonorrhea-test/",
+    "reference_range": null,
+    "normal": "A negative test result means that no gonorrhea infection was found in your sample. However, it doesn't completely rule out the possibility of an infection if the test was done too soon after exposure.",
+    "high": "A positive test result indicates that you are infected with the gonorrhea bacteria and will require immediate antibiotic treatment.",
+    "low": null
+  },
+  {
+    "name": "Gram Stain",
+    "source": "https://medlineplus.gov/lab-tests/gram-stain/",
+    "reference_range": null,
+    "normal": "A negative result means that no bacteria were found in your sample, suggesting you likely do not have a bacterial infection. It could also mean there weren't enough bacteria present to detect.",
+    "high": "A positive result indicates that bacteria were found in your sample, which may suggest a bacterial infection. The color of the bacteria can help determine whether it's a Gram-positive or Gram-negative infection.",
+    "low": null
+  },
+  {
+    "name": "Growth Hormone Tests",
+    "source": "https://medlineplus.gov/lab-tests/growth-hormone-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result may indicate that there is an excess of growth hormone, which could lead to conditions like gigantism in children or acromegaly in adults. This often requires further investigation to determine the cause, such as a tumor in the pituitary gland.",
+    "low": "A low result may suggest a deficiency in growth hormone, which could affect growth in children. If diagnosed early, treatment with growth hormone supplementation can help improve growth outcomes."
+  },
+  {
+    "name": "Haptoglobin (HP) Test",
+    "source": "https://medlineplus.gov/lab-tests/haptoglobin-hp-test/",
+    "reference_range": null,
+    "normal": "A normal haptoglobin level indicates that your body is not experiencing hemolysis, which is the breakdown of red blood cells. It suggests that your liver is functioning well and there are no significant underlying health issues.",
+    "high": "A high haptoglobin level may suggest the presence of conditions such as severe infections, diabetes, or inflammatory diseases like ulcerative colitis or arthritis. It indicates that your body is responding to some form of stress or injury.",
+    "low": "A low haptoglobin level may indicate hemolytic anemia, liver disease, or a reaction to a blood transfusion. It suggests that your body is breaking down red blood cells more rapidly than normal."
+  },
+  {
+    "name": "Hearing Tests for Adults",
+    "source": "https://medlineplus.gov/lab-tests/hearing-tests-for-adults/",
+    "reference_range": null,
+    "normal": "A normal result means your hearing is functioning properly without any loss. You should be able to hear sounds at typical levels without difficulty.",
+    "high": "A high result indicates that you have hearing loss, which may vary in severity and could affect one or both ears. Depending on the type of hearing loss, treatment options may be available.",
+    "low": null
+  },
+  {
+    "name": "Hearing Tests for Children",
+    "source": "https://medlineplus.gov/lab-tests/hearing-tests-for-children/",
+    "reference_range": null,
+    "normal": "A normal hearing test result means your child is likely hearing well and may not need further testing until the next routine check-up. If you have concerns, you should discuss them with your child's healthcare provider.",
+    "high": null,
+    "low": "If a hearing test indicates hearing loss, it may suggest that your child has difficulty hearing sounds, which could impact their communication and learning. Further evaluation will help determine the type and severity of the hearing loss."
+  },
+  {
+    "name": "Heart Disease Risk Assessment",
+    "source": "https://medlineplus.gov/lab-tests/heart-disease-risk-assessment/",
+    "reference_range": null,
+    "normal": "A lower percentage indicates a lower risk of developing heart disease, which is generally a good sign for your health. It suggests that you may not need to take additional steps to lower your risk.",
+    "high": "A higher percentage indicates a greater risk of developing heart disease. This may prompt your healthcare provider to suggest lifestyle changes or medications to help reduce your risk.",
+    "low": null
+  },
+  {
+    "name": "Heavy Metal Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/heavy-metal-blood-test/",
+    "reference_range": null,
+    "normal": "Normal or low levels of heavy metals in your blood typically indicate that you do not have heavy metal poisoning. However, some metals may not be detected in the blood if they are stored in your tissues.",
+    "high": "Higher than normal levels of a heavy metal may suggest heavy metal poisoning, which could require you to avoid exposure and possibly undergo treatment to remove the metal from your body.",
+    "low": null
+  },
+  {
+    "name": "Helicobacter Pylori (H. Pylori) Tests",
+    "source": "https://medlineplus.gov/lab-tests/helicobacter-pylori-h-pylori-tests/",
+    "reference_range": null,
+    "normal": "A negative result suggests that you likely do not have an H. pylori infection. Your doctor may look for other reasons for your symptoms.",
+    "high": "A positive result indicates that you have an H. pylori infection. Your doctor will typically prescribe antibiotics and other medications to help treat the infection and alleviate your symptoms.",
+    "low": null
+  },
+  {
+    "name": "Hematocrit Test",
+    "source": "https://medlineplus.gov/lab-tests/hematocrit-test/",
+    "reference_range": null,
+    "normal": "A normal hematocrit level means that your blood has a healthy percentage of red blood cells. This is important for ensuring that your body gets enough oxygen.",
+    "high": "A high hematocrit level may indicate that your body is producing too many red blood cells or that you are dehydrated. This can be caused by conditions like lung disease or heart failure.",
+    "low": "A low hematocrit level may suggest that you have experienced blood loss, anemia, or other conditions affecting red blood cell production. Pregnancy can also lead to lower levels due to increased fluid in the body."
+  },
+  {
+    "name": "Hemoglobin A1C (HbA1c) Test",
+    "source": "https://medlineplus.gov/lab-tests/hemoglobin-a1c-hba1c-test/",
+    "reference_range": "A1C below 5.7%",
+    "normal": "A normal A1C result means that your blood sugar levels have been in a healthy range over the past few months. This suggests that you are not at risk for diabetes.",
+    "high": "A high A1C result may indicate that you have diabetes or prediabetes, meaning your blood sugar levels are higher than normal and may require further testing or management.",
+    "low": null
+  },
+  {
+    "name": "Hemoglobin Electrophoresis",
+    "source": "https://medlineplus.gov/lab-tests/hemoglobin-electrophoresis/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High levels of certain types of hemoglobin may indicate conditions like thalassemia or sickle cell disease. These conditions can affect how your body produces and uses hemoglobin.",
+    "low": "Low levels of hemoglobin types may suggest thalassemia, where the body doesn't produce enough hemoglobin, potentially leading to symptoms like fatigue or weakness."
+  },
+  {
+    "name": "Hemoglobin Test",
+    "source": "https://medlineplus.gov/lab-tests/hemoglobin-test/",
+    "reference_range": null,
+    "normal": "A normal hemoglobin level indicates that your blood has a healthy amount of this protein, which is essential for carrying oxygen throughout your body. It suggests that you are likely not experiencing anemia or other related conditions.",
+    "high": "A high hemoglobin level may suggest underlying health issues such as lung disease, heart disease, or conditions that cause your body to produce too many red blood cells. It could also be influenced by factors like living at high altitudes or dehydration.",
+    "low": "A low hemoglobin level can indicate conditions such as anemia, blood loss, or deficiencies in essential nutrients like iron or vitamin B-12. It may also suggest other health issues that require further investigation."
+  },
+  {
+    "name": "Hepatitis Testing",
+    "source": "https://medlineplus.gov/lab-tests/hepatitis-testing/",
+    "reference_range": null,
+    "normal": "A negative result typically means you do not have a hepatitis infection. However, if you have been exposed to hepatitis, you may need to be tested again later.",
+    "high": "A positive result may indicate that you currently have an active hepatitis infection, which could be either new or long-standing. It might also suggest that you had a hepatitis infection in the past that has since cleared.",
+    "low": null
+  },
+  {
+    "name": "HER2 Tumor Marker Test",
+    "source": "https://medlineplus.gov/lab-tests/her2-tumor-marker-test/",
+    "reference_range": null,
+    "normal": "A normal result indicates that your cancer cells have low levels of HER2 protein or genes, meaning your cancer is HER2 negative and won't respond to HER2 targeted therapy. Your doctor will discuss alternative treatment options.",
+    "high": "A high result means that your cancer cells have excessive HER2 protein or genes, indicating that your cancer is HER2 positive and likely to respond to HER2 targeted therapy.",
+    "low": null
+  },
+  {
+    "name": "Herpes (HSV) Test",
+    "source": "https://medlineplus.gov/lab-tests/herpes-hsv-test/",
+    "reference_range": null,
+    "normal": "A negative test result means that no signs of the herpes virus were found, suggesting you likely do not have an HSV infection. However, it's possible to receive a negative result even if you have an infection if the test was done too soon.",
+    "high": "A positive test result indicates that signs of the herpes virus were found in your sample. This could mean you have an active infection or have had one in the past.",
+    "low": null
+  },
+  {
+    "name": "HIV Screening Test",
+    "source": "https://medlineplus.gov/lab-tests/hiv-screening-test/",
+    "reference_range": null,
+    "normal": "A negative result means no signs of HIV were found in your sample. However, it doesn't completely rule out an infection, especially if the exposure was recent.",
+    "high": "A positive result indicates that signs of an HIV infection were detected in your sample. You will need further testing to confirm the diagnosis.",
+    "low": null
+  },
+  {
+    "name": "HIV Viral Load",
+    "source": "https://medlineplus.gov/lab-tests/hiv-viral-load/",
+    "reference_range": null,
+    "normal": "A negative result means that no HIV was found in your blood, suggesting you are likely not infected with HIV. If you have HIV, an undetectable viral load indicates that your treatment is effectively controlling the virus.",
+    "high": "A high viral load indicates that the virus is growing and your treatment may not be effective. This increases your risk for infections and diseases related to a weakened immune system.",
+    "low": "A low viral load suggests that your treatment is working to keep the virus from growing, reducing the likelihood of your infection worsening."
+  },
+  {
+    "name": "Homocysteine Test",
+    "source": "https://medlineplus.gov/lab-tests/homocysteine-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high homocysteine level may indicate a deficiency in vitamin B12 or folic acid, or it could suggest a higher risk for heart disease and other health issues. It may also be associated with certain medical conditions that require further testing.",
+    "low": null
+  },
+  {
+    "name": "How to Understand Your Lab Results",
+    "source": "https://medlineplus.gov/lab-tests/how-to-understand-your-lab-results/",
+    "reference_range": null,
+    "normal": "A normal or negative result means that the test did not find what it was looking for, suggesting you are unlikely to have the health issue tested for. However, additional tests may still be necessary.",
+    "high": "A positive or abnormal result indicates that the test found what it was looking for, which may suggest the presence of a disease or infection. Further testing might be needed to confirm the diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Human Papillomavirus (HPV) Test",
+    "source": "https://medlineplus.gov/lab-tests/human-papillomavirus-hpv-test/",
+    "reference_range": null,
+    "normal": "A negative HPV test means that no high-risk HPV was detected in your sample, indicating a lower risk for cervical issues. Your healthcare provider will advise you on when to have your next test.",
+    "high": "A positive HPV test indicates that high-risk HPV DNA was found in your sample, suggesting an HPV infection. This does not mean you have cancer, but it does increase your risk for developing cervical precancer or cancer in the future.",
+    "low": null
+  },
+  {
+    "name": "Hysteroscopy",
+    "source": "https://medlineplus.gov/lab-tests/hysteroscopy/",
+    "reference_range": null,
+    "normal": null,
+    "high": "If the results are abnormal, it may indicate the presence of fibroids, polyps, or other unusual growths in the uterus. These issues might require removal during the procedure.",
+    "low": null
+  },
+  {
+    "name": "IGF-1 (Insulin-like Growth Factor 1) Test",
+    "source": "https://medlineplus.gov/lab-tests/igf-1-insulin-like-growth-factor-1-test/",
+    "reference_range": null,
+    "normal": "A normal IGF-1 level suggests that your child's growth hormone levels are adequate for their age and health. This means they are likely growing properly and do not have any significant hormonal deficiencies.",
+    "high": "Elevated IGF-1 levels may indicate conditions like gigantism in children or acromegaly in adults, often related to a tumor in the pituitary gland. Further tests may be needed to determine the exact cause.",
+    "low": "Low IGF-1 levels can suggest a growth hormone deficiency or insensitivity, which may be due to genetic disorders or other health issues. Treatment with growth hormone supplementation might be beneficial for your child."
+  },
+  {
+    "name": "Immunoglobulins Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/immunoglobulins-blood-test/",
+    "reference_range": null,
+    "normal": "Normal levels of immunoglobulins indicate that your immune system is functioning properly. This means your body is likely able to fight off infections effectively.",
+    "high": "High levels of immunoglobulins may suggest the presence of an autoimmune disease, chronic infection, or certain types of cancer. It is important to follow up with your healthcare provider for further evaluation.",
+    "low": "Low levels of immunoglobulins can indicate issues such as malnutrition, kidney disease, or genetic disorders that affect immune function. Additional testing may be needed to determine the underlying cause."
+  },
+  {
+    "name": "Insulin in Blood",
+    "source": "https://medlineplus.gov/lab-tests/insulin-in-blood/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high insulin level may suggest that you have insulin resistance or conditions like a pancreatic tumor or Cushing's syndrome. It can also occur if you have taken too much insulin for diabetes.",
+    "low": "A low insulin level, especially when your blood glucose is high, may indicate that your pancreas is not producing enough insulin. This can be associated with type 1 diabetes or pancreatitis."
+  },
+  {
+    "name": "Intravenous Pyelogram (IVP)",
+    "source": "https://medlineplus.gov/lab-tests/intravenous-pyelogram-ivp/",
+    "reference_range": null,
+    "normal": "Normal results indicate that your urinary tract organs are functioning properly without any blockages. This means your kidneys, ureters, and bladder are effectively filtering the dye and eliminating it from your body.",
+    "high": "Abnormal results may suggest that there is an issue with your urinary tract, such as an irregularly sized or positioned organ, or the presence of a tumor, stone, or cyst that could be obstructing urine flow.",
+    "low": null
+  },
+  {
+    "name": "Iron Tests",
+    "source": "https://medlineplus.gov/lab-tests/iron-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high iron level may indicate conditions such as hemochromatosis, lead poisoning, or liver disease. It's important to discuss these results with your healthcare provider for further evaluation.",
+    "low": "Low iron levels can suggest iron deficiency anemia or other types of anemia. It may also indicate thalassemia, a genetic blood disorder."
+  },
+  {
+    "name": "Karyotype Genetic Test",
+    "source": "https://medlineplus.gov/lab-tests/karyotype-genetic-test/",
+    "reference_range": null,
+    "normal": "A normal result indicates that there are 46 chromosomes in the sample and no unusual changes were found. This suggests typical genetic health.",
+    "high": "An abnormal result indicates that there are unusual changes in the number or structure of chromosomes. This could have various implications for your health or your child's health.",
+    "low": null
+  },
+  {
+    "name": "Ketones in Blood",
+    "source": "https://medlineplus.gov/lab-tests/ketones-in-blood/",
+    "reference_range": null,
+    "normal": "A normal test result indicates that your body is not producing excessive ketones and you likely do not have ketoacidosis. However, it does not completely rule out the possibility of diabetic ketoacidosis, especially in early stages.",
+    "high": "A high test result means that there are ketones present in your blood. This could indicate ketoacidosis, which may be related to diabetes or other conditions, and requires medical attention.",
+    "low": null
+  },
+  {
+    "name": "Ketones in Urine",
+    "source": "https://medlineplus.gov/lab-tests/ketones-in-urine/",
+    "reference_range": null,
+    "normal": "A normal result may indicate that your body is properly using carbohydrates for energy. It suggests that ketone levels are low and not a concern.",
+    "high": "A high level of ketones may suggest that your body is breaking down fat for energy instead of carbohydrates, which can lead to serious health issues. It's important to discuss these results with your healthcare provider.",
+    "low": null
+  },
+  {
+    "name": "Kidney Stone Analysis",
+    "source": "https://medlineplus.gov/lab-tests/kidney-stone-analysis/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Lactate Dehydrogenase (LDH) Isoenzymes Test",
+    "source": "https://medlineplus.gov/lab-tests/lactate-dehydrogenase-ldh-isoenzymes-test/",
+    "reference_range": null,
+    "normal": "Normal LDH isoenzyme levels suggest that there is no significant tissue damage in your body. Your results should be interpreted in the context of your overall health and any symptoms you may have.",
+    "high": "A high level of one or more LDH isoenzymes typically indicates some form of tissue damage. The specific condition may vary depending on which isoenzymes are elevated.",
+    "low": "Low LDH isoenzyme levels are uncommon and generally not seen as a health concern. However, they can be influenced by certain vitamins or rare genetic disorders."
+  },
+  {
+    "name": "Lactate Dehydrogenase (LDH) Test",
+    "source": "https://medlineplus.gov/lab-tests/lactate-dehydrogenase-ldh-test/",
+    "reference_range": null,
+    "normal": "A normal LDH level typically indicates that there is no significant tissue damage in your body. It suggests that your health is stable and there are no underlying issues requiring attention.",
+    "high": "An elevated LDH level may suggest that there is some tissue damage due to disease, infection, or injury. However, it can also be influenced by factors like intense exercise or certain medications.",
+    "low": "A low LDH level is uncommon and usually not a cause for concern. It may occur due to high intake of vitamins C or E, or in rare cases, a genetic disorder."
+  },
+  {
+    "name": "Lactate Test",
+    "source": "https://medlineplus.gov/lab-tests/lactate-test/",
+    "reference_range": null,
+    "normal": "A normal lactate level indicates that your body is managing lactate properly and there are no immediate concerns. It suggests that your blood acidity is within a normal range.",
+    "high": "A high lactate level may indicate conditions like hyperlactatemia or lactic acidosis, which can be serious and require immediate attention. It suggests that your body is experiencing some form of stress or dysfunction.",
+    "low": "Low levels of lactate are rare and generally not a cause for concern. They typically do not indicate any medical issues."
+  },
+  {
+    "name": "Lactose Tolerance Tests",
+    "source": "https://medlineplus.gov/lab-tests/lactose-tolerance-tests/",
+    "reference_range": null,
+    "normal": "A normal result suggests that your symptoms are likely not due to lactose intolerance. You may not need to change your diet significantly.",
+    "high": "A high result indicates that you may have lactose intolerance, meaning your body struggles to digest lactose properly, which can lead to discomfort after consuming dairy.",
+    "low": null
+  },
+  {
+    "name": "Laparoscopy",
+    "source": "https://medlineplus.gov/lab-tests/laparoscopy/",
+    "reference_range": null,
+    "normal": "A normal result from a laparoscopy means that no significant issues were found during the procedure. This can indicate that your health is stable regarding the area examined.",
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Legionella Tests",
+    "source": "https://medlineplus.gov/lab-tests/legionella-tests/",
+    "reference_range": null,
+    "normal": "A negative result suggests that you may have a different type of infection or that there weren't enough Legionella bacteria detected in your sample. It's important to discuss your symptoms and test results with your healthcare provider.",
+    "high": "A positive result likely indicates that you have Legionnaires' disease, which is a serious type of pneumonia caused by Legionella bacteria.",
+    "low": null
+  },
+  {
+    "name": "Lipase Tests",
+    "source": "https://medlineplus.gov/lab-tests/lipase-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A very high level of lipase often indicates acute pancreatitis or other pancreatic issues. It may also suggest other conditions like kidney disease or gallbladder problems.",
+    "low": "Low levels of lipase may indicate permanent damage to the pancreas, which can occur in chronic diseases like cystic fibrosis or chronic pancreatitis."
+  },
+  {
+    "name": "Lipoprotein (a) Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/lipoprotein-a-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high lipoprotein (a) level may indicate an increased risk for heart and blood vessel disease, even if other cholesterol levels are normal. It's important to discuss these results with your healthcare provider.",
+    "low": null
+  },
+  {
+    "name": "Liver Function Tests",
+    "source": "https://medlineplus.gov/lab-tests/liver-function-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result may indicate that your liver is inflamed or not functioning properly. It could also suggest other issues, such as problems with your bile ducts or damage from medications.",
+    "low": "A low result may suggest that your liver is not working well or that there are other underlying health issues. It's important to discuss these results with your healthcare provider."
+  },
+  {
+    "name": "Lung Cancer Genetic Tests",
+    "source": "https://medlineplus.gov/lab-tests/lung-cancer-genetic-tests/",
+    "reference_range": null,
+    "normal": "A normal result means that your lung cancer cells do not have a gene change that would respond to targeted therapy. This may indicate that other treatment options should be considered.",
+    "high": "A high result indicates that your lung cancer cells have a gene change that may respond well to a specific targeted therapy, which could lead to a more effective treatment plan.",
+    "low": "A low result suggests that your lung cancer cells have a gene change that may prevent certain therapies from working, helping to avoid ineffective treatments."
+  },
+  {
+    "name": "Lung Function Tests",
+    "source": "https://medlineplus.gov/lab-tests/lung-function-tests/",
+    "reference_range": null,
+    "normal": "A normal result means your lung function is appropriate for your size, age, and sex. This suggests that your lungs are functioning well.",
+    "high": null,
+    "low": "An abnormal result may indicate a lung condition, which could be either obstructive or restrictive. This means you might have difficulty with airflow or reduced lung capacity."
+  },
+  {
+    "name": "Luteinizing Hormone (LH) Levels Test",
+    "source": "https://medlineplus.gov/lab-tests/luteinizing-hormone-lh-levels-test/",
+    "reference_range": null,
+    "normal": "Normal LH levels indicate that your reproductive system is functioning properly. In women, this means your menstrual cycle is likely regular, and in men, it suggests normal testicular function.",
+    "high": "Elevated LH levels may suggest issues with the ovaries in women, such as polycystic ovary syndrome or approaching menopause. In men, it could indicate problems like a germ cell tumor or testicular injury.",
+    "low": "Low LH levels may indicate a problem with the pituitary gland or hypothalamus, which can affect hormone production. In women, it may be linked to missed periods due to factors like extreme exercise or stress."
+  },
+  {
+    "name": "Lyme Disease Tests",
+    "source": "https://medlineplus.gov/lab-tests/lyme-disease-tests/",
+    "reference_range": null,
+    "normal": "A negative test result means that no antibodies against Lyme disease were found in your blood, suggesting you likely do not have the disease. If you have had symptoms for more than 30 days, it is unlikely that you have Lyme disease.",
+    "high": "A positive test result indicates that antibodies against Lyme disease were found in your blood, which may suggest an active infection. However, further testing is recommended to confirm the diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Magnesium Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/magnesium-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high magnesium level may indicate that you are consuming too much magnesium from supplements or medications. It can also suggest that your kidneys are not functioning properly, making it hard for your body to eliminate magnesium.",
+    "low": "A low magnesium level may suggest that you are not getting enough magnesium in your diet or that your body is having trouble absorbing it. It can also indicate that your body is losing too much magnesium due to conditions like kidney problems or diabetes."
+  },
+  {
+    "name": "Malaria Tests",
+    "source": "https://medlineplus.gov/lab-tests/malaria-tests/",
+    "reference_range": null,
+    "normal": "A negative result means no malaria parasites were found in your blood, but it doesn't completely rule out the disease. Additional tests may be needed to confirm that you do not have malaria.",
+    "high": "A positive result indicates that you have malaria, and your healthcare provider will start treatment immediately based on the type of malaria and your medical history.",
+    "low": null
+  },
+  {
+    "name": "MCV (Mean Corpuscular Volume)",
+    "source": "https://medlineplus.gov/lab-tests/mcv-mean-corpuscular-volume/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high MCV result may indicate conditions such as pernicious anemia or liver disease, which can be related to vitamin B12 or folic acid deficiencies. It may also suggest that your body is not using these vitamins properly.",
+    "low": "A low MCV result can suggest certain types of anemia, like iron deficiency anemia or thalassemia, which means your red blood cells are smaller than normal."
+  },
+  {
+    "name": "Measles and Mumps Tests",
+    "source": "https://medlineplus.gov/lab-tests/measles-and-mumps-tests/",
+    "reference_range": null,
+    "normal": "A negative test result indicates that there are no signs of measles or mumps in your sample, suggesting you do not have these infections at this time. It also means you are not immune to these diseases.",
+    "high": "A positive result on a molecular test indicates that the measles or mumps virus is present in your blood, meaning you currently have an infection. A positive IgM antibody test suggests a current or recent infection, while a positive IgG test shows you are immune due to vaccination or past infection.",
+    "low": null
+  },
+  {
+    "name": "Measuring Blood Pressure",
+    "source": "https://medlineplus.gov/lab-tests/measuring-blood-pressure/",
+    "reference_range": "Less than 120/80 mm Hg",
+    "normal": "A normal blood pressure reading is less than 120 systolic and less than 80 diastolic. This means your heart is working efficiently and your blood vessels are healthy.",
+    "high": "A high blood pressure reading indicates that your heart is working harder than normal, which can increase the risk of heart disease and stroke. If your reading is consistently high, you may need lifestyle changes or medication.",
+    "low": "A low blood pressure reading, defined as 90/60 mm Hg or lower, may suggest that your body isn't getting enough blood flow. This can lead to symptoms like dizziness or fainting and may require medical attention."
+  },
+  {
+    "name": "Meningococcal Disease Tests",
+    "source": "https://medlineplus.gov/lab-tests/meningococcal-disease-tests/",
+    "reference_range": null,
+    "normal": "A negative result indicates that no meningococcal bacteria were detected, suggesting that your symptoms are likely not due to meningococcal disease.",
+    "high": "A positive result means that meningococcal bacteria were found, indicating that you most likely have meningococcal disease and will need treatment.",
+    "low": null
+  },
+  {
+    "name": "Mental Health Screening",
+    "source": "https://medlineplus.gov/lab-tests/mental-health-screening/",
+    "reference_range": null,
+    "normal": "A normal result means that no signs of a mental health disorder were found. This suggests that you or your child may not need further evaluation or treatment at this time.",
+    "high": "A high result indicates that there may be signs of a mental health disorder. This may lead to further discussions about treatment options or referrals to a specialist.",
+    "low": null
+  },
+  {
+    "name": "Methylmalonic Acid (MMA) Test",
+    "source": "https://medlineplus.gov/lab-tests/methylmalonic-acid-mma-test/",
+    "reference_range": null,
+    "normal": "Normal levels of MMA indicate that you likely do not have a vitamin B12 deficiency. This means your body is processing certain substances properly.",
+    "high": "Elevated levels of MMA may suggest a vitamin B12 deficiency, which could require further investigation and treatment. In infants, high levels may indicate a serious condition called methylmalonic acidemia.",
+    "low": "Lower-than-normal levels of MMA are rare and are generally not considered a health issue."
+  },
+  {
+    "name": "Microalbumin Creatinine Ratio",
+    "source": "https://medlineplus.gov/lab-tests/microalbumin-creatinine-ratio/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high microalbumin creatinine ratio may indicate serious kidney disease that could worsen over time and increase the risk of heart and blood vessel problems.",
+    "low": null
+  },
+  {
+    "name": "Mononucleosis (Mono) Tests",
+    "source": "https://medlineplus.gov/lab-tests/mononucleosis-mono-tests/",
+    "reference_range": null,
+    "normal": "A negative monospot test means you likely do not have mono, but if you still have symptoms, further testing may be needed. It suggests that your symptoms might be due to another condition.",
+    "high": "A positive monospot test indicates that you or your child may have mono. It suggests the presence of the virus that causes this illness.",
+    "low": null
+  },
+  {
+    "name": "MPV Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/mpv-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high MPV result indicates that your platelets are larger than normal, which may suggest that older platelets are being destroyed quickly and your bone marrow is producing many new platelets. This can be associated with various conditions, including blood cancers and heart disease.",
+    "low": "A low MPV result means your platelets are smaller than usual, which may indicate that your bone marrow isn't producing enough new platelets. This can be linked to certain cancers, autoimmune diseases, or infections."
+  },
+  {
+    "name": "MRSA Tests",
+    "source": "https://medlineplus.gov/lab-tests/mrsa-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result indicates that you have a MRSA infection, which may require treatment depending on its severity. Mild infections might be treated with topical antibiotics or drainage, while serious cases could need hospitalization and intravenous antibiotics.",
+    "low": null
+  },
+  {
+    "name": "MTHFR Gene Test",
+    "source": "https://medlineplus.gov/lab-tests/mthfr-gene-test/",
+    "reference_range": null,
+    "normal": "A negative result means that no common changes in the MTHFR gene were found, suggesting that any high homocysteine levels are likely due to other health issues. This result is generally reassuring regarding the MTHFR gene's role in your health.",
+    "high": "A positive result indicates that you have one or both common changes in the MTHFR gene, which may be linked to high homocysteine levels. This could potentially increase your risk for certain health problems, depending on the specific gene changes.",
+    "low": null
+  },
+  {
+    "name": "Mucus in Urine",
+    "source": "https://medlineplus.gov/lab-tests/mucus-in-urine/",
+    "reference_range": "Small or moderate amount of mucus",
+    "normal": "A normal result indicates that there is a small or moderate amount of mucus in your urine, which is typically not a cause for concern.",
+    "high": "A high amount of mucus may suggest a medical issue, such as a urinary tract infection, sexually transmitted infection, kidney stones, irritable bowel syndrome, or bladder cancer.",
+    "low": null
+  },
+  {
+    "name": "Myasthenia Gravis Tests",
+    "source": "https://medlineplus.gov/lab-tests/myasthenia-gravis-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result indicates that you have Myasthenia Gravis (MG), a condition that affects your muscles and can cause weakness. Your healthcare provider will help you create a treatment plan to manage your symptoms.",
+    "low": null
+  },
+  {
+    "name": "Myelography",
+    "source": "https://medlineplus.gov/lab-tests/myelography/",
+    "reference_range": null,
+    "normal": "A normal result indicates that your spinal canal and its structures are of normal size, position, and shape. This suggests there are no significant issues detected in the spine.",
+    "high": "If your results are not normal, it may indicate conditions such as a herniated disk, spinal stenosis, a tumor, nerve injury, bone spurs, or arachnoiditis.",
+    "low": null
+  },
+  {
+    "name": "Nasal Swab",
+    "source": "https://medlineplus.gov/lab-tests/nasal-swab/",
+    "reference_range": null,
+    "normal": "A negative result indicates that no harmful viruses or bacteria were detected in your sample, suggesting you do not have an infection. This is a good sign for your health.",
+    "high": "A positive result means that a specific harmful virus or bacteria was found in your sample, indicating that you may have an infection that requires treatment.",
+    "low": null
+  },
+  {
+    "name": "Natriuretic Peptide Tests (BNP, NT-proBNP)",
+    "source": "https://medlineplus.gov/lab-tests/natriuretic-peptide-tests-bnp-nt-probnp/",
+    "reference_range": null,
+    "normal": "Normal BNP or NT-proBNP results suggest that you are unlikely to have heart failure. Your doctor may still need to conduct additional tests to determine the cause of your symptoms.",
+    "high": "Elevated BNP or NT-proBNP levels may indicate that you could have heart failure. Higher levels often suggest more severe heart failure, but other health issues can also raise these levels.",
+    "low": null
+  },
+  {
+    "name": "Neurological Exam",
+    "source": "https://medlineplus.gov/lab-tests/neurological-exam/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Nitrites in Urine",
+    "source": "https://medlineplus.gov/lab-tests/nitrites-in-urine/",
+    "reference_range": null,
+    "normal": "A negative result means that no nitrites were found in your urine, which may suggest that you do not have a urinary tract infection (UTI). However, it's important to note that some infections may not produce nitrites.",
+    "high": "A positive result indicates that nitrites are present in your urine, which may suggest that you have a UTI. Your healthcare provider will consider this result along with other tests to confirm the diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Nonstress Test",
+    "source": "https://medlineplus.gov/lab-tests/nonstress-test/",
+    "reference_range": null,
+    "normal": "A reactive result indicates that your baby's heart rate increased appropriately during the test, suggesting they are doing well. This is a reassuring sign of your baby's health.",
+    "high": "A nonreactive result means your baby's heart rate did not increase as expected, which may require further testing to ensure there are no health concerns. It could be due to your baby being asleep or affected by medications.",
+    "low": null
+  },
+  {
+    "name": "Obesity Screening",
+    "source": "https://medlineplus.gov/lab-tests/obesity-screening/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result indicates that you are classified as overweight or obese, which may increase your risk of health problems. Your healthcare provider will help you create a plan to manage your weight and improve your health.",
+    "low": null
+  },
+  {
+    "name": "Obsessive Compulsive Disorder (OCD) Test",
+    "source": "https://medlineplus.gov/lab-tests/obsessive-compulsive-disorder-ocd-test/",
+    "reference_range": null,
+    "normal": "A normal result suggests that you do not have obsessive-compulsive disorder and your thoughts and behaviors are within a typical range. It indicates that your symptoms are manageable and do not significantly interfere with your daily life.",
+    "high": "A high result may indicate that you have obsessive-compulsive disorder, characterized by excessive thoughts and behaviors that take up a significant amount of your time and affect your daily functioning. It suggests that you may need further evaluation and possibly treatment.",
+    "low": null
+  },
+  {
+    "name": "Opioid Testing",
+    "source": "https://medlineplus.gov/lab-tests/opioid-testing/",
+    "reference_range": null,
+    "normal": "A negative result means that no opioids were detected in your sample. This could mean you haven't taken any opioids or that they have cleared from your system.",
+    "high": "A positive result indicates that opioids were found in your sample. However, this result may not be accurate, and further testing is often needed to confirm it.",
+    "low": null
+  },
+  {
+    "name": "Osmolality Tests",
+    "source": "https://medlineplus.gov/lab-tests/osmolality-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high osmolality result may indicate dehydration, an excess of salt in the blood, or potential poisoning. It can also suggest conditions like diabetes insipidus or stroke.",
+    "low": "A low osmolality result may suggest overhydration or issues such as heart failure, liver disease, or kidney disease."
+  },
+  {
+    "name": "Ova and Parasite Test",
+    "source": "https://medlineplus.gov/lab-tests/ova-and-parasite-test/",
+    "reference_range": null,
+    "normal": "A negative test result means no parasites or eggs were found in your stool, suggesting you likely do not have a parasitic infection. However, it is possible that there weren't enough parasites in the sample to detect.",
+    "high": "A positive test result indicates that parasites or their eggs were found in your stool, confirming the presence of intestinal parasites. This may require treatment depending on the type of parasite identified.",
+    "low": null
+  },
+  {
+    "name": "Panic Disorder Test",
+    "source": "https://medlineplus.gov/lab-tests/panic-disorder-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result may indicate that you have panic disorder, which is characterized by frequent panic attacks and ongoing worry about future attacks. It suggests that your symptoms are significant enough to warrant further evaluation and treatment.",
+    "low": null
+  },
+  {
+    "name": "Pap Smear",
+    "source": "https://medlineplus.gov/lab-tests/pap-smear/",
+    "reference_range": null,
+    "normal": "A normal result means that no abnormal changes were found in your cervical cells, and you may not need to be tested again for three to five years, depending on other factors.",
+    "high": "An abnormal result indicates that changes were found in your cervical cells. While most of these changes are not cancerous, some may require further testing to ensure they do not develop into cancer.",
+    "low": null
+  },
+  {
+    "name": "Parainfluenza Tests",
+    "source": "https://medlineplus.gov/lab-tests/parainfluenza-tests/",
+    "reference_range": null,
+    "normal": "A negative result indicates that no parainfluenza viruses were detected, suggesting another illness may be responsible for your symptoms. However, it doesn't completely rule out a parainfluenza infection.",
+    "high": "A positive result suggests that you likely have a parainfluenza infection. However, it's important to note that the test may sometimes detect the virus even if it isn't causing illness.",
+    "low": null
+  },
+  {
+    "name": "Parathyroid Hormone (PTH) Test",
+    "source": "https://medlineplus.gov/lab-tests/parathyroid-hormone-pth-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high PTH level may indicate hyperparathyroidism, which can be caused by issues with the parathyroid glands or low blood calcium levels. It suggests that the glands are producing too much PTH, potentially due to a benign tumor or other conditions.",
+    "low": "A low PTH level, especially with low blood calcium, may indicate hypoparathyroidism, meaning the parathyroid glands are not producing enough PTH. This can result from damage to the glands or certain medical conditions."
+  },
+  {
+    "name": "Partial Thromboplastin Time (PTT) Test",
+    "source": "https://medlineplus.gov/lab-tests/partial-thromboplastin-time-ptt-test/",
+    "reference_range": null,
+    "normal": "A normal PTT result means your blood clots within the expected time, indicating proper functioning of the clotting factors being tested. This suggests that there are no significant issues with your blood's ability to clot.",
+    "high": "A high PTT result indicates that your blood is taking longer than normal to clot, which may suggest liver disease, a vitamin K deficiency, or certain genetic disorders that increase bleeding risk.",
+    "low": "A low PTT result means your blood clots faster than normal, which could be a sign of conditions like early disseminated intravascular coagulation (DIC) or advanced cancer affecting blood clotting."
+  },
+  {
+    "name": "PDL1 (Immunotherapy) Tests",
+    "source": "https://medlineplus.gov/lab-tests/pdl1-immunotherapy-tests/",
+    "reference_range": null,
+    "normal": "A negative result means that your tumor cells do not have enough PD-L1 protein, which suggests that immunotherapy may not be effective for your treatment. Your doctor will likely consider other treatment options.",
+    "high": "A positive result indicates that your tumor cells have enough PD-L1 protein, which may allow you to benefit from certain immunotherapy medicines. This could be a good option for your cancer treatment.",
+    "low": null
+  },
+  {
+    "name": "PET Scan",
+    "source": "https://medlineplus.gov/lab-tests/pet-scan/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result may indicate the presence of cancer, as cancer cells typically appear as bright spots on the scan. It can also suggest heart disease if there is decreased blood flow to the heart.",
+    "low": null
+  },
+  {
+    "name": "Pharmacogenetic Tests",
+    "source": "https://medlineplus.gov/lab-tests/pharmacogenetic-tests/",
+    "reference_range": null,
+    "normal": "A normal result means that there are no significant changes in the tested genes, suggesting that the medicines you are currently using are likely to be effective for you. It indicates that your provider may continue with the current treatment plan.",
+    "high": "If the test shows changes in the genes that suggest a certain medicine may not work well for you, it may indicate that alternative treatments should be considered. Your provider will discuss other options that may be more effective.",
+    "low": null
+  },
+  {
+    "name": "Phenylketonuria (PKU) Screening",
+    "source": "https://medlineplus.gov/lab-tests/phenylketonuria-pku-screening/",
+    "reference_range": null,
+    "normal": "A normal result means your baby's blood levels of Phe are normal, indicating they are unlikely to have PKU. If the test was done early, a follow-up test may be needed.",
+    "high": "A high result indicates elevated levels of Phe in your baby's blood, suggesting they most likely have PKU. Further testing may be required to confirm this diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Phosphate in Blood",
+    "source": "https://medlineplus.gov/lab-tests/phosphate-in-blood/",
+    "reference_range": null,
+    "normal": "Normal phosphate levels indicate that your body is maintaining a proper balance of phosphorus, which is important for bone health and energy production. It suggests that your kidneys are functioning well and effectively filtering excess phosphate.",
+    "high": "A high phosphate level may indicate kidney problems, such as chronic kidney disease, where the kidneys cannot remove excess phosphate. It can also be linked to conditions like hypoparathyroidism or acidosis.",
+    "low": "A low phosphate level may suggest issues such as hyperparathyroidism or vitamin D deficiency, which can lead to weak bones. It may also occur due to inadequate dietary intake or certain medications."
+  },
+  {
+    "name": "Phosphate in Urine",
+    "source": "https://medlineplus.gov/lab-tests/phosphate-in-urine/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High phosphate levels in your urine may indicate kidney disease that prevents your kidneys from retaining phosphate or hyperparathyroidism, where your parathyroid gland produces too much hormone.",
+    "low": "Low phosphate levels in your urine may suggest kidney disease that affects your kidneys' ability to eliminate excess phosphate or hypoparathyroidism, where your parathyroid gland produces insufficient hormone."
+  },
+  {
+    "name": "Platelet Tests",
+    "source": "https://medlineplus.gov/lab-tests/platelet-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high platelet count may indicate certain types of cancer, anemia, inflammatory bowel disease, rheumatoid arthritis, a viral or bacterial infection, or severe blood loss.",
+    "low": "A low platelet count may suggest conditions like cancer affecting the blood, viral infections, autoimmune diseases, bone marrow damage, cirrhosis, or vitamin B12 deficiency."
+  },
+  {
+    "name": "Pleural Fluid Analysis",
+    "source": "https://medlineplus.gov/lab-tests/pleural-fluid-analysis/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result indicates that the pleural fluid is exudate, which may be due to inflammation, infections, or other serious conditions affecting blood vessels or lymphatic vessels. It's important to follow up with your provider to determine the specific cause.",
+    "low": "A low result suggests that the pleural fluid is transudate, typically caused by conditions like heart failure or kidney disease. This type of fluid is usually less concerning but should still be evaluated by your provider."
+  },
+  {
+    "name": "Pneumococcal Disease Tests",
+    "source": "https://medlineplus.gov/lab-tests/pneumococcal-disease-tests/",
+    "reference_range": null,
+    "normal": "A negative result means that no pneumococcus bacteria were found, suggesting that your symptoms are likely not due to pneumococcal disease.",
+    "high": "A positive result indicates that pneumococcus bacteria were detected, which means you most likely have pneumococcal disease.",
+    "low": null
+  },
+  {
+    "name": "Porphyrin Tests",
+    "source": "https://medlineplus.gov/lab-tests/porphyrin-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High levels of porphyrin in your blood, urine, or stool may suggest the presence of porphyria, a rare disease. Further testing will likely be needed to confirm the diagnosis and determine the specific type of porphyria.",
+    "low": null
+  },
+  {
+    "name": "Postpartum Depression Screening",
+    "source": "https://medlineplus.gov/lab-tests/postpartum-depression-screening/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive screening result may indicate that you are experiencing postpartum depression, which is important to address with a mental health professional.",
+    "low": null
+  },
+  {
+    "name": "Potassium Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/potassium-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of potassium in your blood may indicate that your kidneys are not functioning properly or that you have certain medical conditions, such as Addison's disease or uncontrolled diabetes. It can also result from injuries or certain medications.",
+    "low": "A low level of potassium may suggest issues such as excessive fluid loss from vomiting or diarrhea, the effects of certain medications, or adrenal gland disorders. It can also occur from a diet that lacks sufficient potassium."
+  },
+  {
+    "name": "Prealbumin Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/prealbumin-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High prealbumin levels may indicate conditions such as Hodgkin disease, kidney failure, or the effects of certain medications. Your healthcare provider may recommend further tests to understand the cause.",
+    "low": "Low prealbumin levels can suggest malnutrition or various health issues like inflammation or serious illness. If you are unwell or recovering from surgery, additional tests may be needed to assess your nutritional status."
+  },
+  {
+    "name": "Pregnancy Test",
+    "source": "https://medlineplus.gov/lab-tests/pregnancy-test/",
+    "reference_range": null,
+    "normal": "A negative result means that hCG wasn't detected, suggesting you may not be pregnant. However, it's possible to get a false-negative if the test is taken too early.",
+    "high": "A positive result indicates that hCG was found, which usually means you are pregnant. It's important to follow up with your healthcare provider for confirmation and care.",
+    "low": null
+  },
+  {
+    "name": "Prenatal Cell-Free DNA Screening",
+    "source": "https://medlineplus.gov/lab-tests/prenatal-cell-free-dna-screening/",
+    "reference_range": null,
+    "normal": "A negative result suggests that it is unlikely your baby has Down syndrome or another trisomy disorder.",
+    "high": "A positive result indicates an increased risk that your baby may have Down syndrome or another trisomy disorder, but it does not confirm a diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Prenatal Panel",
+    "source": "https://medlineplus.gov/lab-tests/prenatal-panel/",
+    "reference_range": null,
+    "normal": null,
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Procalcitonin Test",
+    "source": "https://medlineplus.gov/lab-tests/procalcitonin-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High procalcitonin levels suggest that you may have sepsis or a serious bacterial infection. It indicates a higher risk of developing severe complications like septic shock.",
+    "low": "Low procalcitonin levels, especially if you are being treated for an infection, indicate that your treatment is effective."
+  },
+  {
+    "name": "Progesterone Test",
+    "source": "https://medlineplus.gov/lab-tests/progesterone-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High progesterone levels when not pregnant may indicate issues such as ovarian cysts or cancer, while high levels during pregnancy could suggest multiple pregnancies or a molar pregnancy, which requires medical attention.",
+    "low": "Low progesterone levels when not pregnant may suggest problems with ovulation or conditions like PCOS, while low levels during pregnancy can be associated with ectopic pregnancy or an increased risk of miscarriage."
+  },
+  {
+    "name": "Prolactin Levels",
+    "source": "https://medlineplus.gov/lab-tests/prolactin-levels/",
+    "reference_range": null,
+    "normal": "Normal prolactin levels indicate that your body is functioning properly in terms of hormone production. It suggests that there are no underlying issues affecting your pituitary gland or other related conditions.",
+    "high": "Elevated prolactin levels may suggest various conditions, including pituitary disorders or hypothyroidism. It is important to follow up with your healthcare provider for further testing to determine the cause.",
+    "low": "Low prolactin levels are uncommon but may indicate a pituitary disorder. In women, it could lead to difficulties in breastfeeding due to insufficient milk production."
+  },
+  {
+    "name": "Prostate-Specific Antigen (PSA) Test",
+    "source": "https://medlineplus.gov/lab-tests/prostate-specific-antigen-psa-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high PSA level may suggest the presence of prostate cancer or other prostate conditions, such as an infection or an enlarged prostate. Further testing may be needed to determine the exact cause.",
+    "low": null
+  },
+  {
+    "name": "Protein C and Protein S Tests",
+    "source": "https://medlineplus.gov/lab-tests/protein-c-and-protein-s-tests/",
+    "reference_range": null,
+    "normal": "Normal levels of protein C and S do not pose any health risks and are considered healthy. This means you have a standard risk for developing blood clots.",
+    "high": "Higher levels of protein C or S are not associated with health issues, so an elevated result is generally not a concern.",
+    "low": "Low levels of protein C or S indicate an increased risk of developing blood clots. The severity of this risk depends on how low the levels are."
+  },
+  {
+    "name": "Protein Electrophoresis by Immunofixation Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/protein-electrophoresis-by-immunofixation-blood-test/",
+    "reference_range": null,
+    "normal": "A normal result means your protein levels are within the expected range, indicating no immediate concerns. It suggests that your body is functioning well regarding protein production and regulation.",
+    "high": "High protein levels may indicate various conditions such as dehydration, inflammatory diseases, or certain cancers. It is important to discuss these results with your healthcare provider for further evaluation.",
+    "low": "Low protein levels can suggest issues like malnutrition, liver disease, or kidney problems. This may require further investigation to determine the underlying cause."
+  },
+  {
+    "name": "Protein in Urine",
+    "source": "https://medlineplus.gov/lab-tests/protein-in-urine/",
+    "reference_range": null,
+    "normal": "A negative result means that your urine did not have an excessive amount of protein at the time of testing, which is generally a good sign for kidney health.",
+    "high": "A high protein level in your urine may indicate potential kidney issues or damage, but it can also be caused by temporary factors like exercise or dehydration.",
+    "low": null
+  },
+  {
+    "name": "Prothrombin Time Test and INR (PT/INR)",
+    "source": "https://medlineplus.gov/lab-tests/prothrombin-time-test-and-inr-ptinr/",
+    "reference_range": null,
+    "normal": "A normal PT/INR result means your blood is clotting properly, which reduces the risk of excessive bleeding or clotting. This is important for maintaining overall health, especially if you are on medications like warfarin.",
+    "high": "A high PT/INR level indicates that your blood is taking longer than normal to clot, which can increase the risk of bleeding. This may be due to a bleeding disorder, liver disease, or vitamin K deficiency.",
+    "low": "A low PT/INR level suggests that your blood is clotting too quickly, which can increase the risk of dangerous blood clots. This may be caused by a clotting disorder or a diet high in vitamin K."
+  },
+  {
+    "name": "PTEN Genetic Test",
+    "source": "https://medlineplus.gov/lab-tests/pten-genetic-test/",
+    "reference_range": null,
+    "normal": "A normal result means there are no inherited changes in your PTEN gene, indicating a typical cancer risk. It does not imply the presence of cancer.",
+    "high": "A positive result indicates an acquired change in your PTEN gene or certain inherited changes, which may increase your risk of cancer. Your healthcare provider will discuss potential steps to manage this risk.",
+    "low": null
+  },
+  {
+    "name": "Pulse Oximetry",
+    "source": "https://medlineplus.gov/lab-tests/pulse-oximetry/",
+    "reference_range": "95%–100%",
+    "normal": "A normal oxygen saturation level means your blood is carrying enough oxygen to support your body's needs. This is typically between 95% and 100%.",
+    "high": null,
+    "low": "A low oxygen saturation level, especially below 92%, may indicate that your body is not getting enough oxygen, which can be serious. If your level drops to 88% or lower, you should seek immediate medical help."
+  },
+  {
+    "name": "Rash Evaluation",
+    "source": "https://medlineplus.gov/lab-tests/rash-evaluation/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result may indicate that you are allergic to the substance tested or that you have an infection. This means your body is reacting to something it perceives as harmful.",
+    "low": null
+  },
+  {
+    "name": "RDW (Red Cell Distribution Width)",
+    "source": "https://medlineplus.gov/lab-tests/rdw-red-cell-distribution-width/",
+    "reference_range": "Null",
+    "normal": "A normal RDW result indicates that your red blood cells are of similar size and volume. This suggests that your red blood cells are functioning properly, but other tests may still be needed to rule out conditions like anemia.",
+    "high": "A high RDW result indicates that your red blood cells vary significantly in size. This could suggest underlying health issues such as chronic liver disease, heart disease, diabetes, or certain types of cancer.",
+    "low": "A low RDW result means your red blood cells are similar in size and closely packed. This is generally not a concern and is not indicative of anemia."
+  },
+  {
+    "name": "Red Blood Cell Antibody Screen",
+    "source": "https://medlineplus.gov/lab-tests/red-blood-cell-antibody-screen/",
+    "reference_range": null,
+    "normal": "A negative result means that no red blood cell antibodies were found in your blood, which is a good sign for both blood transfusions and pregnancy.",
+    "high": "A positive result indicates that you have one or more red blood cell antibodies in your blood, which could pose risks during blood transfusions or pregnancy. Further testing will be needed to determine the specific type of antibodies present.",
+    "low": null
+  },
+  {
+    "name": "Red Blood Cell (RBC) Count",
+    "source": "https://medlineplus.gov/lab-tests/red-blood-cell-rbc-count/",
+    "reference_range": null,
+    "normal": "A normal red blood cell count indicates that your body is producing an adequate number of red blood cells, which are essential for transporting oxygen throughout your body. This is a sign of good overall health.",
+    "high": "A high red blood cell count may suggest conditions such as dehydration, heart disease, or lung disease. It could also indicate polycythemia vera, a disorder where your body produces too many red blood cells.",
+    "low": "A low red blood cell count can indicate issues like anemia or malnutrition, and may also be caused by conditions such as leukemia or kidney failure. This may lead to fatigue and other health problems."
+  },
+  {
+    "name": "Red Blood Cell (RBC) Indices",
+    "source": "https://medlineplus.gov/lab-tests/red-blood-cell-rbc-indices/",
+    "reference_range": null,
+    "normal": "Normal results indicate that your red blood cells are of standard size and uniform in size. This suggests that your body is producing healthy red blood cells.",
+    "high": "A high result may suggest conditions like anemia due to vitamin B deficiency or hemolytic anemia, where red blood cells are being destroyed faster than they can be made.",
+    "low": "A low result may indicate iron deficiency anemia or thalassemia, which can lead to a reduced number of healthy red blood cells."
+  },
+  {
+    "name": "Renin Test",
+    "source": "https://medlineplus.gov/lab-tests/renin-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of renin may indicate conditions such as Addison disease, cirrhosis, or dehydration. It suggests that your body is trying to compensate for low blood pressure or low blood volume.",
+    "low": "A low level of renin may suggest primary aldosteronism or kidney disease. It can indicate that your adrenal glands are producing too much aldosterone or that there is an issue with kidney function."
+  },
+  {
+    "name": "Respiratory Pathogens Panel",
+    "source": "https://medlineplus.gov/lab-tests/respiratory-pathogens-panel/",
+    "reference_range": null,
+    "normal": "A negative result suggests that your symptoms might be due to a pathogen not tested for, or that the sample was not collected properly. It may also indicate that your condition is not caused by a virus or bacteria.",
+    "high": "A positive result indicates that a specific pathogen has been detected, which helps identify the type of infection you have. If multiple pathogens are found, it suggests a co-infection.",
+    "low": null
+  },
+  {
+    "name": "Respiratory Syncytial Virus (RSV) Tests",
+    "source": "https://medlineplus.gov/lab-tests/respiratory-syncytial-virus-rsv-tests/",
+    "reference_range": null,
+    "normal": "A negative result indicates that the virus was not detected in your sample, suggesting another illness may be responsible for your symptoms. However, it does not completely rule out the possibility of an RSV infection.",
+    "high": "A positive result suggests that you likely have an RSV infection, which may require treatment, especially for infants, young children, and older adults who might experience severe symptoms.",
+    "low": null
+  },
+  {
+    "name": "Reticulocyte Count",
+    "source": "https://medlineplus.gov/lab-tests/reticulocyte-count/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high reticulocyte count may indicate that your body is producing more red blood cells to replace those that are being lost, possibly due to conditions like hemolytic anemia or recent bleeding.",
+    "low": "A low reticulocyte count may suggest that your body is not producing enough red blood cells, which can occur in conditions like iron deficiency anemia or bone marrow failure."
+  },
+  {
+    "name": "Rheumatoid Factor (RF) Test",
+    "source": "https://medlineplus.gov/lab-tests/rheumatoid-factor-rf-test/",
+    "reference_range": null,
+    "normal": "A negative result indicates that there is little or no rheumatoid factor in your blood. However, this does not completely rule out the possibility of rheumatoid arthritis or other health issues.",
+    "high": "A positive result means that a higher level of rheumatoid factor was detected in your blood, which may suggest rheumatoid arthritis, another autoimmune disease, a chronic infection, or certain cancers.",
+    "low": null
+  },
+  {
+    "name": "Salicylates Level",
+    "source": "https://medlineplus.gov/lab-tests/salicylates-level/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of salicylates may require immediate treatment, as it can be dangerous and potentially fatal. The specific treatment will depend on how much salicylate is in your system.",
+    "low": null
+  },
+  {
+    "name": "Semen Analysis",
+    "source": "https://medlineplus.gov/lab-tests/semen-analysis/",
+    "reference_range": {
+      "volume": "1.5 to 7.6 milliliters",
+      "sperm_count": "More than 39 million sperm in the entire sample",
+      "sperm_concentration": "15 to 259 million sperm per milliliter of semen",
+      "sperm_motility": "Over 40%",
+      "sperm_morphology": "Over 4% of sperm should have a normal shape",
+      "pH": "7.2 to 8.0",
+      "time_to_liquefaction": "15 to 30 minutes",
+      "white_blood_cells": "Less than 1 million white blood cells per milliliter of semen"
+    },
+    "normal": "A normal semen analysis indicates that your sperm count, movement, and shape are within healthy ranges, which can support fertility. This means you may have a better chance of conceiving with your partner.",
+    "high": "A high sperm count or abnormal results may suggest potential fertility issues, which could make it harder for you and your partner to conceive. It may indicate underlying health problems that need further investigation.",
+    "low": "A low sperm count or abnormal results may indicate fertility challenges, making it more difficult for you to get your partner pregnant. It could be due to various factors, including lifestyle or health conditions."
+  },
+  {
+    "name": "Sentinel Lymph Node Biopsy",
+    "source": "https://medlineplus.gov/lab-tests/sentinel-lymph-node-biopsy/",
+    "reference_range": null,
+    "normal": "A negative result means no cancer cells were found in the sentinel lymph node, suggesting that the cancer has likely not spread. You won't need further lymph node removal.",
+    "high": "A positive result indicates that cancer was found in the sentinel lymph node, which may suggest that it has spread to nearby lymph nodes or other organs.",
+    "low": null
+  },
+  {
+    "name": "Sexually Transmitted Infection (STI) Tests",
+    "source": "https://medlineplus.gov/lab-tests/sexually-transmitted-infection-sti-tests/",
+    "reference_range": null,
+    "normal": "A negative result means you do not have an STI. This is a good outcome, but it's still important to practice safe sex.",
+    "high": "A positive result indicates that you have an STI. It's crucial to follow your healthcare provider's treatment plan and inform your partner.",
+    "low": null
+  },
+  {
+    "name": "SHBG Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/shbg-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high SHBG level may indicate that less testosterone is available for your body to use, which could lead to symptoms of low testosterone. This may be associated with conditions like liver disease or hyperthyroidism.",
+    "low": "A low SHBG level suggests that more testosterone is free and available for your body, which might be linked to conditions such as hypothyroidism, obesity, or polycystic ovary syndrome."
+  },
+  {
+    "name": "Skin Biopsy",
+    "source": "https://medlineplus.gov/lab-tests/skin-biopsy/",
+    "reference_range": null,
+    "normal": "A normal result means that no cancer or skin disease was found in the biopsy sample. This is a positive outcome for your health.",
+    "high": "An abnormal result may indicate the presence of a bacterial or fungal infection, a skin disorder like psoriasis, or skin cancer, which could be basal cell, squamous cell, or melanoma.",
+    "low": null
+  },
+  {
+    "name": "Skin Cancer Screening",
+    "source": "https://medlineplus.gov/lab-tests/skin-cancer-screening/",
+    "reference_range": null,
+    "normal": "A normal result means that no cancer cells were found in the skin sample, indicating that the suspicious spot is likely not cancerous.",
+    "high": "A positive result indicates that cancer cells were found in the skin sample, suggesting that you may have skin cancer and should discuss treatment options with your provider.",
+    "low": "A negative result means that no cancer cells were detected, but if you still have concerns about your skin, you should consult your provider for further evaluation."
+  },
+  {
+    "name": "Sleep Study",
+    "source": "https://medlineplus.gov/lab-tests/sleep-study/",
+    "reference_range": null,
+    "normal": "A normal sleep study indicates that you have a healthy sleep pattern with no significant issues like sleep apnea or low oxygen levels. Your heart rate should also fall within the normal range of 60 to 100 beats per minute.",
+    "high": "A high Apnea Hypopnea Index (AHI) suggests that you may have sleep apnea, which can lead to disrupted sleep and other health issues. An elevated Oxygen Desaturation Index (ODI) indicates that your oxygen levels drop too low during sleep, which can be concerning.",
+    "low": "Low sleep efficiency means you are spending a lot of time in bed without actually sleeping well, which can affect your overall rest. A low heart rate may indicate bradycardia, which could be a sign of an underlying health issue."
+  },
+  {
+    "name": "Smooth Muscle Antibody (SMA) Test",
+    "source": "https://medlineplus.gov/lab-tests/smooth-muscle-antibody-sma-test/",
+    "reference_range": null,
+    "normal": "A negative SMA test result means that SMAs were not found in your blood, suggesting you are unlikely to have type 1 autoimmune hepatitis. However, other tests may still be needed to confirm your health status.",
+    "high": "A positive SMA test result indicates that SMAs were found in your blood, which often suggests type 1 autoimmune hepatitis. High levels may also point to other conditions, so further testing may be necessary.",
+    "low": null
+  },
+  {
+    "name": "Sodium Blood Test",
+    "source": "https://medlineplus.gov/lab-tests/sodium-blood-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high sodium level may indicate dehydration, kidney disease, or certain disorders of the adrenal glands. It can also be caused by not drinking enough fluids or taking certain medications.",
+    "low": "A low sodium level may suggest conditions like kidney disease, heart failure, or excessive fluid retention. It can also result from vomiting, diarrhea, or certain medications."
+  },
+  {
+    "name": "Ultrasound",
+    "source": "https://medlineplus.gov/lab-tests/sonogram/",
+    "reference_range": null,
+    "normal": "A normal ultrasound result typically indicates that everything appears to be developing as expected. However, it does not guarantee a healthy outcome.",
+    "high": null,
+    "low": null
+  },
+  {
+    "name": "Sputum Culture",
+    "source": "https://medlineplus.gov/lab-tests/sputum-culture/",
+    "reference_range": null,
+    "normal": "A normal sputum culture result means that no harmful bacteria or fungi were detected in your sample. This suggests that you do not have an active infection.",
+    "high": "An abnormal sputum culture result may indicate the presence of harmful bacteria or fungi, suggesting an infection such as pneumonia, bronchitis, or tuberculosis. It may also signal a flare-up of a chronic condition like cystic fibrosis or COPD.",
+    "low": null
+  },
+  {
+    "name": "Stool Elastase",
+    "source": "https://medlineplus.gov/lab-tests/stool-elastase/",
+    "reference_range": null,
+    "normal": "A normal elastase level suggests that you likely do not have exocrine pancreatic insufficiency (EPI), but it doesn't completely rule it out. If you have symptoms, further testing may be necessary.",
+    "high": null,
+    "low": "A low elastase level may indicate that you have exocrine pancreatic insufficiency (EPI). If your results are not normal, your doctor may recommend additional tests to confirm EPI and determine its cause."
+  },
+  {
+    "name": "Strep A Test",
+    "source": "https://medlineplus.gov/lab-tests/strep-a-test/",
+    "reference_range": null,
+    "normal": "A negative result means that strep A bacteria are not causing your symptoms, and your provider may look for other causes. You may need further testing if your symptoms persist.",
+    "high": "A positive result indicates that you or your child has strep throat or another strep A infection, and no further testing is needed.",
+    "low": null
+  },
+  {
+    "name": "Strep B Test",
+    "source": "https://medlineplus.gov/lab-tests/strep-b-test/",
+    "reference_range": null,
+    "normal": "A negative result means you do not have GBS bacteria, which is good for your pregnancy and delivery. You will not need antibiotics during labor.",
+    "high": "A positive result indicates that you have GBS bacteria, and you will receive antibiotics during labor to protect your baby from infection.",
+    "low": null
+  },
+  {
+    "name": "Stress Tests",
+    "source": "https://medlineplus.gov/lab-tests/stress-tests/",
+    "reference_range": null,
+    "normal": "A normal result indicates that there are no issues with blood flow and your heart is functioning properly.",
+    "high": "An abnormal result may suggest the presence of heart disease, and further evaluation may be necessary.",
+    "low": null
+  },
+  {
+    "name": "Suicide Risk Screening",
+    "source": "https://medlineplus.gov/lab-tests/suicide-risk-screening/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high risk result indicates that you may be at significant risk of attempting suicide, which could lead to immediate hospitalization for your safety.",
+    "low": "A low risk result suggests that you are not currently at risk of attempting suicide, but it does not mean you won't need support in the future."
+  },
+  {
+    "name": "Sweat Test for Cystic Fibrosis",
+    "source": "https://medlineplus.gov/lab-tests/sweat-test-for-cystic-fibrosis/",
+    "reference_range": "30–59 mmol/L",
+    "normal": "A chloride level below 29 mmol/L is considered normal, suggesting that cystic fibrosis is unlikely. However, a normal result does not completely rule out the possibility of cystic fibrosis.",
+    "high": "A chloride level of 60 mmol/L or greater indicates a high likelihood of cystic fibrosis. Further testing may be required to confirm the diagnosis.",
+    "low": "A chloride level between 30 and 59 mmol/L means that the results are unclear, and additional testing may be necessary to determine if cystic fibrosis is present."
+  },
+  {
+    "name": "Synovial Fluid Analysis",
+    "source": "https://medlineplus.gov/lab-tests/synovial-fluid-analysis/",
+    "reference_range": null,
+    "normal": "Normal synovial fluid is typically light yellow, clear, and slightly sticky. This indicates healthy joint function.",
+    "high": "Abnormal synovial fluid that is cloudy or has an unusual consistency may suggest conditions like arthritis, a bleeding disorder, or a bacterial infection.",
+    "low": null
+  },
+  {
+    "name": "Syphilis Tests",
+    "source": "https://medlineplus.gov/lab-tests/syphilis-tests/",
+    "reference_range": null,
+    "normal": "A negative result suggests that you likely do not have a syphilis infection, but it doesn't completely rule it out. You may need another test if you think you were exposed.",
+    "high": "A positive result indicates that you have antibodies that may be from a syphilis infection. A follow-up test will be needed to confirm the diagnosis.",
+    "low": null
+  },
+  {
+    "name": "Testosterone Levels Test",
+    "source": "https://medlineplus.gov/lab-tests/testosterone-levels-test/",
+    "reference_range": null,
+    "normal": null,
+    "high": "High testosterone levels may indicate conditions such as tumors in the testicles or issues with the adrenal glands. In females, it could suggest polycystic ovary syndrome or ovarian cancer.",
+    "low": "Low testosterone levels in males can be caused by various health issues, including testicular problems or chronic diseases. In females, low levels are usually normal, but very low levels may indicate adrenal or pituitary gland disorders."
+  },
+  {
+    "name": "Therapeutic Drug Monitoring",
+    "source": "https://medlineplus.gov/lab-tests/therapeutic-drug-monitoring/",
+    "reference_range": null,
+    "normal": "A normal result means that the medicine levels in your blood are within the therapeutic range, which is safe and effective for your treatment. This indicates that your current dosage is appropriate.",
+    "high": "A high result suggests that the medicine levels in your blood are above the therapeutic range, which could be harmful. This may require your healthcare provider to lower your dosage.",
+    "low": "A low result indicates that the medicine levels in your blood are below the therapeutic range, which may mean that the treatment is not effective. Your provider may need to increase your dosage."
+  },
+  {
+    "name": "Thyroglobulin",
+    "source": "https://medlineplus.gov/lab-tests/thyroglobulin/",
+    "reference_range": null,
+    "normal": "Very low or no thyroglobulin levels after treatment generally indicate that the cancer treatment was successful in removing all thyroid tissue. However, ongoing monitoring is necessary to ensure that the cancer does not return.",
+    "high": "High or increasing thyroglobulin levels may suggest that not all thyroid tissue was removed during treatment, or that the thyroid cancer is still present or has returned.",
+    "low": null
+  },
+  {
+    "name": "Thyroid Antibodies",
+    "source": "https://medlineplus.gov/lab-tests/thyroid-antibodies/",
+    "reference_range": null,
+    "normal": "A negative result means that no thyroid antibodies were detected, suggesting that your thyroid symptoms are likely not due to an autoimmune disease.",
+    "high": "A positive result indicates that thyroid antibodies were found, which may suggest the presence of Hashimoto's disease or Graves' disease, both of which are autoimmune disorders affecting the thyroid.",
+    "low": null
+  },
+  {
+    "name": "Thyroxine (T4) Test",
+    "source": "https://medlineplus.gov/lab-tests/thyroxine-t4-test/",
+    "reference_range": null,
+    "normal": "A normal T4 result usually means that your thyroid is functioning properly and producing the right amount of hormones. This is important for maintaining your body's metabolism and energy levels.",
+    "high": "A high T4 result may indicate conditions such as hyperthyroidism or Graves' disease, which can cause your thyroid to produce too much hormone. This may lead to symptoms like weight loss, increased heart rate, and anxiety.",
+    "low": "A low T4 result may suggest hypothyroidism or other thyroid-related issues, meaning your thyroid isn't producing enough hormones. This can result in symptoms like fatigue, weight gain, and depression."
+  },
+  {
+    "name": "Total Protein and Albumin/Globulin (A/G) Ratio",
+    "source": "https://medlineplus.gov/lab-tests/total-protein-and-albumin-globulin-a-g-ratio/",
+    "reference_range": null,
+    "normal": "Normal total protein levels and A/G ratio indicate that your body is likely functioning well and absorbing nutrients properly.",
+    "high": "High total protein levels may suggest an infection or a type of blood cancer. A high A/G ratio could indicate certain genetic disorders or leukemia.",
+    "low": "Low total protein levels may indicate liver or kidney disease, malnutrition, or a malabsorption syndrome. A low A/G ratio may be caused by autoimmune diseases or liver and kidney issues."
+  },
+  {
+    "name": "TP53 Genetic Test",
+    "source": "https://medlineplus.gov/lab-tests/tp53-genetic-test/",
+    "reference_range": null,
+    "normal": "A normal result means there are no inherited changes in the TP53 gene, indicating a typical risk of cancer. This does not guarantee that you will not develop cancer, but your risk is similar to that of the general population.",
+    "high": "A high result indicates an acquired change in the TP53 gene, which may affect your cancer treatment plan and future health. It suggests that the cancer may have developed due to this genetic change.",
+    "low": "A low result indicates an inherited change in one copy of the TP53 gene, which means you have Li-Fraumeni syndrome. This does not mean you currently have cancer, but it does increase your risk of developing it."
+  },
+  {
+    "name": "Trichomoniasis Test",
+    "source": "https://medlineplus.gov/lab-tests/trichomoniasis-test/",
+    "reference_range": null,
+    "normal": "A negative result means that no parasites were found in your sample, indicating you do not have a trichomoniasis infection.",
+    "high": "A positive result means that parasites were detected in your sample, confirming that you have a trichomoniasis infection.",
+    "low": null
+  },
+  {
+    "name": "Tricyclic Antidepressant (TCA) Screen",
+    "source": "https://medlineplus.gov/lab-tests/tricyclic-antidepressant-tca-screen/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high level of TCA in your blood may indicate that you are taking too much of the medication, which could be dangerous. Immediate treatment may be necessary to prevent harm.",
+    "low": null
+  },
+  {
+    "name": "Triglycerides Test",
+    "source": "https://medlineplus.gov/lab-tests/triglycerides-test/",
+    "reference_range": "less than 150 mg/dL",
+    "normal": "A normal triglyceride level means you have a lower risk of heart disease and other related conditions. It indicates that your body is processing fats properly.",
+    "high": "A high triglyceride level may indicate an increased risk of heart disease, stroke, and other health issues. It can also raise the risk of metabolic syndrome and sudden pancreatitis.",
+    "low": "Low triglyceride levels are very uncommon and typically do not indicate a health concern. However, if they occur, it may be worth discussing with your healthcare provider."
+  },
+  {
+    "name": "Triiodothyronine (T3) Tests",
+    "source": "https://medlineplus.gov/lab-tests/triiodothyronine-t3-tests/",
+    "reference_range": null,
+    "normal": "Normal T3 levels typically suggest that you may not have a thyroid condition, especially if your TSH and free T4 levels are also normal. However, normal T3 levels alone do not completely rule out thyroid disease.",
+    "high": "High T3 levels may indicate hyperthyroidism, which means your body has too much thyroid hormone. This can be due to issues with your thyroid gland or, in some cases, a problem with your pituitary gland.",
+    "low": "Low T3 levels may suggest hypothyroidism, indicating that your body has too little thyroid hormone. This can be caused by problems with your thyroid gland or, in some instances, a pituitary gland condition."
+  },
+  {
+    "name": "Troponin Test",
+    "source": "https://medlineplus.gov/lab-tests/troponin-test/",
+    "reference_range": null,
+    "normal": "Normal troponin levels suggest that you likely did not have a heart attack. If your levels remain normal 12 hours after symptoms began, it is a good indication that your heart is not damaged.",
+    "high": "Elevated troponin levels usually indicate some damage to the heart muscle, which may be due to a heart attack or other heart-related conditions. Your provider will evaluate your overall condition to determine the cause.",
+    "low": null
+  },
+  {
+    "name": "TSH (Thyroid-stimulating hormone) Test",
+    "source": "https://medlineplus.gov/lab-tests/tsh-thyroid-stimulating-hormone-test/",
+    "reference_range": null,
+    "normal": "A normal TSH result indicates that your thyroid is functioning properly and producing the right amount of hormones. This means your thyroid is likely healthy.",
+    "high": "A high TSH result may suggest that your thyroid is not producing enough hormones, which could indicate hypothyroidism. Further testing may be needed to determine the cause.",
+    "low": "A low TSH result may indicate that your thyroid is producing too much hormone, which could suggest hyperthyroidism. Additional tests may be required to investigate the issue."
+  },
+  {
+    "name": "Tuberculosis Screening",
+    "source": "https://medlineplus.gov/lab-tests/tuberculosis-screening/",
+    "reference_range": null,
+    "normal": "A negative result means you likely do not have a TB infection. However, further testing may be needed if you have symptoms or were recently exposed to TB.",
+    "high": "A positive result indicates that you have been infected with TB bacteria, and additional tests will be necessary to determine if the infection is active or inactive.",
+    "low": null
+  },
+  {
+    "name": "Tumor Marker Tests",
+    "source": "https://medlineplus.gov/lab-tests/tumor-marker-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high result may suggest the presence of cancer or that cancer treatment is not working effectively. It is important to discuss these results with your healthcare provider for further evaluation.",
+    "low": "A low result may indicate that there is no active cancer or that the treatment is working well. However, it is essential to consult your healthcare provider for a complete interpretation."
+  },
+  {
+    "name": "Uric Acid Test",
+    "source": "https://medlineplus.gov/lab-tests/uric-acid-test/",
+    "reference_range": null,
+    "normal": "Normal uric acid levels typically do not indicate any health issues. Most people with normal levels do not experience related health problems.",
+    "high": "High uric acid levels may suggest conditions like gout, kidney disease, or certain types of cancer. It could also indicate dietary habits or issues with how your body processes uric acid.",
+    "low": "Low uric acid levels are rare and usually do not cause health problems. They are often evaluated through other tests for underlying conditions."
+  },
+  {
+    "name": "Urobilinogen in Urine",
+    "source": "https://medlineplus.gov/lab-tests/urobilinogen-in-urine/",
+    "reference_range": null,
+    "normal": "A normal level of urobilinogen in urine indicates that your liver and bile ducts are functioning properly. It suggests that there are no significant issues affecting bile flow or liver function.",
+    "high": "A high level of urobilinogen may indicate liver problems such as hepatitis or cirrhosis, or conditions that cause increased breakdown of red blood cells. It is important to follow up with your healthcare provider for further evaluation.",
+    "low": "A low or absent level of urobilinogen can suggest a blockage in the bile ducts or issues with blood flow to the liver. This may indicate potential liver dysfunction that should be investigated."
+  },
+  {
+    "name": "Videonystagmography (VNG)",
+    "source": "https://medlineplus.gov/lab-tests/videonystagmography-vng/",
+    "reference_range": null,
+    "normal": null,
+    "high": "An abnormal VNG result may indicate a disorder of the vestibular system in your inner ear, which could affect balance. You may need further tests to determine the specific type of disorder.",
+    "low": null
+  },
+  {
+    "name": "Vision Screening",
+    "source": "https://medlineplus.gov/lab-tests/vision-screening/",
+    "reference_range": null,
+    "normal": "A normal vision screening result means that no vision problems were detected, and your eyesight is likely functioning well.",
+    "high": "If the screening indicates a possible vision problem, it may suggest that further evaluation by an eye care specialist is needed.",
+    "low": null
+  },
+  {
+    "name": "Vitamin B Test",
+    "source": "https://medlineplus.gov/lab-tests/vitamin-b-test/",
+    "reference_range": null,
+    "normal": "Normal vitamin B levels suggest that your body has sufficient amounts of these vitamins. However, if you still have symptoms, further testing may be necessary.",
+    "high": null,
+    "low": "Low levels of one or more B vitamins may indicate a deficiency, which could require additional tests to determine the cause and may lead to recommendations for supplements or IV treatment."
+  },
+  {
+    "name": "Vitamin D Test",
+    "source": "https://medlineplus.gov/lab-tests/vitamin-d-test/",
+    "reference_range": null,
+    "normal": "A sufficient level of vitamin D means your body has enough for good bone and overall health. This is generally considered optimal for most people.",
+    "high": "A high level of vitamin D may indicate that you are taking too many supplements, which can lead to serious health issues. It's important to reduce your intake to avoid potential damage to your organs.",
+    "low": "A low level of vitamin D can suggest that you are not getting enough from your diet or sunlight, or that your body is having trouble absorbing it. This may affect your bone health and overall well-being."
+  },
+  {
+    "name": "Vitamin E (Tocopherol) Test",
+    "source": "https://medlineplus.gov/lab-tests/vitamin-e-tocopherol-test/",
+    "reference_range": null,
+    "normal": "A normal vitamin E level indicates that you are getting enough of this vitamin for your age. It suggests that your body is absorbing vitamin E properly.",
+    "high": "High vitamin E levels may indicate that you are consuming too much of this vitamin, often from supplements. This could lead to health issues, including problems with bleeding.",
+    "low": "Low vitamin E levels suggest that you are not getting enough of this vitamin or that your body is having trouble absorbing it. This may require treatment to improve your vitamin E levels."
+  },
+  {
+    "name": "V/Q Scan",
+    "source": "https://medlineplus.gov/lab-tests/vq-scan/",
+    "reference_range": null,
+    "normal": "A normal result means that both the ventilation and perfusion scans show matching images, indicating that your lungs are functioning properly.",
+    "high": "An abnormal result may suggest a pulmonary embolism or other lung conditions, indicating that medical treatment may be necessary.",
+    "low": null
+  },
+  {
+    "name": "White Blood Cell (WBC) in Stool",
+    "source": "https://medlineplus.gov/lab-tests/white-blood-cell-wbc-in-stool/",
+    "reference_range": null,
+    "normal": "A normal test result means no white blood cells were found in your stool, suggesting that inflammation may not be the cause of your illness. However, it doesn't completely rule out inflammation since white blood cells can break down quickly in samples.",
+    "high": "A positive test result indicates that white blood cells were detected in your stool, which suggests inflammation in your digestive tract. This finding can help identify potential underlying conditions.",
+    "low": null
+  },
+  {
+    "name": "White Blood Count (WBC)",
+    "source": "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A high white blood count may indicate an infection, inflammation, or other conditions like leukemia. It can also result from stress or certain medications.",
+    "low": "A low white blood count may suggest bone marrow damage, autoimmune disorders, or infections like HIV. It could also be a sign that treatment for a blood disorder is effective."
+  },
+  {
+    "name": "Whooping Cough Tests",
+    "source": "https://medlineplus.gov/lab-tests/whooping-cough-diagnosis/",
+    "reference_range": null,
+    "normal": "A negative result suggests that you probably do not have whooping cough, but it does not completely rule it out. Other factors may affect the accuracy of the test.",
+    "high": "A positive result indicates that you have whooping cough, which is caused by a bacterial infection. It is important to seek treatment to reduce the severity of the illness and prevent spreading it to others.",
+    "low": null
+  },
+  {
+    "name": "Xylose Testing",
+    "source": "https://medlineplus.gov/lab-tests/xylose-testing/",
+    "reference_range": null,
+    "normal": "High levels of xylose indicate that your intestines are properly absorbing it, suggesting that malabsorption is not the cause of your symptoms. Normal results mean your digestive system is functioning well.",
+    "high": "High xylose levels suggest that your symptoms are likely not due to malabsorption issues. This is generally a positive indication of intestinal absorption.",
+    "low": "Low levels of xylose may indicate a malabsorption disorder, meaning your body is not properly absorbing nutrients. It could also suggest conditions like Celiac disease or Crohn's disease."
+  },
+  {
+    "name": "Yeast Infection Tests",
+    "source": "https://medlineplus.gov/lab-tests/yeast-infection-tests/",
+    "reference_range": null,
+    "normal": null,
+    "high": "A positive result indicates that you have a yeast infection, which may require treatment with antifungal medication. Your healthcare provider will guide you on the best treatment options.",
+    "low": null
+  },
+  {
+    "name": "Zika Virus Test",
+    "source": "https://medlineplus.gov/lab-tests/zika-virus-test/",
+    "reference_range": null,
+    "normal": "A negative Zika test result may mean that you are not infected with the virus, or it could indicate that the test was done too early for the virus to be detected. It's important to consult your healthcare provider about whether you need to be retested.",
+    "high": "A positive Zika test result suggests that you likely have a Zika infection. If you are pregnant, it is important to discuss potential health issues for your baby with your healthcare provider.",
+    "low": null
+  }
+]

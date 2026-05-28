@@ -49,13 +49,50 @@ export default function Report() {
         await new Promise((r) => setTimeout(r, 350));
       }
       const data = await analyzeReport(f, reportType);
-      setResult(data);
+
+      // Support new backend shape: { reportRecord, savedMetrics }
+      let uiResult = {};
+      if (data && (data.reportRecord || data.savedMetrics)) {
+        const rr = data.reportRecord || {};
+        const sm = data.savedMetrics || [];
+
+        uiResult = {
+          autoSaved: Boolean(rr && Object.keys(rr).length > 0),
+          date: rr.report_date || rr.uploaded_at || new Date().toISOString().slice(0, 10),
+          type: rr.report_type || reportType,
+          lab: rr.facility || null,
+          values: sm.map((m) => ({
+            id: m.metric_id,
+            parameter: m.parameter_name,
+            value: m.value,
+            normalRange: m.reference_range || '',
+            unit: m.unit || '',
+            status: m.status || 'normal',
+            trend: m.trend || [],
+          })),
+          risks: [],
+          recommendations: [],
+          plainSummary: null,
+          urgencyLevel: null,
+          urgencyMessage: null,
+          // keep originals for future use
+          reportRecord: rr,
+          savedMetrics: sm,
+        };
+      } else if (data && data.report) {
+        // legacy shape
+        uiResult = data.report;
+      } else {
+        uiResult = data || {};
+      }
+
+      setResult(uiResult);
       setPhase('result');
       addToast(
-        data.autoSaved
+        uiResult.autoSaved
           ? 'Report saved to your Health Record. AI will track these values.'
           : 'Report analyzed. Add a patient ID to save it to the Health Record.',
-        data.autoSaved ? 'success' : 'info'
+        uiResult.autoSaved ? 'success' : 'info'
       );
     } catch (error) {
       setPhase('upload');
@@ -138,7 +175,9 @@ export default function Report() {
             </div>
 
             {/* Urgency */}
-            <UrgencyBanner level={result.urgencyLevel} message={result.urgencyMessage} />
+            {(result.urgencyLevel || result.urgencyMessage) && (
+              <UrgencyBanner level={result.urgencyLevel} message={result.urgencyMessage} />
+            )}
 
             {/* Report summary */}
             <Card>
@@ -161,7 +200,7 @@ export default function Report() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {result.values.map((v) => (
+                    {(result.values || []).map((v) => (
                       <tr key={v.id}>
                         <td className="py-2.5 pr-3 font-medium text-gray-900 dark:text-white text-xs">{v.parameter}</td>
                         <td className="py-2.5 pr-3 font-bold text-gray-900 dark:text-white">{v.value}</td>
@@ -172,9 +211,9 @@ export default function Report() {
                           </span>
                         </td>
                         <td className="py-2.5">
-                          {v.trend.length >= 2 && (
+                          {(v.trend || []).length >= 2 && (
                             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              {v.trend.join(' → ')}
+                              {(v.trend || []).join(' → ')}
                               <TrendingUp className={`w-3 h-3 ${v.status === 'high' ? 'text-red-500' : 'text-emerald-500'}`} />
                             </div>
                           )}
@@ -189,7 +228,7 @@ export default function Report() {
             {/* Risk Assessment */}
             <div className="space-y-3">
               <h3 className="font-semibold text-gray-900 dark:text-white">Risk Assessment</h3>
-              {result.risks.map((r, i) => (
+              {(result.risks || []).map((r, i) => (
                 <div key={i} className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm ${
                   r.level === 'high' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
                   : r.level === 'moderate' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800'
@@ -212,7 +251,7 @@ export default function Report() {
             <Card>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Recommendations</h3>
               <ol className="space-y-1.5">
-                {result.recommendations.map((r, i) => (
+                {(result.recommendations || []).map((r, i) => (
                   <li key={i} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <span className="text-emerald-500 font-bold flex-shrink-0">{i + 1}.</span> {r}
                   </li>
@@ -246,10 +285,10 @@ export default function Report() {
                 Values from previous reports will appear here
               </div>
               <div className="space-y-2">
-                {result.values.filter(v => v.trend.length >= 2).map((v) => (
+                {(result.values || []).filter(v => (v.trend || []).length >= 2).map((v) => (
                   <div key={v.id} className="flex items-center gap-2 text-sm">
                     <span className="text-gray-500 dark:text-gray-400 w-28 flex-shrink-0">{v.parameter}:</span>
-                    <span className="text-gray-600 dark:text-gray-300">{v.trend.join(' → ')}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{(v.trend || []).join(' → ')}</span>
                     <TrendingUp className="w-3.5 h-3.5 text-red-500" />
                   </div>
                 ))}

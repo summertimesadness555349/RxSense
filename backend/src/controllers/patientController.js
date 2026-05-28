@@ -86,6 +86,7 @@ class PatientController {
 
             // Save to DB if we have a valid UUID patient_id
             let reportRecord = null;
+            let savedMetrics = [];
             const validPatientId = UUID_RE.test(String(patientId || '')) ? patientId : null;
 
             if (validPatientId) {
@@ -102,12 +103,12 @@ class PatientController {
                         patientNameRep: extracted.patient?.name  || null,
                     });
 
-                    // Save individual lab/vital entries as report_metrics
+                    // Save individual lab/vital entries as report_metrics and collect saved rows
                     const sections = extracted.sections || [];
                     for (const section of sections) {
                         if (section.type === 'lab_results' || section.type === 'vitals') {
                             for (const entry of (section.entries || [])) {
-                                await this.patientModel.addReportMetric({
+                                const metric = await this.patientModel.addReportMetric({
                                     reportId:       reportRecord.report_id,
                                     parameterName:  entry.label,
                                     value:          String(entry.value ?? ''),
@@ -115,7 +116,11 @@ class PatientController {
                                     referenceRange: entry.reference_range || null,
                                     status:         this.reportAnalysisUtils.normalizeMetricStatus(entry.status, entry.flag),
                                     llmFlagged:     (entry.status && entry.status !== 'normal') || Boolean(entry.flag),
-                                }).catch(err => console.warn('[Report] Metric save failed:', err.message));
+                                }).catch(err => {
+                                    console.warn('[Report] Metric save failed:', err.message);
+                                    return null;
+                                });
+                                if (metric) savedMetrics.push(metric);
                             }
                         }
                     }
@@ -125,24 +130,11 @@ class PatientController {
                 }
             }
 
+            // Return DB record and the list of saved metrics (frontend will adapt to this shape)
             return res.status(200).json({
                 success: true,
-                report: {
-                    id:                 reportRecord?.report_id || `rep_${Date.now()}`,
-                    image_url:          imageUrl,
-                    type:               extracted.report_type || reportType,
-                    date:               extracted.report_date || new Date().toISOString().slice(0, 10),
-                    facility:           extracted.facility        || null,
-                    ordering_doctor:    extracted.ordering_doctor || null,
-                    patient:            extracted.patient         || null,
-                    sections:           extracted.sections        || [],
-                    overall_impression: extracted.overall_impression || null,
-                    diagnoses:          extracted.diagnoses        || [],
-                    recommendations:    extracted.recommendations  || [],
-                    clinical_notes:     extracted.clinical_notes   || null,
-                    follow_up:          extracted.follow_up        || null,
-                    autoSaved:          Boolean(reportRecord),
-                },
+                reportRecord: reportRecord,
+                savedMetrics: savedMetrics,
             });
         } catch (error) {
             console.error('[Report] Analysis error:', error.message);

@@ -157,7 +157,9 @@ export const analyzeReport = async (file, reportType) => {
     body: formData,
   });
 
-  return data.report;
+  // Backend now returns { success, reportRecord, savedMetrics }
+  // Return the full payload so callers can adapt to the new shape.
+  return data;
 };
 
 // POST /api/symptoms/check

@@ -225,7 +225,8 @@ class PatientModel {
         try {
             const result = await this.db_connection.query_executor(query, [labelLower]);
             return result.rows[0] || null;
-        } catch {
+        } catch (err) {
+            console.warn('[PatientModel] findLabTestInfo failed for:', labelLower, err.message);
             return null;
         }
     };

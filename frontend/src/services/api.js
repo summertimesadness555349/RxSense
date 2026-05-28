@@ -16,7 +16,7 @@ import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const getAccessToken = () => {
   const appToken = localStorage.getItem('rxsense_token');
@@ -56,13 +56,11 @@ export const analyzePrescription = async (imageFile) => {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const token = localStorage.getItem('rxsense_token');
-    const res = await axios.post(`${BASE_URL}/api/prescription/analyze`, formData, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      // Do NOT set Content-Type — axios sets multipart boundary automatically
+    const data = await request('/api/prescription/analyze', {
+      method: 'POST',
+      body: formData,
     });
 
-    const data = res.data;
     if (!data.success) throw new Error(data.error || 'Analysis failed');
 
     const drugs = data.drugs || [];
@@ -134,7 +132,7 @@ export const analyzePrescription = async (imageFile) => {
       warnings,
     };
   } catch (err) {
-    throw new Error(err.response?.data?.error || err.message || 'Analysis failed');
+    throw new Error(err.message || 'Analysis failed');
   }
 };
 
@@ -295,7 +293,7 @@ export const generateEmergencyCard = async (userId) => {
 // };
 
 export const login = async (email, password) => {
-  const data = await request('/auth/login', {
+  const data = await request('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier: email, password }),
@@ -310,26 +308,27 @@ export const login = async (email, password) => {
 
 // POST /api/auth/register
 export const register = async (userData) => {
-  try {
-    const res = await api.post('/auth/register', {
-      name: userData.name,
-      email: userData.email,
-      password: userData.password,
-      phone: userData.phone,
-      role: userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
-    });
+  const payload = {
+    name: userData.name,
+    email: userData.email,
+    password: userData.password,
+    phone: userData.phone,
+    role: userData.role === 'healthworker' ? 'doctor' : (userData.role || 'patient'),
+  };
 
-    const data = res.data || {};
-    if (!data.success) {
-      throw new Error(data.error || 'Registration failed');
-    }
+  try {
+    const data = await request('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
     const token = data.tokens?.accessToken || data.token || null;
     const user = data.user || null;
 
     return { token, user, raw: data };
   } catch (err) {
-    const msg = err.response?.data?.error || err.message || 'Registration failed';
+    const msg = err.message || 'Registration failed';
     throw new Error(msg);
   }
 };

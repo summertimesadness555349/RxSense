@@ -6,7 +6,7 @@ import AddEntryModal from '../components/history/AddEntryModal.jsx';
 import { getTimeline } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const typeFilters = ['All', 'Report', 'Prescription', 'Symptom', 'Visit', 'Note', 'Medication'];
+const typeFilters = ['All', 'Report', 'Prescription', 'Symptom', 'Visit', 'Surgery', 'Note', 'Medication'];
 
 export default function HistoryTimeline() {
   const { user, loading: authLoading } = useAuth();

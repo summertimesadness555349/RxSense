@@ -355,7 +355,7 @@ export const getTimeline = async (userId, filters = {}) => {
   if (filters.limit) params.set('limit', filters.limit);
 
   const query = params.toString();
-  const data = await request(`/timeline/${userId}${query ? `?${query}` : ''}`);
+  const data = await request(`/patient/timeline${query ? `?${query}` : ''}`);
   let entries = data.timeline || [];
 
   if (filters.type && filters.type !== 'all')

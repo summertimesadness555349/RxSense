@@ -31,4 +31,9 @@ patientRouter.post('/reports/chat',
     reportChatController.chat
 );
 
+patientRouter.get('/timeline',
+    authenticateToken.authenticateToken,
+    patientController.getTimeline
+);
+
 module.exports = { patientRouter };

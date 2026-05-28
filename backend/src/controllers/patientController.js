@@ -93,7 +93,6 @@ class PatientController {
                     reportRecord = await this.patientModel.createMedicalReport({
                         patientId:      validPatientId,
                         reportType:     this.reportAnalysisUtils.getReportTypeEnum(reportType),
-                        storagePath:    imageUrl || `memory://${Date.now()}-${req.file.originalname}`,
                         imageUrl,
                         imagePublicId,
                         rawAnalysis:    extracted,

@@ -177,9 +177,7 @@ class PatientModel {
 
     createMedicalReport = async ({
         patientId,
-        doctorId        = null,
         reportType,
-        storagePath     = null,
         imageUrl        = null,
         imagePublicId   = null,
         rawAnalysis     = null,
@@ -190,14 +188,14 @@ class PatientModel {
     }) => {
         const query = `
             INSERT INTO medical_report
-                (patient_id, doctor_id, report_type, storage_path,
+                (patient_id, report_type,
                  image_url, image_public_id, raw_analysis,
                  report_date, facility, ordering_doctor, patient_name_rep)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *;
         `;
         const params = [
-            patientId, doctorId, reportType, storagePath,
+            patientId, reportType,
             imageUrl, imagePublicId,
             rawAnalysis ? JSON.stringify(rawAnalysis) : null,
             reportDate, facility, orderingDoctor, patientNameRep,

@@ -152,7 +152,7 @@ export const analyzeReport = async (file, reportType) => {
     // Optional patient ID only; backend can still analyze without saving.
   }
 
-  const data = await request('/patient/reports/analyze', {
+  const data = await request('/api/patient/reports/analyze', {
     method: 'POST',
     body: formData,
   });

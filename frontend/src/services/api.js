@@ -382,7 +382,29 @@ export const getHealthProfile = async (userId) => {
   return data.user || null;
 };
 
-// PUT /api/user/:userId/profile
+// GET /api/patient/me/documents  — medical reports + prescription scans
+export const getPatientDocuments = async () => {
+  const data = await request('/patient/me/documents');
+  return { reports: data.reports || [], prescriptions: data.prescriptions || [] };
+};
+
+// GET /api/patient/me/health-summary  — profile + latest lab metrics
+export const getHealthSummary = async () => {
+  const data = await request('/patient/me/health-summary');
+  return { profile: data.profile || null, metrics: data.metrics || [] };
+};
+
+// PUT /api/patient/me  — update vitals / demographics
+export const updatePatientProfile = async (payload) => {
+  const data = await request('/patient/me', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return data.user || null;
+};
+
+// PUT /api/user/:userId/profile (legacy mock — kept for compatibility)
 export const updateHealthProfile = async (userId, data) => {
   await delay(800);
   return { ...mockUser, ...data };
@@ -443,6 +465,57 @@ export const getFamilyHistory = async (userId) => {
 export const addFamilyMember = async (userId, member) => {
   await delay(800);
   return { ...member, id: `fam_${Date.now()}` };
+};
+
+// ── Family Network ─────────────────────────────────────────────────────────
+
+// GET /api/family/my-code
+export const getFamilyShareCode = async () => {
+  const data = await request('/family/my-code');
+  return data.code;
+};
+
+// POST /api/family/my-code/regenerate
+export const regenerateFamilyShareCode = async () => {
+  const data = await request('/family/my-code/regenerate', { method: 'POST' });
+  return data.code;
+};
+
+// POST /api/family/lookup  { code }
+export const lookupFamilyCode = async (code) => {
+  const data = await request('/family/lookup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  return data.preview;
+};
+
+// POST /api/family/link  { code, relationship }
+export const linkFamilyMember = async (code, relationship) => {
+  const data = await request('/family/link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, relationship }),
+  });
+  return data.link;
+};
+
+// GET /api/family/members
+export const getFamilyMembers = async () => {
+  const data = await request('/family/members');
+  return data.members;
+};
+
+// GET /api/family/members/:linkId/health
+export const getFamilyMemberHealth = async (linkId) => {
+  const data = await request(`/family/members/${linkId}/health`);
+  return data.health;
+};
+
+// DELETE /api/family/link/:linkId
+export const removeFamilyLink = async (linkId) => {
+  await request(`/family/link/${linkId}`, { method: 'DELETE' });
 };
 
 // POST /api/insights/:userId/doctor-summary

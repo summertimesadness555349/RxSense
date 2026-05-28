@@ -226,6 +226,66 @@ class PatientController {
         }
     };
 
+    getDocuments = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Auth required' });
+
+            const identity = await this.patientModel.resolvePatientIdentity(userId);
+            const patientId = identity.patientId || (UUID_RE.test(String(userId)) ? userId : null);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const { reports, prescriptions } = await this.patientModel.getPatientDocuments(patientId, identity.userId);
+            return res.status(200).json({ success: true, reports, prescriptions });
+        } catch (error) {
+            console.error('[Patient] getDocuments error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    getHealthSummary = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Patient ID required' });
+
+            // Resolve integer user ID → UUID patient_id
+            const identity = await this.patientModel.resolvePatientIdentity(userId);
+            const patientId = identity.patientId || (UUID_RE.test(String(userId)) ? userId : null);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const [profile, metrics] = await Promise.all([
+                this.patientModel.getPatientProfile({ patientId }),
+                this.patientModel.getLatestReportMetrics(patientId),
+            ]);
+
+            if (!profile) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            return res.status(200).json({ success: true, profile, metrics });
+        } catch (error) {
+            console.error('[Patient] getHealthSummary error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    updateProfile = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Patient ID required' });
+
+            const identity = await this.patientModel.resolvePatientIdentity(userId);
+            const patientId = identity.patientId || (UUID_RE.test(String(userId)) ? userId : null);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const updated = await this.patientModel.updatePatientVitals(patientId, req.body);
+            if (!updated) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            return res.status(200).json({ success: true, user: updated });
+        } catch (error) {
+            console.error('[Patient] updateProfile error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
     getProfile = async (req, res) => {
         try {
             const patientId = req.user?.id || req.params.patientId || req.user?.patient_id;

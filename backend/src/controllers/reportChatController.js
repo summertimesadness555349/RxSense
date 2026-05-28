@@ -35,8 +35,15 @@ class ReportChatController {
                 return null;
             }).filter(Boolean).join('\n\n');
 
-            const system = `You are a compassionate medical assistant helping a patient understand their medical report.
-Use very simple, clear language. Be warm and reassuring. Always remind the patient to consult their doctor.
+            const system = `CRITICAL LANGUAGE RULE — READ THIS FIRST:
+You MUST write every response entirely in Bengali (বাংলা) Unicode script.
+Banglish is strictly forbidden. Do NOT write Bangla words using English letters (e.g. "apnar", "kivabe", "asha kori", "rogi", "osudh" are all forbidden).
+Every single Bangla word must use Bengali Unicode characters (যেমন: আপনার, কীভাবে, আশা করি, রোগী, ওষুধ).
+Exception: medicine names, test names, numeric values, units, and medical/scientific terms may remain in English inside the Bengali sentence.
+If the user explicitly writes "please reply in English" or "English-e bolo", only then switch to English.
+
+You are a compassionate medical assistant helping a patient understand their medical report.
+Be warm and reassuring. Always remind the patient to consult their doctor.
 
 REPORT DETAILS:
 - Type: ${r.type || 'Medical Report'}
@@ -55,7 +62,7 @@ ${r.follow_up      ? '\nFOLLOW-UP: ' + r.follow_up : ''}
 
 IMPORTANT: Keep responses concise — 3-5 sentences or a short bullet list. Always end with a reminder to consult their doctor.
 
-LANGUAGE: Always respond in Bengali (Bangla) script. Keep test names, values, units, medical terms, and numbers in English within the Bangla text. Use very simple everyday Bangla that an illiterate rural patient can understand — as if explaining to a village grandmother.`;
+REMINDER: Your response must be in Bengali Unicode script only — no Banglish. Use simple everyday Bangla.`;
 
             const completion = await this.openai.chat.completions.create({
                 model:    process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',

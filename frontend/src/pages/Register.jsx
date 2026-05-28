@@ -32,13 +32,12 @@ export default function Register() {
     setErrors({});
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
       const { user, token } = await apiRegister(form);
       login(user, token);
       addToast(`Account created! Welcome, ${user.name}!`, 'success');
       navigate('/dashboard');
-    } catch {
-      addToast('Registration failed. Please try again.', 'error');
+    } catch (err) {
+      addToast(err.message || 'Registration failed. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

@@ -54,9 +54,19 @@ export default function Drugs() {
   const updateDrug = (id, data) => setDrugs((p) => p.map((d) => d.id === id ? data : d));
 
   const check = async () => {
+    // Filter out empty names before sending
+    const validDrugs = drugs
+      .map(d => ({ ...d, name: (d.name || '').trim() }))
+      .filter(d => d.name && d.name.length > 0);
+
+    if (validDrugs.length === 0) {
+      addToast('Please enter at least one medication name.', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await checkDrugInteractions(drugs);
+      const data = await checkDrugInteractions(validDrugs);
       setResult(data);
       addToast('Interaction check complete!', 'success');
     } catch (err) {
@@ -99,7 +109,7 @@ export default function Drugs() {
           <Plus className="w-4 h-4" /> Add Another Drug
         </button>
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <Button onClick={check} loading={loading} size="lg" className="w-full">
+          <Button onClick={check} loading={loading} size="lg" className="w-full" disabled={!drugs.some(d => (d.name || '').trim().length > 0)}>
             Check Interactions
           </Button>
         </div>

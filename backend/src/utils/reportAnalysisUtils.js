@@ -344,6 +344,49 @@ class ReportAnalysisUtils {
         }
         return extracted;
     }
+
+    // Convert the extracted report into a DB-friendly raw_analysis shape.
+    // Returns an object containing top-level metadata and a `metrics` array
+    // where each metric matches the keys expected by `addReportMetric`.
+    normalizeForDb(extracted = {}, { imageUrl = null, typeOverride = null } = {}) {
+        const out = {};
+
+        out.report_type = extracted.report_type || typeOverride || null;
+        out.report_date = extracted.report_date || null;
+        out.facility = extracted.facility || null;
+        out.ordering_doctor = extracted.ordering_doctor || null;
+        out.patient = extracted.patient || null;
+        out.overall_impression = extracted.overall_impression || null;
+        out.diagnoses = Array.isArray(extracted.diagnoses) ? extracted.diagnoses : (extracted.diagnoses ? [extracted.diagnoses] : []);
+        out.recommendations = Array.isArray(extracted.recommendations) ? extracted.recommendations : (extracted.recommendations ? [extracted.recommendations] : []);
+        out.clinical_notes = extracted.clinical_notes || null;
+        out.follow_up = extracted.follow_up || null;
+        out.image_url = imageUrl || null;
+
+        // Gather DB-friendly metrics from lab_results and vitals sections
+        const metrics = [];
+        for (const section of (extracted.sections || [])) {
+            if (section.type !== 'lab_results' && section.type !== 'vitals') continue;
+            for (const entry of (section.entries || [])) {
+                const m = {
+                    parameterName: entry.label || entry.name || '',
+                    value: String(entry.value ?? ''),
+                    unit: entry.unit || null,
+                    referenceRange: entry.reference_range || null,
+                    status: this.normalizeMetricStatus(entry.status, entry.flag) || null,
+                    llmFlagged: Boolean((entry.status && entry.status !== 'normal') || entry.flag),
+                    // preserve raw entry for traceability
+                    raw: entry,
+                };
+                metrics.push(m);
+            }
+        }
+
+        out.metrics = metrics;
+        // Keep the original sections minimally for backward compatibility
+        out.sections = extracted.sections || [];
+        return out;
+    }
 }
 
 module.exports = ReportAnalysisUtils;

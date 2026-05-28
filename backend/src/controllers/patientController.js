@@ -84,8 +84,12 @@ class PatientController {
 
             console.log(`[Report] Extraction complete — type: ${extracted.report_type}, sections: ${extracted.sections?.length || 0}`);
 
+            // Normalize extraction into DB-friendly raw_analysis (metrics list)
+            const dbAnalysis = this.reportAnalysisUtils.normalizeForDb(extracted, { imageUrl, typeOverride: reportType });
+
             // Save to DB if we have a valid UUID patient_id
             let reportRecord = null;
+            let savedMetrics = [];
             const validPatientId = UUID_RE.test(String(patientId || '')) ? patientId : null;
 
             if (validPatientId) {
@@ -93,57 +97,42 @@ class PatientController {
                     reportRecord = await this.patientModel.createMedicalReport({
                         patientId:      validPatientId,
                         reportType:     this.reportAnalysisUtils.getReportTypeEnum(reportType),
-                        storagePath:    imageUrl || `memory://${Date.now()}-${req.file.originalname}`,
                         imageUrl,
                         imagePublicId,
                         rawAnalysis:    extracted,
-                        reportDate:     extracted.report_date || null,
-                        facility:       extracted.facility    || null,
-                        orderingDoctor: extracted.ordering_doctor || null,
-                        patientNameRep: extracted.patient?.name  || null,
+                        reportDate:     dbAnalysis.report_date || null,
+                        facility:       dbAnalysis.facility    || null,
+                        orderingDoctor: dbAnalysis.ordering_doctor || null,
+                        patientNameRep: dbAnalysis.patient?.name  || null,
                     });
 
-                    // Save individual lab/vital entries as report_metrics
-                    const sections = extracted.sections || [];
-                    for (const section of sections) {
-                        if (section.type === 'lab_results' || section.type === 'vitals') {
-                            for (const entry of (section.entries || [])) {
-                                await this.patientModel.addReportMetric({
-                                    reportId:       reportRecord.report_id,
-                                    parameterName:  entry.label,
-                                    value:          String(entry.value ?? ''),
-                                    unit:           entry.unit   || null,
-                                    referenceRange: entry.reference_range || null,
-                                    status:         this.reportAnalysisUtils.normalizeMetricStatus(entry.status, entry.flag),
-                                    llmFlagged:     (entry.status && entry.status !== 'normal') || Boolean(entry.flag),
-                                }).catch(err => console.warn('[Report] Metric save failed:', err.message));
-                            }
-                        }
+                    // Save individual lab/vital metrics as report_metric rows
+                    for (const m of (dbAnalysis.metrics || [])) {
+                        const metric = await this.patientModel.addReportMetric({
+                            reportId:       reportRecord.report_id,
+                            parameterName:  m.parameterName,
+                            value:          m.value,
+                            unit:           m.unit || null,
+                            referenceRange: m.referenceRange || null,
+                            status:         m.status || null,
+                            llmFlagged:     Boolean(m.llmFlagged),
+                        }).catch(err => {
+                            console.warn('[Report] Metric save failed:', err.message);
+                            return null;
+                        });
+                        if (metric) savedMetrics.push(metric);
                     }
+
                     console.log(`[Report] Saved to DB — report_id: ${reportRecord.report_id}`);
                 } catch (dbErr) {
                     console.warn('[Report] DB save failed (non-fatal):', dbErr.message);
                 }
             }
 
+            // Return the normalized dbAnalysis as `report` for the frontend
             return res.status(200).json({
                 success: true,
-                report: {
-                    id:                 reportRecord?.report_id || `rep_${Date.now()}`,
-                    image_url:          imageUrl,
-                    type:               extracted.report_type || reportType,
-                    date:               extracted.report_date || new Date().toISOString().slice(0, 10),
-                    facility:           extracted.facility        || null,
-                    ordering_doctor:    extracted.ordering_doctor || null,
-                    patient:            extracted.patient         || null,
-                    sections:           extracted.sections        || [],
-                    overall_impression: extracted.overall_impression || null,
-                    diagnoses:          extracted.diagnoses        || [],
-                    recommendations:    extracted.recommendations  || [],
-                    clinical_notes:     extracted.clinical_notes   || null,
-                    follow_up:          extracted.follow_up        || null,
-                    autoSaved:          Boolean(reportRecord),
-                },
+                report: dbAnalysis,
             });
         } catch (error) {
             console.error('[Report] Analysis error:', error.message);

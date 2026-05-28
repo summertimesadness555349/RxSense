@@ -15,6 +15,21 @@ patientRouter.get('/me',
     patientController.getProfile
 );
 
+patientRouter.put('/me',
+    authenticateToken.authenticateToken,
+    patientController.updateProfile
+);
+
+patientRouter.get('/me/health-summary',
+    authenticateToken.authenticateToken,
+    patientController.getHealthSummary
+);
+
+patientRouter.get('/me/documents',
+    authenticateToken.authenticateToken,
+    patientController.getDocuments
+);
+
 patientRouter.get('/profile/:patientId',
     authenticateToken.authenticateToken,
     patientController.getProfile

@@ -16,13 +16,18 @@ class PatientModel {
                     date_of_birth AS "dateOfBirth",
                     gender,
                     blood_group AS "bloodGroup",
-                    location,
+                    smoking_status AS "smokingStatus",
                     phone,
-                    contact_info AS "contactInfo",
                     username,
                     email,
                     height,
                     weight,
+                    blood_pressure_systolic    AS "bloodPressureSystolic",
+                    blood_pressure_diastolic   AS "bloodPressureDiastolic",
+                    bp_recorded_at             AS "bpRecordedAt",
+                    emergency_contact_name     AS "emergencyContactName",
+                    emergency_contact_phone    AS "emergencyContactPhone",
+                    emergency_contact_relation AS "emergencyContactRelation",
                     created_at AS "createdAt",
                     updated_at AS "updatedAt"
                 FROM patient
@@ -262,6 +267,131 @@ class PatientModel {
         `;
         const result = await this.db_connection.query_executor(query, [reportId]);
         return result.rows;
+    };
+
+    // Returns the most-recent value for every unique parameter name across all reports for a patient.
+    getPatientDocuments = async (patientId, userId) => {
+        const reportsResult = await this.db_connection.query_executor(`
+            SELECT
+                report_id          AS id,
+                'report'           AS source,
+                report_type        AS doc_type,
+                image_url,
+                COALESCE(report_date, uploaded_at::date)::text AS doc_date,
+                facility,
+                ordering_doctor    AS doctor,
+                uploaded_at        AS created_at
+            FROM medical_report
+            WHERE patient_id = $1
+            ORDER BY uploaded_at DESC
+            LIMIT 100;
+        `, [patientId]);
+
+        let prescriptionsRows = [];
+        try {
+            const where = [];
+            const params = [patientId];
+            where.push(`patient_id = $1`);
+            if (userId) { where.push(`user_id = $2`); params.push(userId); }
+            const presResult = await this.db_connection.query_executor(`
+                SELECT
+                    scan_id        AS id,
+                    'prescription' AS source,
+                    'prescription' AS doc_type,
+                    image_url,
+                    COALESCE(rx_date, created_at::date)::text AS doc_date,
+                    hospital_name  AS facility,
+                    doctor_name    AS doctor,
+                    created_at
+                FROM prescription_scan
+                WHERE ${where.join(' OR ')}
+                ORDER BY created_at DESC
+                LIMIT 100;
+            `, params);
+            prescriptionsRows = presResult.rows || [];
+        } catch {
+            // prescription_scan may not exist in all deployments
+        }
+
+        return {
+            reports:       reportsResult.rows || [],
+            prescriptions: prescriptionsRows,
+        };
+    };
+
+    getLatestReportMetrics = async (patientId) => {
+        const query = `
+            SELECT DISTINCT ON (LOWER(TRIM(rm.parameter_name)))
+                rm.parameter_name AS "parameterName",
+                rm.value,
+                rm.unit,
+                rm.reference_range AS "referenceRange",
+                rm.status,
+                rm.llm_flagged AS "llmFlagged",
+                COALESCE(mr.report_date::TIMESTAMPTZ, mr.uploaded_at) AS "recordedAt"
+            FROM report_metric rm
+            JOIN medical_report mr ON mr.report_id = rm.report_id
+            WHERE mr.patient_id = $1
+            ORDER BY LOWER(TRIM(rm.parameter_name)),
+                     COALESCE(mr.report_date::TIMESTAMPTZ, mr.uploaded_at) DESC;
+        `;
+        try {
+            const result = await this.db_connection.query_executor(query, [patientId]);
+            return result.rows || [];
+        } catch (err) {
+            console.warn('[PatientModel] getLatestReportMetrics failed:', err.message);
+            return [];
+        }
+    };
+
+    updatePatientVitals = async (patientId, {
+        bloodGroup, smokingStatus,
+        height, weight,
+        bloodPressureSystolic, bloodPressureDiastolic, bpRecordedAt,
+        emergencyContactName, emergencyContactPhone, emergencyContactRelation,
+        phone, dateOfBirth, gender,
+    } = {}) => {
+        const query = `
+            UPDATE patient SET
+                blood_group                = COALESCE($2,  blood_group),
+                smoking_status             = COALESCE($3,  smoking_status),
+                height                     = COALESCE($4,  height),
+                weight                     = COALESCE($5,  weight),
+                blood_pressure_systolic    = COALESCE($6,  blood_pressure_systolic),
+                blood_pressure_diastolic   = COALESCE($7,  blood_pressure_diastolic),
+                bp_recorded_at             = COALESCE($8,  bp_recorded_at),
+                emergency_contact_name     = COALESCE($9,  emergency_contact_name),
+                emergency_contact_phone    = COALESCE($10, emergency_contact_phone),
+                emergency_contact_relation = COALESCE($11, emergency_contact_relation),
+                phone                      = COALESCE($12, phone),
+                date_of_birth              = COALESCE($13::date, date_of_birth),
+                gender                     = COALESCE($14, gender),
+                updated_at                 = NOW()
+            WHERE patient_id = $1
+            RETURNING
+                patient_id AS id, name, date_of_birth AS "dateOfBirth", gender,
+                blood_group AS "bloodGroup", smoking_status AS "smokingStatus",
+                phone, height, weight,
+                blood_pressure_systolic    AS "bloodPressureSystolic",
+                blood_pressure_diastolic   AS "bloodPressureDiastolic",
+                bp_recorded_at             AS "bpRecordedAt",
+                emergency_contact_name     AS "emergencyContactName",
+                emergency_contact_phone    AS "emergencyContactPhone",
+                emergency_contact_relation AS "emergencyContactRelation";
+        `;
+        const params = [
+            patientId,
+            bloodGroup || null, smokingStatus || null,
+            height || null, weight || null,
+            bloodPressureSystolic || null, bloodPressureDiastolic || null,
+            bpRecordedAt || null,
+            emergencyContactName || null, emergencyContactPhone || null,
+            emergencyContactRelation || null, phone || null,
+            dateOfBirth || null,
+            gender      || null,
+        ];
+        const result = await this.db_connection.query_executor(query, params);
+        return result.rows[0] || null;
     };
 
     resolvePatientIdentity = async (userIdOrUuid) => {

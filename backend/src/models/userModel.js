@@ -778,6 +778,159 @@ class UserModel {
             return { success: false };
         }
     }
+
+    // ── Family Network ────────────────────────────────────────────────────────
+
+    static _genCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let c = 'RXF-';
+        for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+        return c;
+    }
+
+    getOrCreateShareCode = async (userId) => {
+        // Return existing code if present
+        const existing = await this.db_connection.query_executor(
+            `SELECT family_share_code FROM users WHERE id = $1 LIMIT 1`, [userId]
+        );
+        if (existing.rows[0]?.family_share_code) return existing.rows[0].family_share_code;
+
+        // Generate a unique code (retry on collision)
+        for (let i = 0; i < 10; i++) {
+            const code = UserModel._genCode();
+            try {
+                const r = await this.db_connection.query_executor(
+                    `UPDATE users SET family_share_code = $1 WHERE id = $2 RETURNING family_share_code`,
+                    [code, userId]
+                );
+                if (r.rows[0]?.family_share_code) return r.rows[0].family_share_code;
+            } catch (e) {
+                if (e.code !== '23505') throw e; // 23505 = unique violation, retry
+            }
+        }
+        throw new Error('Could not generate a unique share code');
+    };
+
+    regenerateShareCode = async (userId) => {
+        for (let i = 0; i < 10; i++) {
+            const code = UserModel._genCode();
+            try {
+                const r = await this.db_connection.query_executor(
+                    `UPDATE users SET family_share_code = $1 WHERE id = $2 RETURNING family_share_code`,
+                    [code, userId]
+                );
+                if (r.rows[0]?.family_share_code) return r.rows[0].family_share_code;
+            } catch (e) {
+                if (e.code !== '23505') throw e;
+            }
+        }
+        throw new Error('Could not regenerate share code');
+    };
+
+    lookupByShareCode = async (code) => {
+        const r = await this.db_connection.query_executor(`
+            SELECT u.id, u.full_name AS name,
+                   p.blood_group, p.date_of_birth, p.gender
+            FROM users u
+            LEFT JOIN patient p ON p.user_id = u.id
+            WHERE u.family_share_code = $1
+            LIMIT 1
+        `, [code.trim().toUpperCase()]);
+        return r.rows[0] || null;
+    };
+
+    createFamilyLink = async (requesterId, memberId, relationship) => {
+        const r = await this.db_connection.query_executor(`
+            INSERT INTO family_link (requester_id, member_id, relationship)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (requester_id, member_id) DO UPDATE SET relationship = EXCLUDED.relationship
+            RETURNING link_id, relationship, created_at
+        `, [requesterId, memberId, relationship]);
+        return r.rows[0] || null;
+    };
+
+    getFamilyLinks = async (userId) => {
+        const r = await this.db_connection.query_executor(`
+            SELECT
+                fl.link_id,
+                fl.relationship,
+                fl.created_at         AS linked_at,
+                u.id                  AS member_user_id,
+                u.full_name           AS name,
+                p.blood_group,
+                p.date_of_birth,
+                p.gender,
+                p.weight,
+                p.blood_pressure_systolic,
+                p.blood_pressure_diastolic,
+                (SELECT COALESCE(json_agg(kc.condition_name ORDER BY kc.created_at), '[]'::json)
+                 FROM known_condition kc
+                 WHERE kc.patient_id = p.patient_id AND kc.status = 'active'
+                 LIMIT 4
+                ) AS active_conditions,
+                (SELECT COUNT(*) FROM patient_allergy pa WHERE pa.patient_id = p.patient_id
+                ) AS allergy_count,
+                (SELECT MAX(mr.uploaded_at) FROM medical_report mr WHERE mr.patient_id = p.patient_id
+                ) AS last_report_at
+            FROM family_link fl
+            JOIN  users u ON u.id = fl.member_id
+            LEFT JOIN patient p ON p.user_id = u.id
+            WHERE fl.requester_id = $1
+            ORDER BY fl.created_at DESC
+        `, [userId]);
+        return r.rows || [];
+    };
+
+    getFamilyMemberHealth = async (requesterId, linkId) => {
+        // Verify requester owns this link, then fetch full health snapshot
+        const r = await this.db_connection.query_executor(`
+            SELECT
+                fl.relationship,
+                u.full_name           AS name,
+                p.date_of_birth,
+                p.gender,
+                p.blood_group,
+                p.height,
+                p.weight,
+                p.blood_pressure_systolic,
+                p.blood_pressure_diastolic,
+                p.bp_recorded_at,
+                p.smoking_status,
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'name', kc.condition_name,
+                    'since', TO_CHAR(kc.diagnosed_at, 'YYYY'),
+                    'status', kc.status
+                ) ORDER BY kc.created_at), '[]'::json)
+                 FROM known_condition kc WHERE kc.patient_id = p.patient_id
+                ) AS conditions,
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'name', COALESCE(d.generic_name, d.brand_name, 'Unknown'),
+                    'severity', pa.severity,
+                    'reaction', pa.reaction_type
+                ) ORDER BY pa.created_at), '[]'::json)
+                 FROM patient_allergy pa
+                 LEFT JOIN drug d ON d.drug_id = pa.drug_id
+                 WHERE pa.patient_id = p.patient_id
+                ) AS allergies,
+                (SELECT MAX(mr.uploaded_at) FROM medical_report mr WHERE mr.patient_id = p.patient_id
+                ) AS last_report_at
+            FROM family_link fl
+            JOIN  users u ON u.id = fl.member_id
+            LEFT JOIN patient p ON p.user_id = u.id
+            WHERE fl.link_id = $1 AND fl.requester_id = $2
+            LIMIT 1
+        `, [linkId, requesterId]);
+        return r.rows[0] || null;
+    };
+
+    removeFamilyLink = async (requesterId, linkId) => {
+        const r = await this.db_connection.query_executor(`
+            DELETE FROM family_link
+            WHERE link_id = $1 AND requester_id = $2
+            RETURNING link_id
+        `, [linkId, requesterId]);
+        return r.rows[0] || null;
+    };
 }
 
 module.exports = UserModel;

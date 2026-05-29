@@ -3,13 +3,6 @@ import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
 import { mockUser } from '../data/mockUser.js';
 import { mockCurrentMedications, mockPastMedications } from '../data/mockMedications.js';
 import { mockDocuments } from '../data/mockDocuments.js';
-import {
-  mockHealthScore,
-  mockTrendAlerts,
-  mockRiskBreakdown,
-  mockRecommendedActions,
-  mockDoctorSummary,
-} from '../data/mockInsights.js';
 import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '../data/mockFamilyHistory.js';
 import { mockConversation } from '../data/mockConversations.js';
 import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
@@ -336,9 +329,15 @@ export const chatWithReport = async ({ messages, report, question }) => {
 };
 
 // POST /api/symptoms/check
-export const checkSymptoms = async (symptomsText) => {
-  await delay(1500);
-  return mockConversation[2];
+// POST /api/symptom/check
+// messages = prior [ { role: 'user'|'ai', content } ] for conversation context
+export const checkSymptoms = async (question, messages = []) => {
+  const data = await request('/symptom/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, messages }),
+  });
+  return { reply: data.reply, emergency: data.emergency || null };
 };
 
 // POST /api/drugs/interactions
@@ -494,14 +493,31 @@ export const uploadDocument = async (userId, file, metadata) => {
   return { id: `doc_${Date.now()}`, filename: file.name, ...metadata };
 };
 
-// GET /api/insights/:userId
-export const getInsights = async (userId) => {
-  await delay(800);
+// GET /api/insights  (?force=true to bypass cache)
+export const getInsights = async ({ force = false } = {}) => {
+  const data = await request(`/insights${force ? '?force=true' : ''}`);
+  const hs   = data.health_score || {};
   return {
-    healthScore: mockHealthScore,
-    trendAlerts: mockTrendAlerts,
-    riskBreakdown: mockRiskBreakdown,
-    recommendedActions: mockRecommendedActions,
+    cached:       data.cached ?? false,
+    generatedAt:  data.generated_at ?? null,
+    healthScore: {
+      score:        hs.score        ?? 50,
+      label:        hs.label        ?? 'Moderate',
+      dataPoints:   hs.data_points  ?? 0,
+      periodMonths: hs.period_months ?? 0,
+      maxScore:     100,
+    },
+    trendAlerts: (data.trend_alerts || []).map((a, i) => ({
+      ...a,
+      id:          a.id          || `ins_${String(i + 1).padStart(3, '0')}`,
+      trendValues: (a.trend_values || []),
+    })),
+    riskBreakdown: (data.risk_breakdown || []),
+    recommendedActions: (data.recommended_actions || []).map((a, i) => ({
+      ...a,
+      id:      a.id       || `ra_${String(i + 1).padStart(3, '0')}`,
+      dueDate: a.due_date || null,
+    })),
   };
 };
 
@@ -519,6 +535,32 @@ export const getFamilyHistory = async (userId) => {
 export const addFamilyMember = async (userId, member) => {
   await delay(800);
   return { ...member, id: `fam_${Date.now()}` };
+};
+
+// ── Places / Nearby ───────────────────────────────────────────────────────
+
+// GET /api/places/nearby
+export const searchNearby = async (lat, lng, { type = 'hospital', keyword = '', radius = 5000 } = {}) => {
+  const params = new URLSearchParams({ lat, lng, type, keyword, radius });
+  const data = await request(`/places/nearby?${params}`);
+  return data.places || [];
+};
+
+// POST /api/places/infer-specialty
+export const inferSpecialty = async (condition) => {
+  const data = await request('/places/infer-specialty', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ condition }),
+  });
+  return { specialty: data.specialty, keyword: data.keyword };
+};
+
+// GET /api/places/geocode
+export const geocodeAddress = async (address) => {
+  const params = new URLSearchParams({ address });
+  const data = await request(`/places/geocode?${params}`);
+  return data; // { success, lat, lng, label }
 };
 
 // ── Family Network ─────────────────────────────────────────────────────────
@@ -572,10 +614,32 @@ export const removeFamilyLink = async (linkId) => {
   await request(`/family/link/${linkId}`, { method: 'DELETE' });
 };
 
-// POST /api/insights/:userId/doctor-summary
-export const generateDoctorSummary = async (userId) => {
-  await delay(2000);
-  return mockDoctorSummary;
+// POST /api/insights/patient-summary — warm Bangla bullet-point health narrative
+export const getPatientSummary = async () => {
+  const data = await request('/insights/patient-summary', { method: 'POST' });
+  const s = data.summary || {};
+  return {
+    headline: s.headline  || '',
+    sections: s.sections  || [],
+  };
+};
+
+// POST /api/insights/doctor-summary
+export const generateDoctorSummary = async () => {
+  const data = await request('/insights/doctor-summary', { method: 'POST' });
+  const s    = data.summary || {};
+  return {
+    generatedDate:      s.generated_date      || new Date().toISOString().slice(0, 10),
+    patientName:        s.patient_name        || 'Unknown',
+    age:                s.age                 ?? null,
+    bloodGroup:         s.blood_group         || null,
+    activeConditions:   s.active_conditions   || [],
+    currentMedications: s.current_medications || [],
+    criticalAllergies:  s.critical_allergies  || [],
+    recentReports:      s.recent_reports      || '',
+    keyInsights:        s.key_insights        || '',
+    emergencyContact:   s.emergency_contact   || 'Not provided',
+  };
 };
 
 // POST /api/insights/:userId/emergency-card

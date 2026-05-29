@@ -5,6 +5,7 @@ import FileDropzone from '../components/ui/FileDropzone.jsx';
 import ReportChatbot from '../components/report/ReportChatbot.jsx';
 import { Select } from '../components/ui/Input.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { analyzeReport, getReportHistoryLocal } from '../services/api.js';
 
 const REPORT_TYPES = [
@@ -22,28 +23,38 @@ const REPORT_TYPES = [
   'Other',
 ];
 
-const STEPS = [
-  'Reading document…',
-  'Extracting values…',
-  'Identifying abnormalities…',
-  'Saving to your health record…',
-];
+// status → translation key
+const STATUS_KEY_MAP = {
+  normal:        'statusNormal',
+  high:          'statusHigh',
+  low:           'statusLow',
+  critical_high: 'statusCritical',
+  critical_low:  'statusCritical',
+  borderline:    'statusBorderline',
+};
 
-const STATUS_CONFIG = {
-  normal:        { label: 'Normal',     cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
-  high:          { label: 'High',       cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
-  low:           { label: 'Low',        cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
-  critical_high: { label: 'Critical',   cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
-  critical_low:  { label: 'Critical',   cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
-  borderline:    { label: 'Borderline', cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+const STATUS_CLS = {
+  normal:        'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  high:          'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  low:           'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  critical_high: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  critical_low:  'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  borderline:    'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
 };
 
 // ── Processing spinner ────────────────────────────────────────────────────────
 function ProcessingView({ stepIdx }) {
+  const { t } = useLanguage();
+  const STEPS = [
+    t('stepReadingDoc'),
+    t('stepExtractingValues'),
+    t('stepIdentifyingAbnormal'),
+    t('stepSavingRecord'),
+  ];
   return (
     <div className="text-center py-10">
       <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin mx-auto mb-5" />
-      <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Analysing report…</h3>
+      <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('analysingReport')}</h3>
       <div className="space-y-2 max-w-xs mx-auto">
         {STEPS.map((s, i) => (
           <div key={s} className={`flex items-center gap-3 text-sm px-4 py-2 rounded-lg transition-all ${
@@ -66,6 +77,7 @@ function ProcessingView({ stepIdx }) {
 
 // ── Collapsible report image ──────────────────────────────────────────────────
 function CollapsibleImage({ imageUrl }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   if (!imageUrl) return null;
   return (
@@ -75,7 +87,7 @@ function CollapsibleImage({ imageUrl }) {
         className="w-full flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
       >
         <img src={imageUrl} alt="report" className="w-9 h-9 object-cover rounded-lg flex-shrink-0 border border-gray-200 dark:border-gray-700" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">Report Image</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">{t('reportImage')}</span>
         {expanded
           ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
           : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
@@ -99,17 +111,18 @@ function CollapsibleImage({ imageUrl }) {
 
 // ── Report selector ───────────────────────────────────────────────────────────
 function ReportSelector({ history, activeReport, onSelect, onNew }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5" /> Saved Reports
+          <Clock className="w-3.5 h-3.5" /> {t('savedReports')}
         </span>
         <button
           onClick={onNew}
           className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 font-medium"
         >
-          <Upload className="w-3 h-3" /> Analyze new
+          <Upload className="w-3 h-3" /> {t('analyzeNew')}
         </button>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -136,7 +149,7 @@ function ReportSelector({ history, activeReport, onSelect, onNew }) {
                 : <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[10px] font-bold text-gray-400">RPT</div>
               }
               <span className="font-medium truncate w-full text-center">{label}</span>
-              <span className="text-gray-400 dark:text-gray-500">{sectionCount} sec{sectionCount !== 1 ? 's' : ''}</span>
+              <span className="text-gray-400 dark:text-gray-500">{t('sectionsCount', { n: sectionCount })}</span>
             </button>
           );
         })}
@@ -147,52 +160,55 @@ function ReportSelector({ history, activeReport, onSelect, onNew }) {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status, flag }) {
+  const { t } = useLanguage();
   if (!status || status === 'normal') return null;
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.high;
+  const cls = STATUS_CLS[status] || STATUS_CLS.high;
+  const label = flag || t(STATUS_KEY_MAP[status] || 'statusHigh');
   return (
-    <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded border ${cfg.cls}`}>
-      {flag || cfg.label}
+    <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded border ${cls}`}>
+      {label}
     </span>
   );
 }
 
 // ── Report result view ────────────────────────────────────────────────────────
 function ResultView({ report }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800">
 
       {/* Report info + Patient side by side */}
       <div className="grid grid-cols-2 py-4">
-        <div className="pr-4 space-y-0.5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">Report Info</p>
+        <div className="pr-4 space-y-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('reportInfo')}</p>
           {report.type && (
-            <p className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">{report.type}</p>
+            <p className="font-semibold text-base text-gray-900 dark:text-white leading-tight">{report.type}</p>
           )}
           {report.facility && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">{report.facility}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{report.facility}</p>
           )}
           {report.ordering_doctor && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">{report.ordering_doctor}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{report.ordering_doctor}</p>
           )}
           {report.date && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{report.date}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{report.date}</p>
           )}
         </div>
 
-        <div className="pl-4 border-l border-gray-200 dark:border-gray-700 space-y-0.5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">Patient</p>
+        <div className="pl-4 border-l border-gray-200 dark:border-gray-700 space-y-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('patientLabel')}</p>
           {report.patient?.name ? (
             <>
-              <p className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">{report.patient.name}</p>
+              <p className="font-semibold text-base text-gray-900 dark:text-white leading-tight">{report.patient.name}</p>
               {report.patient.age && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">Age {report.patient.age}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('ageLabel')} {report.patient.age}</p>
               )}
               {report.patient.gender && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{report.patient.gender}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{report.patient.gender}</p>
               )}
             </>
           ) : (
-            <p className="text-sm text-gray-400">Not specified</p>
+            <p className="text-base text-gray-400">{t('notSpecified')}</p>
           )}
         </div>
       </div>
@@ -200,8 +216,8 @@ function ResultView({ report }) {
       {/* Overall impression */}
       {report.overall_impression && (
         <div className="py-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Overall Impression</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{report.overall_impression}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('overallImpression')}</p>
+          <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">{report.overall_impression}</p>
         </div>
       )}
 
@@ -210,10 +226,10 @@ function ResultView({ report }) {
         <div className="grid grid-cols-2 gap-4 py-4">
           {report.diagnoses?.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Diagnoses</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('diagnoses')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {report.diagnoses.map((d, i) => (
-                  <span key={i} className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                  <span key={i} className="px-3 py-1 rounded-full text-sm font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
                     {d}
                   </span>
                 ))}
@@ -222,10 +238,10 @@ function ResultView({ report }) {
           )}
           {report.recommendations?.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Recommendations</p>
-              <ol className="space-y-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('recommendations')}</p>
+              <ol className="space-y-1.5">
                 {report.recommendations.map((r, i) => (
-                  <li key={i} className="flex gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+                  <li key={i} className="flex gap-1.5 text-sm text-gray-600 dark:text-gray-300">
                     <span className="text-blue-500 font-bold flex-shrink-0">{i + 1}.</span> {r}
                   </li>
                 ))}
@@ -243,19 +259,19 @@ function ResultView({ report }) {
 
         return (
           <div key={si} className="py-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
               {section.title}
             </p>
 
             {isTable && hasEntries && (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[320px]">
+                <table className="w-full text-sm min-w-[360px]">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left font-semibold text-gray-400 pb-1.5 pl-2 pr-3 w-[38%]">Parameter</th>
-                      <th className="text-left font-semibold text-gray-400 pb-1.5 pr-3">Value</th>
-                      <th className="text-left font-semibold text-gray-400 pb-1.5 pr-3">Reference</th>
-                      <th className="text-left font-semibold text-gray-400 pb-1.5">Status</th>
+                      <th className="text-left font-semibold text-gray-500 pb-2 pl-2 pr-3 w-[38%]">{t('colParameter')}</th>
+                      <th className="text-left font-semibold text-gray-500 pb-2 pr-3">{t('colValue')}</th>
+                      <th className="text-left font-semibold text-gray-500 pb-2 pr-3">{t('colReference')}</th>
+                      <th className="text-left font-semibold text-gray-500 pb-2">{t('colStatus')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -263,13 +279,13 @@ function ResultView({ report }) {
                       const isAbnormal = e.status && e.status !== 'normal';
                       return (
                         <tr key={ei} className={isAbnormal ? 'bg-red-50/40 dark:bg-red-900/5' : ''}>
-                          <td className="py-2 pl-2 pr-3 font-medium text-gray-800 dark:text-gray-200">{e.label}</td>
-                          <td className="py-2 pr-3 font-bold text-gray-900 dark:text-white">
+                          <td className="py-2.5 pl-2 pr-3 font-medium text-gray-800 dark:text-gray-200">{e.label}</td>
+                          <td className="py-2.5 pr-3 font-bold text-gray-900 dark:text-white">
                             {e.value ?? '—'}
                             {e.unit && <span className="font-normal text-gray-400 ml-0.5">{e.unit}</span>}
                           </td>
-                          <td className="py-2 pr-3 text-gray-500 dark:text-gray-400">{e.reference_range || '—'}</td>
-                          <td className="py-2">
+                          <td className="py-2.5 pr-3 text-gray-500 dark:text-gray-400">{e.reference_range || '—'}</td>
+                          <td className="py-2.5">
                             <StatusBadge status={e.status} flag={e.flag} />
                           </td>
                         </tr>
@@ -281,13 +297,13 @@ function ResultView({ report }) {
             )}
 
             {!isTable && section.narrative && (
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{section.narrative}</p>
+              <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">{section.narrative}</p>
             )}
 
             {!isTable && !section.narrative && hasEntries && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {section.entries.map((e, ei) => (
-                  <div key={ei} className="flex items-start gap-2 text-xs flex-wrap">
+                  <div key={ei} className="flex items-start gap-2 text-sm flex-wrap">
                     <span className="text-gray-500 dark:text-gray-400 font-medium">{e.label}:</span>
                     <span className="text-gray-700 dark:text-gray-300">
                       {e.value ?? ''}{e.unit ? ' ' + e.unit : ''}
@@ -307,14 +323,14 @@ function ResultView({ report }) {
         <div className="grid grid-cols-2 gap-4 py-4">
           {report.clinical_notes && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">Clinical Notes</p>
-              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{report.clinical_notes}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('clinicalNotes')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{report.clinical_notes}</p>
             </div>
           )}
           {report.follow_up && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">Follow-up</p>
-              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{report.follow_up}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('followUp')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{report.follow_up}</p>
             </div>
           )}
         </div>
@@ -325,13 +341,15 @@ function ResultView({ report }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Report() {
+  const { t } = useLanguage();
+  const { addToast } = useToast();
+
   const [phase, setPhase]               = useState('upload');
   const [stepIdx, setStepIdx]           = useState(0);
   const [activeReport, setActiveReport] = useState(null);
   const [history, setHistory]           = useState([]);
   const [showUpload, setShowUpload]     = useState(false);
   const [reportType, setReportType]     = useState('Complete Blood Count (CBC)');
-  const { addToast }                    = useToast();
 
   useEffect(() => {
     const h = getReportHistoryLocal();
@@ -347,8 +365,9 @@ export default function Report() {
     setShowUpload(false);
     setStepIdx(0);
 
+    const STEP_COUNT = 4;
     const stepTimer = setInterval(() => {
-      setStepIdx(prev => (prev < STEPS.length - 1 ? prev + 1 : prev));
+      setStepIdx(prev => (prev < STEP_COUNT - 1 ? prev + 1 : prev));
     }, 900);
 
     try {
@@ -358,11 +377,11 @@ export default function Report() {
       setPhase('result');
       const updated = getReportHistoryLocal();
       setHistory(updated);
-      addToast('Report analyzed and saved to your Health Record!', 'success');
+      addToast(t('reportSavedToast'), 'success');
     } catch (err) {
       clearInterval(stepTimer);
       setPhase(activeReport ? 'result' : 'upload');
-      addToast(`Analysis failed: ${err.message}`, 'error');
+      addToast(t('analysisFailed', { msg: err.message }), 'error');
     }
   };
 
@@ -375,16 +394,16 @@ export default function Report() {
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
-            Medical Report Analyzer
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
+            {t('reportPageTitle')}
           </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Upload any lab report — we'll extract and explain all findings in Bangla.
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {t('reportPageSubtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400 flex-shrink-0">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex-shrink-0">
           <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
-          Not a medical diagnosis
+          {t('notMedicalDiagnosis')}
         </div>
       </div>
 
@@ -394,29 +413,26 @@ export default function Report() {
         {/* ── Left panel ──────────────────────────────────────────────────────── */}
         <div className="overflow-y-auto pr-1 space-y-4 min-h-0">
 
-          {/* Upload dropzone + report type selector */}
           {(phase === 'upload' || showUpload) && (
             <div className="space-y-3">
               <Select
-                label="Report Type"
+                label={t('reportTypeLabel')}
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
               >
-                {REPORT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                {REPORT_TYPES.map((rt) => <option key={rt} value={rt}>{rt}</option>)}
               </Select>
               <FileDropzone
                 onFileSelect={(file) => { setShowUpload(false); handleUpload(file); }}
                 accept="image/*,.pdf"
-                label="Drag & drop your report (PDF or image) here, or click to browse"
-                hint="Supports PDF, JPG, PNG, HEIC. CBC, lipid panel, X-ray, ECG, and more."
+                label={t('reportDropzoneLabel')}
+                hint={t('reportDropzoneHint')}
               />
             </div>
           )}
 
-          {/* Processing */}
           {isProcessing && <ProcessingView stepIdx={stepIdx} />}
 
-          {/* Report selector */}
           {hasHistory && !isProcessing && (
             <ReportSelector
               history={history}
@@ -430,17 +446,14 @@ export default function Report() {
             />
           )}
 
-          {/* Collapsed image */}
           {activeReport?.image_url && !isProcessing && (
             <CollapsibleImage imageUrl={activeReport.image_url} />
           )}
 
-          {/* Report result */}
           {activeReport && !isProcessing && (
             <ResultView report={activeReport} />
           )}
 
-          {/* Actions */}
           {!isProcessing && (
             <div className="pb-4">
               {activeReport ? (
@@ -449,7 +462,7 @@ export default function Report() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <Upload className="w-4 h-4" />
-                  {showUpload ? 'Cancel' : 'Analyze Another Report'}
+                  {showUpload ? t('cancelBtn') : t('analyzeAnotherBtn')}
                 </button>
               ) : (
                 !showUpload && (
@@ -457,7 +470,7 @@ export default function Report() {
                     onClick={() => setShowUpload(true)}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition-colors"
                   >
-                    <Upload className="w-4 h-4" /> Upload Report
+                    <Upload className="w-4 h-4" /> {t('uploadReportBtn')}
                   </button>
                 )
               )}

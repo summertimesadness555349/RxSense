@@ -5,6 +5,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "ingest:books": "node src/rag/ingest/ingestBooks.js",
+    "ingest:books:force": "node src/rag/ingest/ingestBooks.js --force",
+    "ingest:medlineplus": "node src/rag/ingest/ingestMedlineplus.js",
     "test": "jest --detectOpenHandles",
     "test:routes": "jest tests/routes --detectOpenHandles --verbose",
     "test:auth": "jest tests/routes/authRoutes.test.js --detectOpenHandles --verbose",
@@ -29,6 +32,9 @@
   "license": "ISC",
   "description": "A ready to use node backend template with authentication and user management pipeline",
   "dependencies": {
+    "@langchain/community": "^1.1.29",
+    "@langchain/core": "^1.1.48",
+    "@langchain/textsplitters": "^1.0.1",
     "autocannon": "^2.0.1",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.10.0",

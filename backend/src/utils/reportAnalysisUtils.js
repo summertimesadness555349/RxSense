@@ -146,7 +146,7 @@ class ReportAnalysisUtils {
             },
             body: JSON.stringify({
                 model:      this.modelName,
-                max_tokens: 4096,
+                max_tokens: 8192,
                 messages:   [{ role: 'user', content: this.buildContent(file) }],
             }),
         });
@@ -157,6 +157,12 @@ class ReportAnalysisUtils {
         }
 
         const data    = await response.json();
+
+        if (data.stop_reason === 'max_tokens') {
+            console.warn('[Report] Claude hit max_tokens — response was truncated. Report may be too large.');
+            throw new Error('Report is too large to fully extract. Try uploading individual pages.');
+        }
+
         const rawText = (data.content || [])
             .filter(b => b.type === 'text')
             .map(b => b.text)

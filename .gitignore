@@ -1,3 +1,12 @@
 node_modules/
 .claude
 .vscode/
+frontend/.env
+backend/src/.env
+backend/.env
+
+# Large binary files — keep local, never push
+extra/*.pdf
+extra/*.csv
+extra/*.json
+CLAUDE.md

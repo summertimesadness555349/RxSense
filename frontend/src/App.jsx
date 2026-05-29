@@ -20,6 +20,7 @@ import HistoryInsights from './pages/HistoryInsights.jsx';
 import HistoryFamily from './pages/HistoryFamily.jsx';
 import Symptoms from './pages/Symptoms.jsx';
 import Drugs from './pages/Drugs.jsx';
+import NearMe from './pages/NearMe.jsx';
 import Settings from './pages/Settings.jsx';
 import DoctorPatients from './pages/DoctorPatients.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -57,6 +58,7 @@ export default function App() {
                   </Route>
                   <Route path="/symptoms" element={<Symptoms />} />
                   <Route path="/drugs" element={<Drugs />} />
+                  <Route path="/near-me" element={<NearMe />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
 

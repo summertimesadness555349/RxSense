@@ -1,44 +1,25 @@
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext.jsx';
-import {
-  LayoutDashboard, FileText, FlaskConical, History,
-  Stethoscope, Pill, Settings, X, Users,
-} from 'lucide-react';
+import { X, Activity } from 'lucide-react';
+import { navItems } from './navItems.js';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 
 export default function Sidebar({ open, onClose }) {
-  const { user } = useAuth();
-
-  const navItems = user?.role === 'doctor'
-    ? [
-        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/doctor/patients', icon: Users, label: 'My Patients' },
-        { to: '/drugs', icon: Pill, label: 'Drug Checker' },
-        { to: '/settings', icon: Settings, label: 'Settings' },
-      ]
-    : [
-        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/prescription', icon: FileText, label: 'Prescription Reader' },
-        { to: '/report', icon: FlaskConical, label: 'Report Analyzer' },
-        { to: '/history', icon: History, label: 'Health Record', highlight: true },
-        { to: '/symptoms', icon: Stethoscope, label: 'Symptom Checker' },
-        { to: '/drugs', icon: Pill, label: 'Drug Interactions' },
-        { to: '/settings', icon: Settings, label: 'Settings' },
-      ];
+  const { t } = useLanguage();
   return (
     <>
-      {/* Backdrop — always covers full screen, blurs content behind */}
+      {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar panel — always fixed overlay, full height, never takes layout space */}
+      {/* Drawer — mobile only overlay */}
       <aside
         className={`
-          fixed top-0 left-0 h-full z-50 w-64 flex flex-col
+          fixed top-0 left-0 h-full z-50 w-64 flex flex-col lg:hidden
           bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800
           shadow-2xl
           transform transition-transform duration-300 ease-in-out
@@ -46,10 +27,9 @@ export default function Sidebar({ open, onClose }) {
         `}
         aria-label="Navigation sidebar"
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚕️</span>
+            <Activity className="w-5 h-5 text-emerald-500" />
             <span className="font-bold text-lg text-gray-900 dark:text-white">RxSense</span>
           </div>
           <button
@@ -61,9 +41,8 @@ export default function Sidebar({ open, onClose }) {
           </button>
         </div>
 
-        {/* Nav — fills remaining height, scrollable if needed */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, label, highlight }) => (
+          {navItems.map(({ to, icon: Icon, labelKey, highlight }) => (
             <NavLink
               key={to}
               to={to}
@@ -78,19 +57,18 @@ export default function Sidebar({ open, onClose }) {
               `}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
-              <span className="flex-1">{label}</span>
+              <span className="flex-1">{t(labelKey)}</span>
               {highlight && (
                 <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                  Core
+                  {t('navCore')}
                 </span>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Footer */}
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
-          <p className="text-xs text-gray-400 dark:text-gray-600">RxSense v1.0 • Infinity AI 2026</p>
+          <p className="text-xs text-gray-400 dark:text-gray-600">{t('navFooter')}</p>
         </div>
       </aside>
     </>

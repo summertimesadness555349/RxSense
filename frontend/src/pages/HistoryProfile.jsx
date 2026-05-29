@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Menu, X, Edit2, Save, Plus, Share2, Printer, AlertTriangle, ChevronRight,
   Upload, CheckCircle, Loader2,
+  LayoutDashboard, User, Droplets, FlaskConical, Activity, TrendingUp, Microscope, Stethoscope, PhoneCall, Waves,
 } from 'lucide-react';
 import Badge from '../components/ui/Badge.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -15,16 +16,16 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 const MANUAL_KEY = 'rxsense_manual_metrics';
 
 const SECTIONS = [
-  { id: 'overview',    label: 'Overview',          icon: '📋' },
-  { id: 'general',     label: 'General Info',       icon: '👤' },
-  { id: 'blood_sugar', label: 'Blood Sugar',        icon: '🩸' },
-  { id: 'cbc',         label: 'CBC',                icon: '🔬' },
-  { id: 'kidney',      label: 'Kidney Function',    icon: '🫘' },
-  { id: 'liver',       label: 'Liver Function',     icon: '🫁' },
-  { id: 'lipid',       label: 'Lipid Profile',      icon: '💉' },
-  { id: 'thyroid',     label: 'Thyroid',            icon: '⚕️' },
-  { id: 'conditions',  label: 'Conditions',         icon: '🏥' },
-  { id: 'emergency',   label: 'Emergency Contact',  icon: '🚨' },
+  { id: 'overview',    label: 'Overview',          Icon: LayoutDashboard },
+  { id: 'general',     label: 'General Info',       Icon: User },
+  { id: 'blood_sugar', label: 'Blood Sugar',        Icon: Droplets },
+  { id: 'cbc',         label: 'CBC',                Icon: FlaskConical },
+  { id: 'kidney',      label: 'Kidney Function',    Icon: Microscope },
+  { id: 'liver',       label: 'Liver Function',     Icon: Activity },
+  { id: 'lipid',       label: 'Lipid Profile',      Icon: TrendingUp },
+  { id: 'thyroid',     label: 'Thyroid',            Icon: Waves },
+  { id: 'conditions',  label: 'Conditions',         Icon: Stethoscope },
+  { id: 'emergency',   label: 'Emergency Contact',  Icon: PhoneCall },
 ];
 
 const PARAM_MAP = {
@@ -638,8 +639,8 @@ export default function HistoryProfile() {
           </div>
           <div className="flex flex-wrap gap-2">
             {allergies.map((a) => (
-              <span key={a.id} className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-1 rounded-full font-medium">
-                ⚠ {a.name} ({a.severity})
+              <span key={a.id} className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-1 rounded-full font-medium">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" /> {a.name} ({a.severity})
               </span>
             ))}
           </div>
@@ -783,7 +784,9 @@ export default function HistoryProfile() {
               />
             ))}
             {warnings.map((w, i) => (
-              <p key={i} className="text-xs text-amber-500 dark:text-amber-400 mt-2">⚠ {w}</p>
+              <p key={i} className="flex items-center gap-1 text-xs text-amber-500 dark:text-amber-400 mt-2">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" /> {w}
+              </p>
             ))}
           </>
         )}
@@ -980,7 +983,7 @@ export default function HistoryProfile() {
                   : 'border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <span className="text-base">{s.icon}</span>
+              <s.Icon className="w-4 h-4 flex-shrink-0" />
               {s.label}
             </button>
           ))}
@@ -1002,8 +1005,9 @@ export default function HistoryProfile() {
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <span>Health Profile</span>
             <ChevronRight className="w-4 h-4" />
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {activeSectionMeta?.icon} {activeSectionMeta?.label}
+            <span className="font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
+              {activeSectionMeta && <activeSectionMeta.Icon className="w-4 h-4" />}
+              {activeSectionMeta?.label}
             </span>
           </div>
           {completeness < 0.5 && (

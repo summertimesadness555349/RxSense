@@ -320,6 +320,7 @@ class PatientModel {
     };
 
     getLatestReportMetrics = async (patientId) => {
+        // report_date is free-text (e.g. "18/12/2024") — use uploaded_at for sorting
         const query = `
             SELECT DISTINCT ON (LOWER(TRIM(rm.parameter_name)))
                 rm.parameter_name AS "parameterName",
@@ -328,12 +329,12 @@ class PatientModel {
                 rm.reference_range AS "referenceRange",
                 rm.status,
                 rm.llm_flagged AS "llmFlagged",
-                COALESCE(mr.report_date::TIMESTAMPTZ, mr.uploaded_at) AS "recordedAt"
+                mr.uploaded_at AS "recordedAt"
             FROM report_metric rm
             JOIN medical_report mr ON mr.report_id = rm.report_id
             WHERE mr.patient_id = $1
             ORDER BY LOWER(TRIM(rm.parameter_name)),
-                     COALESCE(mr.report_date::TIMESTAMPTZ, mr.uploaded_at) DESC;
+                     mr.uploaded_at DESC;
         `;
         try {
             const result = await this.db_connection.query_executor(query, [patientId]);

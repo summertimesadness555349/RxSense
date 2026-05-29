@@ -359,7 +359,7 @@ class UserController {
 
             let user = null;
             if (identifier.includes('@')) {
-                user = await this.userModel.getPatientByEmail(identifier);
+                user = await this.userModel.getUserByEmail(identifier);
             }
             if (!user) {
                 user = await this.userModel.getUserByUsername(identifier);
@@ -404,7 +404,7 @@ class UserController {
             await this.userModel.setLastLogin(user.id);
 
             const { accessToken, refreshToken } = this.generateTokens(user);
-            // await this.userModel.updateRefreshToken(user.id, refreshToken);
+            await this.userModel.updateRefreshToken(user.id, refreshToken);
 
             bus.emit(Events.USER_LOGIN, { userId: user.id });
 
@@ -413,12 +413,11 @@ class UserController {
                 message: 'Login successful',
                 user: {
                     id: user.id,
-                    uuid: user.uuid,
+                    uuid: user.role?.toLowerCase() === 'patient' ? user.patient_id : user.doctor_id,
                     patient_id: user.patient_id || user.uuid || user.id,
                     name: user.name || user.full_name || user.username,
                     username: user.username,
                     email: user.email,
-                    name: user.name,
                     // is_active: user.is_active,
                     // avatar_url: user.avatar_url,
                     // subscription_type: user.subscription_type

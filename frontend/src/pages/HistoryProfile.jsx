@@ -427,7 +427,7 @@ export default function HistoryProfile() {
     try {
       const updated = await updatePatientProfile({
         dateOfBirth:   generalForm.dateOfBirth   || null,
-        gender:        generalForm.gender        || null,
+        gender:        generalForm.gender?.toLowerCase()       || null,
         bloodGroup:    generalForm.bloodGroup    || null,
         smokingStatus: generalForm.smokingStatus || null,
         height:        generalForm.height     ? Number(generalForm.height)  : null,

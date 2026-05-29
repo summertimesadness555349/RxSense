@@ -336,9 +336,15 @@ export const chatWithReport = async ({ messages, report, question }) => {
 };
 
 // POST /api/symptoms/check
-export const checkSymptoms = async (symptomsText) => {
-  await delay(1500);
-  return mockConversation[2];
+// POST /api/symptom/check
+// messages = prior [ { role: 'user'|'ai', content } ] for conversation context
+export const checkSymptoms = async (question, messages = []) => {
+  const data = await request('/symptom/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, messages }),
+  });
+  return { reply: data.reply, emergency: data.emergency || null };
 };
 
 // POST /api/drugs/interactions
@@ -514,6 +520,32 @@ export const getFamilyHistory = async (userId) => {
 export const addFamilyMember = async (userId, member) => {
   await delay(800);
   return { ...member, id: `fam_${Date.now()}` };
+};
+
+// ── Places / Nearby ───────────────────────────────────────────────────────
+
+// GET /api/places/nearby
+export const searchNearby = async (lat, lng, { type = 'hospital', keyword = '', radius = 5000 } = {}) => {
+  const params = new URLSearchParams({ lat, lng, type, keyword, radius });
+  const data = await request(`/places/nearby?${params}`);
+  return data.places || [];
+};
+
+// POST /api/places/infer-specialty
+export const inferSpecialty = async (condition) => {
+  const data = await request('/places/infer-specialty', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ condition }),
+  });
+  return { specialty: data.specialty, keyword: data.keyword };
+};
+
+// GET /api/places/geocode
+export const geocodeAddress = async (address) => {
+  const params = new URLSearchParams({ address });
+  const data = await request(`/places/geocode?${params}`);
+  return data; // { success, lat, lng, label }
 };
 
 // ── Family Network ─────────────────────────────────────────────────────────

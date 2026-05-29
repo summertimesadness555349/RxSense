@@ -1,4 +1,39 @@
-const { OpenAI } = require('openai');
+const { OpenAI }      = require('openai');
+const vectorStore     = require('../rag/vectorStore.js');
+const { embedSingle } = require('../rag/embeddings.js');
+
+async function ragContext(question, userId) {
+    try {
+        const results = await vectorStore.search({
+            query:       question,
+            userId,
+            sourceTypes: ['medical_book', 'patient_report', 'chat_history'],
+            topK:        4,
+            minScore:    0.28,
+        });
+        if (!results.length) return '';
+        const lines = results.map(r =>
+            `[${r.metadata?.book_title || r.source_type} | ${r.metadata?.chapter || r.metadata?.topic || ''}]\n${r.content.slice(0, 400)}`
+        ).join('\n\n---\n\n');
+        return `\n\nMEDICAL REFERENCE (from Harrison's / MedlinePlus — use this to explain values in clinical context):\n${lines}`;
+    } catch {
+        return '';
+    }
+}
+
+async function persistChatVector(question, reply, userId) {
+    try {
+        const content   = `Q: ${question.trim()}\nA: ${reply.trim()}`;
+        const embedding = await embedSingle(content);
+        await vectorStore.upsert({
+            content,
+            embedding,
+            sourceType: 'chat_history',
+            userId,
+            metadata: { feature: 'report', date: new Date().toISOString() },
+        });
+    } catch { /* silent */ }
+}
 
 class ReportChatController {
     constructor() {
@@ -64,10 +99,15 @@ IMPORTANT: Keep responses concise — 3-5 sentences or a short bullet list. Alwa
 
 REMINDER: Your response must be in Bengali Unicode script only — no Banglish. Use simple everyday Bangla.`;
 
+            // RAG: inject relevant clinical reference for this question
+            const userId = req.user?.id || null;
+            const rag    = await ragContext(question, userId);
+            const fullSystem = system + rag;
+
             const completion = await this.openai.chat.completions.create({
                 model:    process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
                 messages: [
-                    { role: 'system', content: system },
+                    { role: 'system', content: fullSystem },
                     ...messages.slice(-8).map(m => ({ role: m.role, content: m.content })),
                     { role: 'user', content: question },
                 ],
@@ -77,6 +117,8 @@ REMINDER: Your response must be in Bengali Unicode script only — no Banglish. 
 
             const reply = completion.choices[0]?.message?.content?.trim()
                 || 'Sorry, I could not generate a response.';
+
+            if (userId) persistChatVector(question, reply, userId);
 
             return res.status(200).json({ success: true, reply });
         } catch (error) {

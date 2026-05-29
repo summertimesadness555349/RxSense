@@ -1,17 +1,18 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, FlaskConical, History,
-  Stethoscope, Pill, Settings, X,
+  Stethoscope, Pill, MapPin, Settings, X,
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/prescription', icon: FileText, label: 'Prescription Reader' },
-  { to: '/report', icon: FlaskConical, label: 'Report Analyzer' },
-  { to: '/history', icon: History, label: 'Health Record', highlight: true },
-  { to: '/symptoms', icon: Stethoscope, label: 'Symptom Checker' },
-  { to: '/drugs', icon: Pill, label: 'Drug Interactions' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/prescription', icon: FileText,      label: 'Prescription Reader' },
+  { to: '/report',     icon: FlaskConical,    label: 'Report Analyzer' },
+  { to: '/history',    icon: History,         label: 'Health Record', highlight: true },
+  { to: '/symptoms',   icon: Stethoscope,     label: 'Symptom Checker' },
+  { to: '/drugs',      icon: Pill,            label: 'Drug Interactions' },
+  { to: '/near-me',    icon: MapPin,          label: 'Doctors Near Me' },
+  { to: '/settings',   icon: Settings,        label: 'Settings' },
 ];
 
 export default function Sidebar({ open, onClose }) {

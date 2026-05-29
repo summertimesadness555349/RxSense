@@ -26,6 +26,8 @@ const {patientRouter} = require('./routes/patientRoutes.js');
 const {doctorRouter} = require('./routes/doctorRoutes.js');
 const {prescriptionRouter} = require('./routes/prescriptionRoutes.js');
 const {familyRouter}       = require('./routes/familyRoutes.js');
+const {symptomRouter}      = require('./routes/symptomRoutes.js');
+const {placesRouter}       = require('./routes/placesRoutes.js');
 const { drugRouter } = require('./routes/drugRoutes.js');
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
@@ -135,6 +137,8 @@ app.use('/api/patient', apiLimiter, patientRouter);
 app.use('/api/doctor', apiLimiter, doctorRouter);
 app.use('/api/prescription', apiLimiter, prescriptionRouter);
 app.use('/api/family',       apiLimiter, familyRouter);
+app.use('/api/symptom',      apiLimiter, symptomRouter);
+app.use('/api/places',       apiLimiter, placesRouter);
 app.use('/api/drugs', apiLimiter, drugRouter);
 
 const options = {

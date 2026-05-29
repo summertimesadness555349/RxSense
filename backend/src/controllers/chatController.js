@@ -1,5 +1,44 @@
 const { OpenAI }    = require('openai');
 const DB_Connection = require('../database/db.js');
+const vectorStore   = require('../rag/vectorStore.js');
+const { embedSingle } = require('../rag/embeddings.js');
+
+// Fetch top-3 RAG chunks for a question and format them as a compact reference block.
+// Fails silently — if the vector store is empty or throws, chat still works.
+async function ragContext(question, userId) {
+    try {
+        const results = await vectorStore.search({
+            query:       question,
+            userId,
+            sourceTypes: ['medical_book', 'chat_history'],
+            topK:        4,
+            minScore:    0.28,
+        });
+        if (!results.length) return '';
+        const lines = results.map(r =>
+            `[${r.metadata?.book_title || r.source_type} | ${r.metadata?.chapter || r.metadata?.topic || ''}]\n${r.content.slice(0, 400)}`
+        ).join('\n\n---\n\n');
+        return `\n\nMEDICAL REFERENCE (from Harrison's / MedlinePlus — use this to enrich your answer):\n${lines}`;
+    } catch {
+        return '';
+    }
+}
+
+// Persist a completed Q&A pair to rag_documents as chat_history (weight 0.3).
+// Called fire-and-forget — never awaited, never blocks the response.
+async function persistChatVector(question, reply, userId) {
+    try {
+        const content   = `Q: ${question.trim()}\nA: ${reply.trim()}`;
+        const embedding = await embedSingle(content);
+        await vectorStore.upsert({
+            content,
+            embedding,
+            sourceType: 'chat_history',
+            userId,
+            metadata: { feature: 'prescription', date: new Date().toISOString() },
+        });
+    } catch { /* silent */ }
+}
 
 const db = DB_Connection.getInstance();
 
@@ -117,6 +156,10 @@ ${rx.followUp ? `FOLLOW-UP: ${rx.followUp}` : ''}`;
 
             system += '\n\nIMPORTANT: Keep responses concise (3-5 sentences, or a short bullet list when helpful). Always end with a one-sentence reminder to consult the prescribing doctor or pharmacist.';
 
+            // RAG: inject relevant medical reference chunks
+            const userId = req.user?.id || null;
+            system += await ragContext(question, userId);
+
             system += '\n\nREMINDER: Your response must be in Bengali Unicode script only — no Banglish. Use simple everyday Bangla.';
 
             const completion = await this.openai.chat.completions.create({
@@ -132,6 +175,9 @@ ${rx.followUp ? `FOLLOW-UP: ${rx.followUp}` : ''}`;
 
             const reply = completion.choices[0]?.message?.content?.trim()
                 || 'Sorry, I could not generate a response.';
+
+            // Persist Q&A pair as a low-weight chat_history vector (fire-and-forget)
+            if (userId) persistChatVector(question, reply, userId);
 
             return res.status(200).json({
                 success:       true,

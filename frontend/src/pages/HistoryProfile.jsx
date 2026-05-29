@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Menu, X, Edit2, Save, Plus, Share2, Printer, AlertTriangle, ChevronRight,
   Upload, CheckCircle, Loader2,
-  LayoutDashboard, User, Droplets, FlaskConical, Kidney, Activity, TrendingUp, Microscope, Stethoscope, PhoneCall,
+  LayoutDashboard, User, Droplets, FlaskConical, Activity, TrendingUp, Microscope, Stethoscope, PhoneCall, Waves,
 } from 'lucide-react';
 import Badge from '../components/ui/Badge.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -23,7 +23,7 @@ const SECTIONS = [
   { id: 'kidney',      label: 'Kidney Function',    Icon: Microscope },
   { id: 'liver',       label: 'Liver Function',     Icon: Activity },
   { id: 'lipid',       label: 'Lipid Profile',      Icon: TrendingUp },
-  { id: 'thyroid',     label: 'Thyroid',            Icon: Kidney },
+  { id: 'thyroid',     label: 'Thyroid',            Icon: Waves },
   { id: 'conditions',  label: 'Conditions',         Icon: Stethoscope },
   { id: 'emergency',   label: 'Emergency Contact',  Icon: PhoneCall },
 ];

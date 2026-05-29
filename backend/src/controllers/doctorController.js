@@ -2,11 +2,13 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const DoctorModel = require('../models/doctorModel.js');
 const LLMUtils = require('../utils/llmUtils.js');
+const PatientModel = require('../models/patientModel.js');
 
 class DoctorController {
     constructor() {
         this.doctorModel = new DoctorModel();
         this.llmUtils = new LLMUtils();
+        this.patientModel = new PatientModel();
         this.salt_round = parseInt(process.env.PASSWORD_SALT_ROUNDS || '13');
         this.access_token_secret = process.env.JWT_ACCESS_SECRET;
         this.refresh_token_secret = process.env.JWT_REFRESH_SECRET;
@@ -310,6 +312,16 @@ class DoctorController {
             const activePrescriptions = await this.doctorModel.getPatientActivePrescriptions(patientId);
             const reports = await this.doctorModel.getPatientReports(patientId);
 
+            // Fetch metrics for each lab report
+            for (const r of reports) {
+                r.metrics = await this.patientModel.getReportMetrics(r.report_id);
+            }
+
+            // Fetch self-reported symptom logs and AI risk assessments
+            const symptomLogs = await this.patientModel.getTimelineSymptoms(patientId, 100);
+
+            console.log(`[getPatientChart] patientId=${patientId} conditions=${conditions.length} prescriptions=${activePrescriptions.length} reports=${reports.length}`);
+
             return res.status(200).json({
                 success: true,
                 patient,
@@ -319,7 +331,8 @@ class DoctorController {
                     vaccinations,
                     allergies,
                     activePrescriptions,
-                    reports
+                    reports,
+                    symptomLogs
                 }
             });
         } catch (error) {
@@ -480,6 +493,61 @@ class DoctorController {
             });
         } catch (error) {
             console.error('Create prescription error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    modifyPrescriptionItem = async (req, res) => {
+        try {
+            const { patientId, itemId } = req.params;
+            const { status, pauseDurationDays, pause_duration_days, modificationNotes, modification_notes } = req.body;
+
+            if (!status || !['active', 'paused', 'stopped'].includes(status)) {
+                return res.status(400).json({ success: false, error: 'Status must be active, paused, or stopped' });
+            }
+
+            // Check if patient exists
+            const patient = await this.doctorModel.getPatientById(patientId);
+            if (!patient) {
+                return res.status(404).json({ success: false, error: 'Patient not found' });
+            }
+
+            const durationDays = pauseDurationDays !== undefined ? pauseDurationDays : pause_duration_days;
+            const notes = modificationNotes !== undefined ? modificationNotes : modification_notes;
+
+            // Update status in DB
+            const updatedItem = await this.doctorModel.updatePrescriptionItemStatus(
+                patientId,
+                itemId,
+                status,
+                status === 'paused' ? parseInt(durationDays) || null : null,
+                notes || null
+            );
+
+            if (!updatedItem) {
+                return res.status(404).json({ success: false, error: 'Prescription item not found' });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: `Medication successfully marked as ${status}`,
+                item: updatedItem
+            });
+        } catch (error) {
+            console.error('Modify prescription item error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    getAllHospitals = async (req, res) => {
+        try {
+            const hospitals = await this.doctorModel.getAllHospitals();
+            return res.status(200).json({
+                success: true,
+                hospitals
+            });
+        } catch (error) {
+            console.error('Get hospitals list error:', error);
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
     };

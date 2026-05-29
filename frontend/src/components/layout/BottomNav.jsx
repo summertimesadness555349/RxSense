@@ -1,15 +1,24 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ScanLine, History, Stethoscope, MoreHorizontal } from 'lucide-react';
-
-const items = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { to: '/prescription', icon: ScanLine, label: 'Scan' },
-  { to: '/history', icon: History, label: 'Record', center: true },
-  { to: '/symptoms', icon: Stethoscope, label: 'Symptoms' },
-  { to: '/drugs', icon: MoreHorizontal, label: 'More' },
-];
+import { useAuth } from '../../context/AuthContext.jsx';
+import { LayoutDashboard, ScanLine, History, Stethoscope, MoreHorizontal, Users, Settings } from 'lucide-react';
 
 export default function BottomNav() {
+  const { user } = useAuth();
+
+  const items = user?.role === 'doctor'
+    ? [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+        { to: '/doctor/patients', icon: Users, label: 'Patients', center: true },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+      ]
+    : [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+        { to: '/prescription', icon: ScanLine, label: 'Scan' },
+        { to: '/history', icon: History, label: 'Record', center: true },
+        { to: '/symptoms', icon: Stethoscope, label: 'Symptoms' },
+        { to: '/drugs', icon: MoreHorizontal, label: 'More' },
+      ];
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800">
       <div className="flex items-end justify-around px-2 py-1.5 max-w-xl mx-auto">

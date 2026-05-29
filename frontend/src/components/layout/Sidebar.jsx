@@ -1,20 +1,29 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
   LayoutDashboard, FileText, FlaskConical, History,
-  Stethoscope, Pill, Settings, X,
+  Stethoscope, Pill, Settings, X, Users,
 } from 'lucide-react';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/prescription', icon: FileText, label: 'Prescription Reader' },
-  { to: '/report', icon: FlaskConical, label: 'Report Analyzer' },
-  { to: '/history', icon: History, label: 'Health Record', highlight: true },
-  { to: '/symptoms', icon: Stethoscope, label: 'Symptom Checker' },
-  { to: '/drugs', icon: Pill, label: 'Drug Interactions' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-];
-
 export default function Sidebar({ open, onClose }) {
+  const { user } = useAuth();
+
+  const navItems = user?.role === 'doctor'
+    ? [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/doctor/patients', icon: Users, label: 'My Patients' },
+        { to: '/drugs', icon: Pill, label: 'Drug Checker' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+      ]
+    : [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/prescription', icon: FileText, label: 'Prescription Reader' },
+        { to: '/report', icon: FlaskConical, label: 'Report Analyzer' },
+        { to: '/history', icon: History, label: 'Health Record', highlight: true },
+        { to: '/symptoms', icon: Stethoscope, label: 'Symptom Checker' },
+        { to: '/drugs', icon: Pill, label: 'Drug Interactions' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+      ];
   return (
     <>
       {/* Backdrop — always covers full screen, blurs content behind */}

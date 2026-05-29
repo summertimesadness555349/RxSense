@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import HealthScoreGauge from '../components/ui/HealthScoreGauge.jsx';
 import EmergencyCard from '../components/history/EmergencyCard.jsx';
 import { getHealthProfile, getHealthSummary, getPrescriptionHistoryLocal, getReportHistoryLocal } from '../services/api.js';
+import DoctorDashboard from './DoctorDashboard.jsx';
 
 const CONDITION_COLORS = [
   'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
@@ -75,6 +76,10 @@ function SkeletonLine({ w = 'w-full', h = 'h-4' }) {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  if (user?.role === 'doctor') {
+    return <DoctorDashboard />;
+  }
+  
   const { t } = useLanguage();
 
   const [profile,      setProfile]      = useState(null);

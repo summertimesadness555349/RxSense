@@ -443,6 +443,11 @@ export const getHealthSummary = async () => {
   return { profile: data.profile || null, metrics: data.metrics || [] };
 };
 
+export const getPatientActiveMedications = async () => {
+  const data = await request('/patient/me/active-medications');
+  return data.medications || [];
+};
+
 // PUT /api/patient/me  — update vitals / demographics
 export const updatePatientProfile = async (payload) => {
   const data = await request('/patient/me', {
@@ -621,4 +626,111 @@ export const register = async (userData) => {
     const msg = err.message || 'Registration failed';
     throw new Error(msg);
   }
+};
+
+// ─── Doctor APIs ──────────────────────────────────────────────────────────
+
+export const doctorLogin = async (identifier, password) => {
+  const data = await request('/doctor/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  const token = data.tokens?.accessToken || data.token || null;
+  const doctor = data.doctor || null;
+  if (!token) throw new Error('Login succeeded but no access token was returned');
+  return { token, user: { ...doctor, role: 'doctor', id: doctor.doctor_id }, raw: data };
+};
+
+export const doctorRegister = async (doctorData) => {
+  const data = await request('/doctor/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(doctorData),
+  });
+  return data;
+};
+
+export const getDoctorProfile = async (doctorId) => {
+  const data = await request(`/doctor/get-profile/${doctorId}`);
+  return data.doctor || null;
+};
+
+export const updateDoctorProfile = async (doctorId, profileData) => {
+  const data = await request(`/doctor/update-profile/${doctorId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(profileData),
+  });
+  return data.doctor || null;
+};
+
+export const changeDoctorPassword = async (doctorId, passwords) => {
+  const data = await request(`/doctor/change-password/${doctorId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(passwords),
+  });
+  return data;
+};
+
+export const getHospitalsList = async () => {
+  const data = await request('/doctor/hospitals-list');
+  return data.hospitals || [];
+};
+
+export const addDoctorAffiliation = async (doctorId, affiliationData) => {
+  const data = await request(`/doctor/hospitals/${doctorId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(affiliationData),
+  });
+  return data.affiliation || null;
+};
+
+export const getDoctorAffiliations = async (doctorId) => {
+  const data = await request(`/doctor/hospitals/${doctorId}`);
+  return data.affiliations || [];
+};
+
+export const getDoctorPatients = async (doctorId) => {
+  const data = await request(`/doctor/patients`);
+  return data.patients || [];
+};
+
+export const getDoctorPatientChart = async (patientId) => {
+  const data = await request(`/doctor/patients/${patientId}`);
+  return data;
+};
+
+export const checkPrescriptionSafety = async (patientId, items) => {
+  const data = await request(`/doctor/patients/${patientId}/check-safety`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+  return data.safetyReport || null;
+};
+
+export const createPrescription = async (patientId, items) => {
+  const data = await request(`/doctor/patients/${patientId}/prescriptions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+  return data;
+};
+
+export const searchDrugs = async (query) => {
+  const data = await request(`/doctor/drugs/search?q=${encodeURIComponent(query)}`);
+  return data.drugs || [];
+};
+
+export const modifyPrescriptionItem = async (patientId, itemId, { status, pause_duration_days, modification_notes }) => {
+  const data = await request(`/doctor/patients/${patientId}/prescription-items/${itemId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, pause_duration_days, modification_notes }),
+  });
+  return data;
 };

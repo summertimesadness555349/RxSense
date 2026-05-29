@@ -267,6 +267,23 @@ class PatientController {
         }
     };
 
+    getActiveMedications = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Patient ID required' });
+
+            const identity = await this.patientModel.resolvePatientIdentity(userId);
+            const patientId = identity.patientId || (UUID_RE.test(String(userId)) ? userId : null);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const medications = await this.patientModel.getActiveMedications(patientId);
+            return res.status(200).json({ success: true, medications });
+        } catch (error) {
+            console.error('[Patient] getActiveMedications error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
     updateProfile = async (req, res) => {
         try {
             const userId = req.user?.id;

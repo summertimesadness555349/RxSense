@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useNavigate } from 'react-router-dom';
+import DoctorSettings from './DoctorSettings.jsx';
 
 function Toggle({ checked, onChange, label, id }) {
   return (
@@ -28,6 +29,10 @@ function Toggle({ checked, onChange, label, id }) {
 
 export default function Settings() {
   const { user, logout } = useAuth();
+  if (user?.role === 'doctor') {
+    return <DoctorSettings />;
+  }
+
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang } = useLanguage();
   const { addToast } = useToast();

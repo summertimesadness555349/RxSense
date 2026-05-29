@@ -8,12 +8,21 @@ class DoctorModel {
     createDoctor = async (doctorData) => {
         try {
             const { name, specialty, licenseNumber, gender, username, email, password } = doctorData;
+            
+            // Ensure specialty is stored as an array of strings in PostgreSQL
+            let specialtyArray = [];
+            if (Array.isArray(specialty)) {
+                specialtyArray = specialty;
+            } else if (typeof specialty === 'string') {
+                specialtyArray = specialty.split(',').map(s => s.trim()).filter(Boolean);
+            }
+
             const query = `
                 INSERT INTO doctor (name, specialty, license_number, gender, username, email, password)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING doctor_id, name, specialty, license_number, gender, username, email, created_at, updated_at;
             `;
-            const params = [name, specialty, licenseNumber, gender, username, email, password];
+            const params = [name, specialtyArray, licenseNumber, gender, username, email, password];
             const result = await this.db_connection.query_executor(query, params);
             return result.rows[0];
         } catch (error) {
@@ -88,8 +97,19 @@ class DoctorModel {
             const values = [];
             let idx = 1;
 
-            for (const [key, value] of Object.entries(updates)) {
+            for (let [key, value] of Object.entries(updates)) {
                 if (!allowed.has(key)) continue;
+                
+                if (key === 'specialty') {
+                    if (Array.isArray(value)) {
+                        // Value is already an array
+                    } else if (typeof value === 'string') {
+                        value = value.split(',').map(s => s.trim()).filter(Boolean);
+                    } else {
+                        value = [];
+                    }
+                }
+                
                 sets.push(`${key} = $${idx++}`);
                 values.push(value);
             }
@@ -136,7 +156,7 @@ class DoctorModel {
                 INSERT INTO doctor_hospital (doctor_id, hospital_id, role, is_primary)
                 VALUES ($1, $2, $3, $4)
                 ON CONFLICT (doctor_id, hospital_id) 
-                DO UPDATE SET role = EXCLUDED.role, is_primary = EXCLUDED.is_primary, updated_at = NOW()
+                DO UPDATE SET role = EXCLUDED.role, is_primary = EXCLUDED.is_primary
                 RETURNING *;
             `;
             // Note: Schema doesn't have updated_at in doctor_hospital. Let's check Schema.sql doctor_hospital columns.
@@ -202,7 +222,11 @@ class DoctorModel {
     getPatientById = async (patientId) => {
         try {
             const query = `
-                SELECT patient_id, name, date_of_birth, gender, phone, height, weight, email, created_at
+                SELECT patient_id, name, date_of_birth, gender, phone, height, weight, email, 
+                       blood_group AS "bloodGroup", smoking_status AS "smokingStatus", 
+                       blood_pressure_systolic AS "bloodPressureSystolic", blood_pressure_diastolic AS "bloodPressureDiastolic", bp_recorded_at AS "bpRecordedAt",
+                       emergency_contact_name AS "emergencyContactName", emergency_contact_phone AS "emergencyContactPhone", emergency_contact_relation AS "emergencyContactRelation",
+                       created_at
                 FROM patient
                 WHERE patient_id = $1;
             `;
@@ -317,9 +341,8 @@ class DoctorModel {
     getPatientReports = async (patientId) => {
         try {
             const query = `
-                SELECT mr.*, d.name as doctor_name
+                SELECT mr.*, mr.ordering_doctor as doctor_name
                 FROM medical_report mr
-                LEFT JOIN doctor d ON mr.doctor_id = d.doctor_id
                 WHERE mr.patient_id = $1
                 ORDER BY mr.uploaded_at DESC;
             `;
@@ -408,14 +431,13 @@ class DoctorModel {
     };
 
     // Logging & Caching interaction
-    logLLMQuery = async (patientId, queryType, inputContext, outputSummary, tokensUsed = 0) => {
+    logLLMQuery = async (patientId, queryType, inputContext, outputSummary, tokensUsed = 0, modelUsed = 'claude-3-5-sonnet-latest') => {
         try {
             const query = `
                 INSERT INTO llm_query_log (patient_id, query_type, input_context, output_summary, model_used, tokens_used)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING query_id;
             `;
-            const modelUsed = 'gemini-2.5-flash';
             await this.db_connection.query_executor(query, [patientId, queryType, inputContext, outputSummary, modelUsed, tokensUsed]);
         } catch (error) {
             console.error(`Failed to log LLM query: ${error.message}`);
@@ -450,6 +472,45 @@ class DoctorModel {
         } catch (error) {
             console.error(`Failed to get drug interaction: ${error.message}`);
             return null;
+        }
+    };
+
+    updatePrescriptionItemStatus = async (patientId, itemId, status, pauseDurationDays, modificationNotes) => {
+        try {
+            const query = `
+                UPDATE prescription_item pi
+                SET status = $1,
+                    pause_duration_days = $2,
+                    paused_at = CASE WHEN $1 = 'paused' THEN NOW() ELSE NULL END,
+                    modification_notes = $3
+                FROM prescription p
+                WHERE pi.prescription_id = p.prescription_id
+                  AND p.patient_id = $4
+                  AND pi.item_id = $5
+                RETURNING pi.*;
+            `;
+            const result = await this.db_connection.query_executor(query, [
+                status,
+                pauseDurationDays,
+                modificationNotes,
+                patientId,
+                itemId
+            ]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error(`Failed to update prescription item status: ${error.message}`);
+            throw error;
+        }
+    };
+
+    getAllHospitals = async () => {
+        try {
+            const query = `SELECT * FROM hospital ORDER BY name ASC;`;
+            const result = await this.db_connection.query_executor(query);
+            return result.rows;
+        } catch (error) {
+            console.error(`Failed to get hospitals: ${error.message}`);
+            throw error;
         }
     };
 }

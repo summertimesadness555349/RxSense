@@ -2,11 +2,13 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const DoctorModel = require('../models/doctorModel.js');
 const LLMUtils = require('../utils/llmUtils.js');
+const PatientModel = require('../models/patientModel.js');
 
 class DoctorController {
     constructor() {
         this.doctorModel = new DoctorModel();
         this.llmUtils = new LLMUtils();
+        this.patientModel = new PatientModel();
         this.salt_round = parseInt(process.env.PASSWORD_SALT_ROUNDS || '13');
         this.access_token_secret = process.env.JWT_ACCESS_SECRET;
         this.refresh_token_secret = process.env.JWT_REFRESH_SECRET;
@@ -310,6 +312,16 @@ class DoctorController {
             const activePrescriptions = await this.doctorModel.getPatientActivePrescriptions(patientId);
             const reports = await this.doctorModel.getPatientReports(patientId);
 
+            // Fetch metrics for each lab report
+            for (const r of reports) {
+                r.metrics = await this.patientModel.getReportMetrics(r.report_id);
+            }
+
+            // Fetch self-reported symptom logs and AI risk assessments
+            const symptomLogs = await this.patientModel.getTimelineSymptoms(patientId, 100);
+
+            console.log(`[getPatientChart] patientId=${patientId} conditions=${conditions.length} prescriptions=${activePrescriptions.length} reports=${reports.length}`);
+
             return res.status(200).json({
                 success: true,
                 patient,
@@ -319,7 +331,8 @@ class DoctorController {
                     vaccinations,
                     allergies,
                     activePrescriptions,
-                    reports
+                    reports,
+                    symptomLogs
                 }
             });
         } catch (error) {
@@ -342,6 +355,138 @@ class DoctorController {
             });
         } catch (error) {
             console.error('Drug search error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    addPatientAllergy = async (req, res) => {
+        try {
+            const { patientId } = req.params;
+            const { drugId, reactionType, severity, confirmedAt } = req.body || {};
+
+            if (!drugId || !reactionType || !severity) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'drugId, reactionType, and severity are required'
+                });
+            }
+
+            const patient = await this.doctorModel.getPatientById(patientId);
+            if (!patient) {
+                return res.status(404).json({ success: false, error: 'Patient not found' });
+            }
+
+            const allergy = await this.doctorModel.createPatientAllergy(patientId, req.doctor.doctor_id, {
+                drugId,
+                reactionType,
+                severity,
+                confirmedAt: confirmedAt || null,
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: 'Allergy added successfully',
+                allergy
+            });
+        } catch (error) {
+            if (error.code === '23505') {
+                return res.status(409).json({ success: false, error: 'Allergy already exists for this patient' });
+            }
+            console.error('Add patient allergy error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    addPatientVaccination = async (req, res) => {
+        try {
+            const { patientId } = req.params;
+            const {
+                vaccineName,
+                cvxCode,
+                doseNumber,
+                totalDoses,
+                administeredAt,
+                batchNumber,
+                site,
+                nextDueDate,
+                notes,
+                hospitalId,
+            } = req.body || {};
+
+            if (!vaccineName) {
+                return res.status(400).json({ success: false, error: 'vaccineName is required' });
+            }
+
+            const patient = await this.doctorModel.getPatientById(patientId);
+            if (!patient) {
+                return res.status(404).json({ success: false, error: 'Patient not found' });
+            }
+
+            const vaccination = await this.doctorModel.createPatientVaccination(patientId, req.doctor.doctor_id, {
+                vaccineName,
+                cvxCode,
+                doseNumber,
+                totalDoses,
+                administeredAt: administeredAt || null,
+                batchNumber,
+                site,
+                nextDueDate,
+                notes,
+                hospitalId,
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: 'Vaccination added successfully',
+                vaccination
+            });
+        } catch (error) {
+            console.error('Add patient vaccination error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    addPatientSurgery = async (req, res) => {
+        try {
+            const { patientId } = req.params;
+            const {
+                procedureName,
+                icd10Pcs,
+                performedAt,
+                outcome,
+                complications,
+                anaesthesiaType,
+                notes,
+                hospitalId,
+            } = req.body || {};
+
+            if (!procedureName) {
+                return res.status(400).json({ success: false, error: 'procedureName is required' });
+            }
+
+            const patient = await this.doctorModel.getPatientById(patientId);
+            if (!patient) {
+                return res.status(404).json({ success: false, error: 'Patient not found' });
+            }
+
+            const surgery = await this.doctorModel.createPatientSurgery(patientId, req.doctor.doctor_id, {
+                procedureName,
+                icd10Pcs,
+                performedAt: performedAt || null,
+                outcome,
+                complications,
+                anaesthesiaType,
+                notes,
+                hospitalId,
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: 'Surgery added successfully',
+                surgery
+            });
+        } catch (error) {
+            console.error('Add patient surgery error:', error);
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
     };
@@ -480,6 +625,82 @@ class DoctorController {
             });
         } catch (error) {
             console.error('Create prescription error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    modifyPrescriptionItem = async (req, res) => {
+        try {
+            const { patientId, itemId } = req.params;
+            const { status, pause_duration_days, modification_notes } = req.body;
+            console.log(req.body);
+
+            if (!status || !["active", "paused", "stopped"].includes(status)) {
+                return res.status(400).json({ success: false, error: 'Status must be active, paused, or stopped' });
+            }
+
+            // Check if patient exists
+            const patient = await this.doctorModel.getPatientById(patientId);
+            if (!patient) {
+                return res.status(404).json({ success: false, error: 'Patient not found' });
+            }
+            if(status === "paused" && !pause_duration_days && isNaN(parseInt(pause_duration_days))) {
+                return res.status(400).json({ success: false, error: 'Pause duration days is required when status is paused' });
+            }
+            if(status === "stopped" || status === "paused") {
+                const activePrescriptions = await this.doctorModel.getPatientActivePrescriptions(patientId);
+                let itemFound = false;
+                for(const rx of activePrescriptions){
+                    if(rx.items && rx.items.length > 0){
+                        const found = rx.items.find(i => String(i.item_id) === String(itemId));
+                        if(found){
+                            itemFound = true;
+                            break;
+                        }
+                    }
+                }
+                if(!itemFound){
+                    return res.status(404).json({ success: false, error: 'Active prescription item not found for stopping or pausing' });
+                }
+            }
+
+            const durationDays = pause_duration_days;
+            const notes = modification_notes ? `Modification notes: ${modification_notes}` : null;
+            // console.log(`[modifyPrescriptionItem] patientId=${patientId} itemId=${itemId} status=${status} durationDays=${durationDays} notes=${notes}`);
+
+            // Update status in DB
+            const updatedItem = await this.doctorModel.updatePrescriptionItemStatus(
+                patientId,
+                itemId,
+                status,
+                status === "paused" ? parseInt(durationDays) || null : null,
+                notes || null
+            );
+
+            if (!updatedItem) {
+                return res.status(404).json({ success: false, error: 'Prescription item not found' });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: `Medication successfully marked as ${status}`,
+                item: updatedItem
+            });
+        } catch (error) {
+            console.error('Modify prescription item error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    getAllHospitals = async (req, res) => {
+        try {
+            const hospitals = await this.doctorModel.getAllHospitals();
+            return res.status(200).json({
+                success: true,
+                hospitals
+            });
+        } catch (error) {
+            console.error('Get hospitals list error:', error);
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
     };

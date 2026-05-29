@@ -345,6 +345,38 @@ class PatientModel {
         }
     };
 
+    getActiveMedications = async (patientId) => {
+        const query = `
+            SELECT
+                pi.item_id AS id,
+                pi.item_id,
+                pi.prescription_id,
+                pi.dosage,
+                pi.frequency,
+                pi.duration_days,
+                pi.instructions,
+                COALESCE(pi.status, 'active') AS status,
+                pi.paused_at,
+                pi.pause_duration_days,
+                pi.modification_notes,
+                dr.generic_name,
+                dr.brand_name,
+                dr.drug_class,
+                p.issued_at,
+                p.status AS prescription_status,
+                d.name AS doctor_name
+            FROM prescription_item pi
+            JOIN prescription p ON p.prescription_id = pi.prescription_id
+            JOIN drug dr ON dr.drug_id = pi.drug_id
+            LEFT JOIN doctor d ON d.doctor_id = p.doctor_id
+            WHERE p.patient_id = $1
+              AND p.status = 'active'
+            ORDER BY p.issued_at DESC, dr.brand_name ASC NULLS LAST, dr.generic_name ASC;
+        `;
+        const result = await this.db_connection.query_executor(query, [patientId]);
+        return result.rows || [];
+    };
+
     updatePatientVitals = async (patientId, {
         bloodGroup, smokingStatus,
         height, weight,

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon } from 'lucide-react';
 import Modal from '../components/ui/Modal.jsx';
-import { getPrescriptionHistoryLocal } from '../services/api.js';
+import { getPatientActiveMedications, getPrescriptionHistoryLocal } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 
@@ -174,13 +174,19 @@ export default function HistoryMedications() {
   const { t }        = useLanguage();
 
   const [allRx,       setAllRx]       = useState([]);
+  const [doctorMedications, setDoctorMedications] = useState([]);
   const [activeRxIdx, setActiveRxIdx] = useState(0);
   const [selectedMed, setSelectedMed] = useState(null);
   const [pastOpen,    setPastOpen]    = useState(false);
 
   useEffect(() => {
     setAllRx(getPrescriptionHistoryLocal());
-  }, []);
+    getPatientActiveMedications()
+      .then(setDoctorMedications)
+      .catch(() => {
+        addToast('Could not load doctor-issued medication updates', 'warning');
+      });
+  }, [addToast]);
 
   // Only show prescriptions that have at least one still-active medication
   const activePrescriptions = allRx.filter((rx) =>
@@ -194,9 +200,71 @@ export default function HistoryMedications() {
   const clampedIdx  = Math.min(activeRxIdx, Math.max(0, activePrescriptions.length - 1));
   const activeRx    = activePrescriptions[clampedIdx] || null;
   const medications = (activeRx?.medications || []).filter((m) => isMedActive(m, activeRx?.savedAt));
+  const hasDoctorMedications = doctorMedications.length > 0;
+
+  const statusMeta = (status = 'active') => {
+    const normalized = String(status || 'active').toLowerCase();
+    if (normalized === 'paused') {
+      return { Icon: PauseCircle, label: 'Paused', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
+    }
+    if (normalized === 'stopped') {
+      return { Icon: StopCircle, label: 'Stopped', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
+    }
+    return { Icon: PlayCircle, label: 'Active', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' };
+  };
 
   return (
     <div className="space-y-5">
+
+      {hasDoctorMedications && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Doctor-issued active medication list</p>
+            <p className="text-xs text-gray-400 mt-0.5">Pause, stop, and resume recommendations from your doctor appear here.</p>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {doctorMedications.map((med) => {
+              const meta = statusMeta(med.status);
+              const Icon = meta.Icon;
+              return (
+                <div key={med.item_id || med.id} className="p-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {med.brand_name || med.generic_name || 'Medication'}
+                      </p>
+                      {med.brand_name && med.generic_name && (
+                        <span className="text-xs text-gray-400">({med.generic_name})</span>
+                      )}
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold ${meta.className}`}>
+                        <Icon className="w-3 h-3" />
+                        {meta.label}
+                        {med.status === 'paused' && med.pause_duration_days ? ` for ${med.pause_duration_days}d` : ''}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {[med.dosage, med.frequency, med.duration_days ? `${med.duration_days} days` : null].filter(Boolean).join(' · ')}
+                    </p>
+                    {med.instructions && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{med.instructions}</p>
+                    )}
+                    {med.modification_notes && (
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/60 rounded-xl px-3 py-2">
+                        Doctor note: {med.modification_notes}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-400 md:text-right">
+                    {med.doctor_name ? `Dr. ${med.doctor_name}` : 'Doctor-issued'}
+                    <br />
+                    {med.issued_at ? new Date(med.issued_at).toLocaleDateString() : ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Active prescription selector */}
       {activePrescriptions.length > 1 && (

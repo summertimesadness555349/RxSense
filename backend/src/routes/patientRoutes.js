@@ -30,6 +30,11 @@ patientRouter.get('/me/documents',
     patientController.getDocuments
 );
 
+patientRouter.get('/me/active-medications',
+    authenticateToken.authenticateToken,
+    patientController.getActiveMedications
+);
+
 patientRouter.get('/profile/:patientId',
     authenticateToken.authenticateToken,
     patientController.getProfile

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sun, Moon, Bell, Shield, Download, Trash2 } from 'lucide-react';
+import { Sun, Moon, Download, Trash2, Settings as SettingsIcon, Globe, Bell } from 'lucide-react';
 import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -29,7 +29,7 @@ function Toggle({ checked, onChange, label, id }) {
 export default function Settings() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState({ reminders: true, reports: true, insights: false });
@@ -40,36 +40,41 @@ export default function Settings() {
   return (
     <div className="space-y-5 max-w-lg">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">⚙️ Settings</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage your account and preferences.</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <SettingsIcon className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+          {t('settingsTitle')}
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('settingsSubtitle')}</p>
       </div>
 
       {/* Profile */}
       <Card>
-        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Profile</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">{t('sectionProfile')}</h2>
         <div className="space-y-3">
-          <Input label="Full Name" value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} />
-          <Input label="Email" type="email" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} />
-          <Input label="Phone Number" value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} />
-          <Button onClick={() => addToast('Profile saved!', 'success')}>Save Changes</Button>
+          <Input label={t('fieldFullName')} value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} />
+          <Input label={t('fieldEmail')} type="email" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} />
+          <Input label={t('fieldPhone')} value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} />
+          <Button onClick={() => addToast(t('profileSaved'), 'success')}>{t('saveChangesBtn')}</Button>
         </div>
       </Card>
 
       {/* Language */}
       <Card>
-        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Language</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <Globe className="w-4 h-4 text-gray-400" /> {t('sectionLanguage')}
+        </h2>
         <div className="flex gap-3">
-          {[{ val: 'en', label: 'English' }, { val: 'bn', label: 'বাংলা (Bangla)' }].map(({ val, label }) => (
+          {[{ val: 'en', labelKey: 'optionEnglish' }, { val: 'bn', labelKey: 'optionBangla' }].map(({ val, labelKey }) => (
             <button
               key={val}
-              onClick={() => { setLang(val); addToast(`Language set to ${label}`, 'info'); }}
+              onClick={() => { setLang(val); addToast(t(labelKey), 'info'); }}
               className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                 lang === val
                   ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-400 text-emerald-700 dark:text-emerald-400'
                   : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
               }`}
             >
-              {label}
+              {t(labelKey)}
             </button>
           ))}
         </div>
@@ -77,12 +82,12 @@ export default function Settings() {
 
       {/* Theme */}
       <Card>
-        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Appearance</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">{t('sectionAppearance')}</h2>
         <div className="flex gap-3">
           {[
-            { val: 'light', Icon: Sun, label: 'Light' },
-            { val: 'dark', Icon: Moon, label: 'Dark' },
-          ].map(({ val, Icon, label }) => (
+            { val: 'light', Icon: Sun, labelKey: 'optionLight' },
+            { val: 'dark', Icon: Moon, labelKey: 'optionDark' },
+          ].map(({ val, Icon, labelKey }) => (
             <button
               key={val}
               onClick={() => { if (theme !== val) toggleTheme(); }}
@@ -92,7 +97,7 @@ export default function Settings() {
                   : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
               }`}
             >
-              <Icon className="w-4 h-4" /> {label}
+              <Icon className="w-4 h-4" /> {t(labelKey)}
             </button>
           ))}
         </div>
@@ -100,28 +105,28 @@ export default function Settings() {
 
       {/* Notifications */}
       <Card>
-        <h2 className="font-semibold text-gray-900 dark:text-white mb-1">Notifications</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+          <Bell className="w-4 h-4 text-gray-400" /> {t('sectionNotifications')}
+        </h2>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
-          <Toggle id="notif-reminders" label="Medication Reminders" checked={notifs.reminders} onChange={() => toggleNotif('reminders')} />
-          <Toggle id="notif-reports" label="Report Analysis Alerts" checked={notifs.reports} onChange={() => toggleNotif('reports')} />
-          <Toggle id="notif-insights" label="AI Health Insights" checked={notifs.insights} onChange={() => toggleNotif('insights')} />
+          <Toggle id="notif-reminders" label={t('notifMedReminders')} checked={notifs.reminders} onChange={() => toggleNotif('reminders')} />
+          <Toggle id="notif-reports" label={t('notifReportAlerts')} checked={notifs.reports} onChange={() => toggleNotif('reports')} />
+          <Toggle id="notif-insights" label={t('notifHealthInsights')} checked={notifs.insights} onChange={() => toggleNotif('insights')} />
         </div>
       </Card>
 
       {/* Data & Privacy */}
       <Card>
-        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Data & Privacy</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-3">{t('sectionDataPrivacy')}</h2>
         <div className="space-y-2">
           <Button variant="outline" className="w-full" onClick={() => addToast('Preparing data export...', 'info')}>
-            <Download className="w-4 h-4" /> Download My Data
+            <Download className="w-4 h-4" /> {t('downloadMyData')}
           </Button>
           <Button variant="danger" className="w-full" onClick={() => addToast('Please contact support to delete your account.', 'warning')}>
-            <Trash2 className="w-4 h-4" /> Delete Account
+            <Trash2 className="w-4 h-4" /> {t('deleteAccount')}
           </Button>
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-          Your data is stored securely and never shared without consent. See our Privacy Policy for details.
-        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">{t('dataSecurityNote')}</p>
       </Card>
 
       {/* Logout */}
@@ -130,12 +135,10 @@ export default function Settings() {
         className="w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"
         onClick={() => { logout(); navigate('/'); }}
       >
-        Sign Out
+        {t('signOut')}
       </Button>
 
-      <p className="text-center text-xs text-gray-400 dark:text-gray-600">
-        RxSense v1.0.0 • Infinity AI Buildfest 2026 • Bangladesh
-      </p>
+      <p className="text-center text-xs text-gray-400 dark:text-gray-600">{t('settingsFooter')}</p>
     </div>
   );
 }

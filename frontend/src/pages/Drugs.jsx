@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Info } from 'lucide-react';
+import { Plus, Info, Pill } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DrugInputRow from '../components/drugs/DrugInputRow.jsx';
 import InteractionCard from '../components/drugs/InteractionCard.jsx';
@@ -7,6 +7,7 @@ import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import DisclaimerBanner from '../components/ui/DisclaimerBanner.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { checkDrugInteractions } from '../services/api.js';
 import { defaultDrugs } from '../data/mockDrugInteractions.js';
 
@@ -44,6 +45,7 @@ function InteractionMatrix({ matrix, drugs = [] }) {
 }
 
 export default function Drugs() {
+  const { t } = useLanguage();
   const [drugs, setDrugs] = useState(defaultDrugs.map((d) => ({ ...d })));
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function Drugs() {
       .filter(d => d.name && d.name.length > 0);
 
     if (validDrugs.length === 0) {
-      addToast('Please enter at least one medication name.', 'error');
+      addToast(t('enterOneMed'), 'error');
       return;
     }
 
@@ -68,10 +70,10 @@ export default function Drugs() {
     try {
       const data = await checkDrugInteractions(validDrugs);
       setResult(data);
-      addToast('Interaction check complete!', 'success');
+      addToast(t('checkInteractionsBtn'), 'success');
     } catch (err) {
       console.error('Drug interaction check failed:', err);
-      addToast(err.message || 'Interaction check failed', 'error');
+      addToast(err.message || t('checkInteractionsBtn'), 'error');
     } finally {
       setLoading(false);
     }
@@ -80,17 +82,20 @@ export default function Drugs() {
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">💊 Drug Interaction Checker</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Pill className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+          {t('drugsPageTitle')}
+        </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Check if your medications are safe to take together.
+          {t('drugsPageSubtitle')}
         </p>
       </div>
 
-      <DisclaimerBanner message="Drug interaction data is for informational purposes only. Always consult your pharmacist or doctor before changing medications." />
+      <DisclaimerBanner message={t('drugsDisclaimer')} />
 
       {/* Drug input */}
       <Card>
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Add Medications</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('addMedications')}</h3>
         <div className="space-y-2.5">
           {drugs.map((drug) => (
             <DrugInputRow
@@ -106,7 +111,7 @@ export default function Drugs() {
           onClick={addDrug}
           className="mt-3 flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
         >
-          <Plus className="w-4 h-4" /> Add Another Drug
+          <Plus className="w-4 h-4" /> {t('addAnotherDrug')}
         </button>
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
           <Button onClick={check} loading={loading} size="lg" className="w-full" disabled={!drugs.some(d => (d.name || '').trim().length > 0)}>
@@ -121,13 +126,13 @@ export default function Drugs() {
             {/* Summary */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Safe', count: result.summary.safe, color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
-                { label: 'Warnings', count: result.summary.warning, color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
-                { label: 'Dangerous', count: result.summary.danger, color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
-              ].map(({ label, count, color }) => (
-                <div key={label} className={`border rounded-xl p-3 text-center ${color}`}>
+                { labelKey: 'safeCount',    count: result.summary.safe,    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
+                { labelKey: 'warningCount', count: result.summary.warning, color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+                { labelKey: 'dangerCount',  count: result.summary.danger,  color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
+              ].map(({ labelKey, count, color }) => (
+                <div key={labelKey} className={`border rounded-xl p-3 text-center ${color}`}>
                   <div className="text-2xl font-bold">{count}</div>
-                  <div className="text-xs font-medium">{label}</div>
+                  <div className="text-xs font-medium">{t(labelKey)}</div>
                 </div>
               ))}
             </div>
@@ -141,7 +146,7 @@ export default function Drugs() {
 
             {/* Matrix */}
             <Card>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Interaction Matrix</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('interactionMatrix')}</h3>
               <InteractionMatrix matrix={result.matrix} drugs={result.drugs} />
             </Card>
 

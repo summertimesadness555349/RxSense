@@ -101,13 +101,11 @@ const EXECUTORS = {
                  LEFT JOIN drug d ON d.drug_id = pa.drug_id
                  WHERE pa.patient_id = p.patient_id
                 ) AS allergies,
-                (SELECT COALESCE(json_agg(json_build_object(
-                    'drug', m.drug_name,
-                    'dosage', m.dosage,
-                    'frequency', m.frequency
-                )), '[]'::json)
-                 FROM medication m
-                 WHERE m.patient_id = p.patient_id AND m.status = 'active'
+                (SELECT COALESCE(ps.medications, '[]'::jsonb)
+                 FROM prescription_scan ps
+                 WHERE ps.user_id = u.id
+                 ORDER BY ps.created_at DESC
+                 LIMIT 1
                 ) AS current_medications
             FROM users u
             LEFT JOIN patient p ON p.user_id = u.id
@@ -122,15 +120,20 @@ const EXECUTORS = {
             SELECT
                 mr.report_type,
                 mr.report_date,
-                mr.overall_impression,
+                mr.facility,
+                mr.raw_analysis->>'overall_impression' AS overall_impression,
                 (SELECT COALESCE(json_agg(json_build_object(
                     'parameter', lm.parameter_name,
                     'value',     lm.value,
                     'unit',      lm.unit,
-                    'status',    lm.metric_status,
+                    'status',    lm.status,
                     'ref_range', lm.reference_range
-                ) ORDER BY lm.metric_status DESC NULLS LAST), '[]'::json)
-                 FROM lab_metric lm WHERE lm.report_id = mr.report_id
+                ) ORDER BY CASE lm.status
+                    WHEN 'critical_high' THEN 1 WHEN 'critical_low' THEN 2
+                    WHEN 'high'          THEN 3 WHEN 'low'          THEN 4
+                    ELSE 5 END
+                ), '[]'::json)
+                 FROM report_metric lm WHERE lm.report_id = mr.report_id
                 ) AS metrics
             FROM medical_report mr
             JOIN patient p ON p.patient_id = mr.patient_id

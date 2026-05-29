@@ -79,13 +79,9 @@ Rules:
 
             if (!lat || !lng) return res.status(400).json({ success: false, error: 'lat and lng are required' });
 
-            const params = new URLSearchParams({
-                location: `${lat},${lng}`,
-                radius:   String(radius),
-                type,
-                keyword,
-                key,
-            });
+            const params = new URLSearchParams({ location: `${lat},${lng}`, radius: String(radius), key });
+            if (type?.trim())    params.append('type',    type.trim());
+            if (keyword?.trim()) params.append('keyword', keyword.trim());
 
             const apiRes = await fetch(`${PLACES_BASE}/nearbysearch/json?${params}`);
             const data   = await apiRes.json();

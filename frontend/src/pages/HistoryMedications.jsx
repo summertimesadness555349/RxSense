@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Info, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon } from 'lucide-react';
 import Modal from '../components/ui/Modal.jsx';
 import { getPrescriptionHistoryLocal } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
@@ -97,45 +97,8 @@ function parseSchedule(frequency = '', instructions = '') {
   return { morningAfter: true }; // fallback
 }
 
-// ─── Labels (EN + BN) ─────────────────────────────────────────────────────────
-const L = {
-  en: {
-    medication: 'Medication',
-    morning:    '🌅 Morning',
-    afternoon:  '☀️ Afternoon',
-    night:      '🌙 Night',
-    sos:        'SOS',
-    before:     'Before',
-    after:      'After',
-    noMed:      'No medications found',
-    noMedSub:   'Scan a prescription to populate this table.',
-    noRx:       'No prescriptions scanned yet',
-    noRxSub:    'Go to Prescription and scan one to populate this view.',
-    inference:  'Timing is inferred from the prescription text. Tap a medication name for full details.',
-    pastRx:     'Past Prescriptions',
-    view:       'View',
-    prescribed: 'Prescribed by',
-    schedule:   'Schedule',
-  },
-  bn: {
-    medication: 'ওষুধ',
-    morning:    '🌅 সকাল',
-    afternoon:  '☀️ দুপুর',
-    night:      '🌙 রাত',
-    sos:        'প্রয়োজনে',
-    before:     'খাওয়ার আগে',
-    after:      'খাওয়ার পরে',
-    noMed:      'কোনো ওষুধ পাওয়া যায়নি',
-    noMedSub:   'এই তালিকা পূরণ করতে একটি প্রেসক্রিপশন স্ক্যান করুন।',
-    noRx:       'এখনো কোনো প্রেসক্রিপশন স্ক্যান করা হয়নি',
-    noRxSub:    'প্রেসক্রিপশন বিভাগে গিয়ে একটি স্ক্যান করুন।',
-    inference:  'সময় প্রেসক্রিপশনের টেক্সট থেকে অনুমান করা হয়েছে। বিস্তারিত দেখতে ওষুধের নামে ট্যাপ করুন।',
-    pastRx:     'পুরনো প্রেসক্রিপশন',
-    view:       'দেখুন',
-    prescribed: 'প্রেসক্রাইব করেছেন',
-    schedule:   'সময়সূচি',
-  },
-};
+// TIME_ICONS used by table header and cell rendering
+export const TIME_ICONS = { morning: Sunrise, afternoon: Sun, night: Moon };
 
 // ─── Table cell ───────────────────────────────────────────────────────────────
 function Tick({ active }) {
@@ -145,18 +108,18 @@ function Tick({ active }) {
 }
 
 // ─── Medication detail modal ──────────────────────────────────────────────────
-function MedModal({ med, rx, onClose, lang }) {
-  const lbl = L[lang] || L.en;
+function MedModal({ med, rx, onClose }) {
+  const { t } = useLanguage();
   const sched = med ? parseSchedule(med.frequency, med.instructions) : {};
 
   const SLOT_LABELS = [
-    { key: 'morningBefore',   label: lang === 'bn' ? `${L.bn.morning} · ${L.bn.before}` : `${L.en.morning} · ${L.en.before}` },
-    { key: 'morningAfter',    label: lang === 'bn' ? `${L.bn.morning} · ${L.bn.after}`  : `${L.en.morning} · ${L.en.after}`  },
-    { key: 'afternoonBefore', label: lang === 'bn' ? `${L.bn.afternoon} · ${L.bn.before}` : `${L.en.afternoon} · ${L.en.before}` },
-    { key: 'afternoonAfter',  label: lang === 'bn' ? `${L.bn.afternoon} · ${L.bn.after}`  : `${L.en.afternoon} · ${L.en.after}`  },
-    { key: 'nightBefore',     label: lang === 'bn' ? `${L.bn.night} · ${L.bn.before}` : `${L.en.night} · ${L.en.before}` },
-    { key: 'nightAfter',      label: lang === 'bn' ? `${L.bn.night} · ${L.bn.after}`  : `${L.en.night} · ${L.en.after}`  },
-    { key: 'sos',             label: lbl.sos },
+    { key: 'morningBefore',   label: `${t('timeMorning')} · ${t('timingBefore')}` },
+    { key: 'morningAfter',    label: `${t('timeMorning')} · ${t('timingAfter')}` },
+    { key: 'afternoonBefore', label: `${t('timeAfternoon')} · ${t('timingBefore')}` },
+    { key: 'afternoonAfter',  label: `${t('timeAfternoon')} · ${t('timingAfter')}` },
+    { key: 'nightBefore',     label: `${t('timeNight')} · ${t('timingBefore')}` },
+    { key: 'nightAfter',      label: `${t('timeNight')} · ${t('timingAfter')}` },
+    { key: 'sos',             label: t('timeSOS') },
   ];
 
   return (
@@ -171,15 +134,15 @@ function MedModal({ med, rx, onClose, lang }) {
 
           <div className="space-y-2.5">
             {[
-              { label: 'Generic',        value: med.generic      },
-              { label: 'Dosage',         value: med.dosage       },
-              { label: 'Frequency',      value: med.frequency    },
-              { label: 'Duration',       value: med.duration     },
-              { label: 'Instructions',   value: med.instructions },
-              { label: lbl.prescribed,   value: rx?.doctor?.name || (typeof rx?.doctor === 'string' ? rx?.doctor : null) },
-              { label: 'Date',           value: rx?.date         },
-              { label: 'Hospital',       value: rx?.hospital?.name || (typeof rx?.hospital === 'string' ? rx?.hospital : null) },
-              { label: 'Conditions',     value: (rx?.diseases || []).join(', ') || null },
+              { label: t('genericLabel'),      value: med.generic      },
+              { label: t('dosageLabel'),       value: med.dosage       },
+              { label: t('frequencyLabel'),    value: med.frequency    },
+              { label: t('durationLabel'),     value: med.duration     },
+              { label: t('instructionsLabel'), value: med.instructions },
+              { label: t('prescribedBy'),      value: rx?.doctor?.name || (typeof rx?.doctor === 'string' ? rx?.doctor : null) },
+              { label: 'Date',                 value: rx?.date         },
+              { label: t('hospitalLabel'),     value: rx?.hospital?.name || (typeof rx?.hospital === 'string' ? rx?.hospital : null) },
+              { label: t('conditionsLabel'),   value: (rx?.diseases || []).join(', ') || null },
             ].filter((r) => r.value).map(({ label, value }) => (
               <div key={label} className="flex gap-3 text-sm">
                 <span className="text-gray-400 dark:text-gray-500 w-28 flex-shrink-0">{label}</span>
@@ -189,7 +152,7 @@ function MedModal({ med, rx, onClose, lang }) {
           </div>
 
           <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{lbl.schedule}</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('scheduleLabel')}</p>
             <div className="flex flex-wrap gap-2">
               {SLOT_LABELS.filter(({ key }) => sched[key]).map(({ label }) => (
                 <span key={label} className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full font-medium">
@@ -207,9 +170,8 @@ function MedModal({ med, rx, onClose, lang }) {
 // ═════════════════════════════════════════════════════════════════════════════
 
 export default function HistoryMedications() {
-  const { addToast }  = useToast();
-  const { lang }      = useLanguage();
-  const lbl           = L[lang] || L.en;
+  const { addToast } = useToast();
+  const { t }        = useLanguage();
 
   const [allRx,       setAllRx]       = useState([]);
   const [activeRxIdx, setActiveRxIdx] = useState(0);
@@ -262,8 +224,8 @@ export default function HistoryMedications() {
       {/* Table */}
       {activePrescriptions.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-base font-medium">{allRx.length > 0 ? lbl.noMed : lbl.noRx}</p>
-          <p className="text-sm mt-1">{allRx.length > 0 ? lbl.noMedSub : lbl.noRxSub}</p>
+          <p className="text-base font-medium">{allRx.length > 0 ? t('noMedicationsFound') : t('noPrescriptionsYet')}</p>
+          <p className="text-sm mt-1">{allRx.length > 0 ? t('scanPrescriptionPrompt') : t('goScanPrescription')}</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
@@ -283,29 +245,29 @@ export default function HistoryMedications() {
                 {/* Group row */}
                 <tr className="bg-gray-50 dark:bg-gray-800/70">
                   <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700" rowSpan={2}>
-                    {lbl.medication}
+                    {t('filterMedication')}
                   </th>
                   <th colSpan={2} className="text-center px-2 py-2.5 font-semibold text-gray-600 dark:text-gray-300 border-l border-b border-gray-200 dark:border-gray-700">
-                    {lbl.morning}
+                    <span className="flex items-center justify-center gap-1"><Sunrise className="w-3.5 h-3.5" />{t('timeMorning')}</span>
                   </th>
                   <th colSpan={2} className="text-center px-2 py-2.5 font-semibold text-gray-600 dark:text-gray-300 border-l border-b border-gray-200 dark:border-gray-700">
-                    {lbl.afternoon}
+                    <span className="flex items-center justify-center gap-1"><Sun className="w-3.5 h-3.5" />{t('timeAfternoon')}</span>
                   </th>
                   <th colSpan={2} className="text-center px-2 py-2.5 font-semibold text-gray-600 dark:text-gray-300 border-l border-b border-gray-200 dark:border-gray-700">
-                    {lbl.night}
+                    <span className="flex items-center justify-center gap-1"><Moon className="w-3.5 h-3.5" />{t('timeNight')}</span>
                   </th>
                   <th className="text-center px-2 py-2.5 font-semibold text-gray-600 dark:text-gray-300 border-l border-b border-gray-200 dark:border-gray-700" rowSpan={2}>
-                    {lbl.sos}
+                    {t('timeSOS')}
                   </th>
                 </tr>
                 {/* Sub-header row */}
                 <tr className="bg-gray-50 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{lbl.before}</th>
-                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{lbl.after}</th>
-                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{lbl.before}</th>
-                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{lbl.after}</th>
-                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{lbl.before}</th>
-                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{lbl.after}</th>
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{t('timingBefore')}</th>
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('timingAfter')}</th>
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{t('timingBefore')}</th>
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('timingAfter')}</th>
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{t('timingBefore')}</th>
+                  <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('timingAfter')}</th>
                 </tr>
               </thead>
 
@@ -346,7 +308,7 @@ export default function HistoryMedications() {
 
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
             <Info className="w-3.5 h-3.5 flex-shrink-0" />
-            {lbl.inference}
+            {t('timingNote')}
           </div>
         </div>
       )}
@@ -359,7 +321,7 @@ export default function HistoryMedications() {
             className="flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             {pastOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            {lbl.pastRx} ({pastPrescriptions.length})
+            {t('pastPrescriptions')} ({pastPrescriptions.length})
           </button>
           {pastOpen && (
             <div className="mt-3 space-y-2">
@@ -382,7 +344,6 @@ export default function HistoryMedications() {
         med={selectedMed}
         rx={activeRx}
         onClose={() => setSelectedMed(null)}
-        lang={lang}
       />
     </div>
   );

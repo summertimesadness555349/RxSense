@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { Activity } from 'lucide-react';
 
 export default function AuthLayout() {
   const { user, loading } = useAuth();
@@ -27,7 +28,9 @@ export default function AuthLayout() {
           ))}
         </div>
         <div className="relative z-10 text-center">
-          <div className="text-6xl mb-6">⚕️</div>
+          <div className="mb-6 flex justify-center">
+            <Activity className="w-16 h-16 text-white/90" />
+          </div>
           <h1 className="text-3xl font-bold text-white mb-3">RxSense</h1>
           <p className="text-emerald-200 text-base leading-relaxed max-w-xs">
             Your lifelong digital health companion. Every prescription, every report — connected and understood.
@@ -52,7 +55,7 @@ export default function AuthLayout() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <span className="text-2xl">⚕️</span>
+            <Activity className="w-6 h-6 text-emerald-500" />
             <span className="font-bold text-xl text-gray-900 dark:text-white">RxSense</span>
           </div>
           <Outlet />

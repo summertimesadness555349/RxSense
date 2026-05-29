@@ -9,3 +9,4 @@ backend/.env
 extra/*.pdf
 extra/*.csv
 extra/*.json
+CLAUDE.md

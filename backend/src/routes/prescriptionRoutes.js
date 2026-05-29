@@ -1,0 +1,96 @@
+const express = require('express');
+const multer = require('multer');
+const PrescriptionController = require('../controllers/prescriptionController.js');
+const ChatController          = require('../controllers/chatController.js');
+const AuthenticateToken       = require('../middlewares/authenticateToken.js');
+
+const prescriptionRouter      = express.Router();
+const prescriptionController  = new PrescriptionController();
+const chatController          = new ChatController();
+const authenticateToken       = new AuthenticateToken();
+const upload = multer({ storage: multer.memoryStorage() });
+
+/**
+ * @openapi
+ * /api/prescription/analyze:
+ *   post:
+ *     tags: [Prescription]
+ *     summary: Analyze a prescription image
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Extracted drug list
+ *       400:
+ *         description: No image provided
+ *       500:
+ *         description: Analysis error
+ */
+prescriptionRouter.post(
+    '/analyze',
+    authenticateToken.authenticateToken,
+    upload.single('image'),
+    prescriptionController.analyzePrescription
+);
+
+/**
+ * @openapi
+ * /api/prescription/history:
+ *   get:
+ *     tags: [Prescription]
+ *     summary: Get prescription scan history for the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer, default: 0 }
+ *     responses:
+ *       200:
+ *         description: List of prescription scans
+ */
+prescriptionRouter.get(
+    '/history',
+    authenticateToken.authenticateToken,
+    prescriptionController.getPrescriptionHistory
+);
+
+/**
+ * @openapi
+ * /api/prescription/chat:
+ *   post:
+ *     tags: [Prescription]
+ *     summary: Chat about a prescription using AI + DrugBank context
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               question:    { type: string }
+ *               prescription: { type: object }
+ *               messages:    { type: array }
+ */
+prescriptionRouter.post(
+    '/chat',
+    authenticateToken.authenticateToken,
+    chatController.chat
+);
+
+module.exports = { prescriptionRouter };

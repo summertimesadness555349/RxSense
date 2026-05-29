@@ -11,7 +11,7 @@ export default function MainLayout() {
   const location = useLocation();
 
   // Pages that should fill all available height (no page-level scroll — inner sections scroll)
-  const isFullHeightPage = location.pathname === '/symptoms';
+  const isFullHeightPage = ['/symptoms', '/prescription', '/report'].includes(location.pathname);
 
   if (loading) {
     return (

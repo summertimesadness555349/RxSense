@@ -11,6 +11,7 @@ const typeConfig = {
   note: { icon: '📝', color: 'border-gray-400', badge: 'gray', label: 'Personal Note' },
   medication: { icon: '💊', color: 'border-pink-400', badge: 'gray', label: 'Medication Change' },
   vaccination: { icon: '💉', color: 'border-teal-400', badge: 'emerald', label: 'Vaccination' },
+  surgery: { icon: '🩹', color: 'border-rose-400', badge: 'red', label: 'Surgery' },
 };
 
 function formatDate(dateStr) {

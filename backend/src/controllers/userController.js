@@ -18,18 +18,20 @@ class UserController {
         this.access_token_expiry = process.env.ACCESS_TOKEN_TTL;
         this.refresh_token_expiry = process.env.REFRESH_TOKEN_DAYS;
         this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-        this.requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+        // this.requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+        this.requireEmailVerification = false; // Disable email verification for now to simplify registration flow during hackathon
     }
 
     generateTokens = (user) => {
+        const subject = user.id || user.patient_id || user.uuid;
         const accessPayload = {
-            sub: user.id,
+            sub: subject,
             username: user.username,
             email: user.email
         };
 
         const accessToken = jwt.sign(accessPayload, this.access_token_secret, { expiresIn: this.access_token_expiry });
-        const refreshToken = jwt.sign({ sub: user.id }, this.refresh_token_secret, { expiresIn: this.refresh_token_expiry });
+        const refreshToken = jwt.sign({ sub: subject }, this.refresh_token_secret, { expiresIn: this.refresh_token_expiry });
 
         return { accessToken, refreshToken };
     };
@@ -173,14 +175,9 @@ class UserController {
         try {
             console.log(req.body);
             
-            const { username, email, password } = req.body || {};
-            if (!username || !email || !password) {
-                return res.status(400).json({ success: false, error: 'username, email, password required' });
-            }
-
-            const existingUserByUsername = await this.userModel.getUserByUsername(username);
-            if (existingUserByUsername) {
-                return res.status(409).json({ success: false, error: 'Username already taken' });
+            const { name, email, password, phone, role } = req.body || {};
+            if (!name || !email || !password || !phone || !role) {
+                return res.status(400).json({ success: false, error: 'name, email, password, phone number, and role required' });
             }
 
             const existingUserByEmail = await this.userModel.getUserByEmail(email);
@@ -189,7 +186,7 @@ class UserController {
             }
 
             const passwordHash = await bcrypt.hash(password, this.salt_round);
-            const newUser = await this.userModel.createUser({ username, email, passwordHash });
+            const newUser = (role === 'patient') ? await this.userModel.createPatient({ name, email, passwordHash, phone }) : await this.userModel.createDoctor({ name, email, passwordHash, phone });
 
             if(!newUser){
                 return res.status(500).json({
@@ -221,25 +218,28 @@ class UserController {
                     }
                 })
             } else {
-                await this.userModel.setEmailVerified(newUser.id);
-                const { accessToken, refreshToken } = this.generateTokens({
-                    ...newUser,
-                    email_verified: true
-                });
+                // await this.userModel.setEmailVerified(newUser.id);
+                // const { accessToken, refreshToken } = this.generateTokens({
+                //     ...newUser,
+                //     email_verified: true
+                // });
+                const { accessToken, refreshToken } = this.generateTokens(newUser);
 
-                await this.userModel.updateRefreshToken(newUser.id, refreshToken);
+                // await this.userModel.updateRefreshToken(newUser.id, refreshToken);
                 bus.emit(Events.USER_REGISTERED, {userId: newUser.id, email: newUser.email, username: newUser.username});
 
                 return res.status(201).json({
                     success: true,
                     message: 'User registered successfully',
                     user: {
-                        id: newUser.id,
+                        id: newUser.patient_id,
+                        // uuid: user.uuid,
                         username: newUser.username,
                         email: newUser.email,
-                        email_verified: true,
-                        requires_verification: false,
-                        subscription_type: newUser.subscription_type
+                        name: newUser.name,
+                        // is_active: user.is_active,
+                        // avatar_url: user.avatar_url,
+                        // subscription_type: user.subscription_type
                     },
                     tokens: {
                         accessToken,
@@ -357,9 +357,12 @@ class UserController {
                 return res.status(400).json({ success: false, error: 'identifier and password required' });
             }
 
-            let user = await this.userModel.getUserByUsername(identifier);
-            if (!user && identifier.includes('@')) {
+            let user = null;
+            if (identifier.includes('@')) {
                 user = await this.userModel.getUserByEmail(identifier);
+            }
+            if (!user) {
+                user = await this.userModel.getUserByUsername(identifier);
             }
 
             if (!user) {
@@ -374,7 +377,8 @@ class UserController {
                 });
             }
 
-            const match = await bcrypt.compare(password, user.password_hash);
+            const passwordHash = user.password || user.password_hash;
+            const match = passwordHash ? await bcrypt.compare(password, passwordHash) : false;
             if (!match) {
                 const updated = await this.userModel.incrementLoginAttempts(user.id);
                 const attempts = updated ? updated.login_attempts : (user.login_attempts + 1);
@@ -409,13 +413,14 @@ class UserController {
                 message: 'Login successful',
                 user: {
                     id: user.id,
-                    uuid: user.uuid,
+                    uuid: user.role?.toLowerCase() === 'patient' ? user.patient_id : user.doctor_id,
+                    patient_id: user.patient_id || user.uuid || user.id,
+                    name: user.name || user.full_name || user.username,
                     username: user.username,
                     email: user.email,
-                    full_name: user.full_name,
-                    is_active: user.is_active,
-                    avatar_url: user.avatar_url,
-                    subscription_type: user.subscription_type
+                    // is_active: user.is_active,
+                    // avatar_url: user.avatar_url,
+                    // subscription_type: user.subscription_type
                 },
                 tokens: { accessToken, refreshToken }
             });

@@ -22,7 +22,11 @@ dotenv.config({path: path.resolve(__dirname, '.env')});
 const app = express();
 const {authRouter} = require('./routes/authRoutes.js');
 const {userRouter} = require('./routes/userRoutes.js');
+const {patientRouter} = require('./routes/patientRoutes.js');
 const {doctorRouter} = require('./routes/doctorRoutes.js');
+const {prescriptionRouter} = require('./routes/prescriptionRoutes.js');
+const {familyRouter}       = require('./routes/familyRoutes.js');
+const { drugRouter } = require('./routes/drugRoutes.js');
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
 const socketLayer = createSocketServer(server);
@@ -127,7 +131,11 @@ app.use(
 
 app.use('/api/auth', loginLimiter, authRouter);
 app.use('/api/user', apiLimiter, userRouter);
+app.use('/api/patient', apiLimiter, patientRouter);
 app.use('/api/doctor', apiLimiter, doctorRouter);
+app.use('/api/prescription', apiLimiter, prescriptionRouter);
+app.use('/api/family',       apiLimiter, familyRouter);
+app.use('/api/drugs', apiLimiter, drugRouter);
 
 const options = {
   transports: [
@@ -162,8 +170,8 @@ app.get('/', (req, res)=>{
 })
  
 
-server.listen(PORT, '0.0.0.0', ()=>{    
-    console.log(`Listening on: http://0.0.0.0:${PORT}`);
+server.listen(PORT, 'localhost', ()=>{    
+    console.log(`Listening on: http://localhost:${PORT}`);
     if(process.env.ENABLE_WEBSOCKETS === 'true'){
         console.log("Websockets enabled");
     }

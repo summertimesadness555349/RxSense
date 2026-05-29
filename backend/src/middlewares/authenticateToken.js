@@ -12,7 +12,7 @@ class AuthenticateToken{
     
     authenticateToken = async(req, res, next)=>{
         try {
-            console.log("Authenticating users");
+            // console.log("Authenticating users");
             
             const authHeader = req.headers['authorization'] || req.headers['Authorization'];
             const token = authHeader && authHeader.split(' ')[1];
@@ -25,20 +25,21 @@ class AuthenticateToken{
                 });
             }
 
-            console.log("Verifying token");
+            // console.log("Verifying token");
 
             const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
             const userId = decoded.sub || decoded.id;
-            const user = await this.userModel.getUserById(userId);
+            // console.log("Token verified for userId:", userId);
+            // const user = await this.userModel.getUserById(userId);
 
-            if(!user){
+            if(!userId){
                 return res.status(401).json({
                     success: false,
-                    message: "User not found"
+                    message: "UserId not found"
                 });
             }
 
-            req.user = user;
+            req.user = { id: userId };
             next();
         } catch (error) {
             console.error('Token verification error:', error.message);

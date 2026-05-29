@@ -1,0 +1,426 @@
+{
+  "metadata": {
+    "source": "Standard lab references (Mayo Clinic, WHO, Wallach's)",
+    "note": "Ranges may vary slightly by lab and analyzer. Always confirm with lab-specific reference intervals.",
+    "version": "1.0"
+  },
+  "tests": {
+    "CRP": {
+      "full_name": "C-Reactive Protein",
+      "ranges": {
+        "normal": { "max": 10, "unit": "mg/L" },
+        "elevated": { "min": 10, "max": 100, "unit": "mg/L", "note": "Moderate inflammation/infection" },
+        "high": { "min": 100, "unit": "mg/L", "note": "Severe bacterial infection or major trauma" }
+      },
+      "interpretation": "Higher values indicate inflammation or infection"
+    },
+    "S. Uric Acid": {
+      "full_name": "Serum Uric Acid",
+      "ranges": {
+        "male":   { "min": 3.5, "max": 7.2, "unit": "mg/dL" },
+        "female": { "min": 2.6, "max": 6.0, "unit": "mg/dL" }
+      },
+      "interpretation": "Elevated levels (hyperuricemia) may indicate gout or kidney disease"
+    },
+    "RBS": {
+      "full_name": "Random Blood Sugar",
+      "ranges": {
+        "normal":      { "max": 140, "unit": "mg/dL" },
+        "prediabetes": { "min": 140, "max": 199, "unit": "mg/dL" },
+        "diabetes":    { "min": 200, "unit": "mg/dL" }
+      },
+      "interpretation": ">=200 mg/dL with symptoms is diagnostic of diabetes"
+    },
+    "FBS": {
+      "full_name": "Fasting Blood Sugar",
+      "ranges": {
+        "normal":      { "max": 99,  "unit": "mg/dL" },
+        "prediabetes": { "min": 100, "max": 125, "unit": "mg/dL" },
+        "diabetes":    { "min": 126, "unit": "mg/dL" }
+      },
+      "interpretation": "Test done after 8+ hours fasting"
+    },
+    "HbA1c": {
+      "full_name": "Glycated Hemoglobin",
+      "ranges": {
+        "normal":      { "max": 5.6, "unit": "%" },
+        "prediabetes": { "min": 5.7, "max": 6.4, "unit": "%" },
+        "diabetes":    { "min": 6.5, "unit": "%" }
+      },
+      "interpretation": "Reflects average blood sugar over past 2-3 months"
+    },
+    "CBC": {
+      "full_name": "Complete Blood Count",
+      "components": {
+        "WBC": {
+          "range": { "min": 4.5, "max": 11.0, "unit": "10³/µL" },
+          "note": "Low = infection risk, High = infection/leukemia"
+        },
+        "RBC": {
+          "male":   { "min": 4.5, "max": 5.9, "unit": "10⁶/µL" },
+          "female": { "min": 4.1, "max": 5.1, "unit": "10⁶/µL" }
+        },
+        "Hemoglobin": {
+          "male":   { "min": 13.5, "max": 17.5, "unit": "g/dL" },
+          "female": { "min": 12.0, "max": 15.5, "unit": "g/dL" }
+        },
+        "Hematocrit": {
+          "male":   { "min": 41, "max": 53, "unit": "%" },
+          "female": { "min": 36, "max": 46, "unit": "%" }
+        },
+        "Platelets": {
+          "range": { "min": 150, "max": 400, "unit": "10³/µL" }
+        },
+        "Neutrophils": { "range": { "min": 40, "max": 70, "unit": "%" } },
+        "Lymphocytes": { "range": { "min": 20, "max": 45, "unit": "%" } },
+        "Eosinophils": { "range": { "min": 1,  "max": 6,  "unit": "%" } },
+        "Monocytes":   { "range": { "min": 2,  "max": 8,  "unit": "%" } },
+        "Basophils":   { "range": { "min": 0,  "max": 1,  "unit": "%" } }
+      }
+    },
+    "ESR": {
+      "full_name": "Erythrocyte Sedimentation Rate",
+      "ranges": {
+        "male_under50":   { "max": 15, "unit": "mm/hr" },
+        "male_over50":    { "max": 20, "unit": "mm/hr" },
+        "female_under50": { "max": 20, "unit": "mm/hr" },
+        "female_over50":  { "max": 30, "unit": "mm/hr" }
+      },
+      "interpretation": "Non-specific marker of inflammation"
+    },
+    "Creatinine": {
+      "full_name": "Serum Creatinine",
+      "ranges": {
+        "male":   { "min": 0.74, "max": 1.35, "unit": "mg/dL" },
+        "female": { "min": 0.59, "max": 1.04, "unit": "mg/dL" }
+      },
+      "interpretation": "Elevated indicates kidney dysfunction"
+    },
+    "BUN": {
+      "full_name": "Blood Urea Nitrogen",
+      "ranges": {
+        "normal": { "min": 7, "max": 20, "unit": "mg/dL" }
+      },
+      "interpretation": "Elevated may indicate kidney disease or dehydration"
+    },
+    "eGFR": {
+      "full_name": "Estimated Glomerular Filtration Rate",
+      "ranges": {
+        "normal":   { "min": 90, "unit": "mL/min/1.73m²" },
+        "mild_ckd": { "min": 60, "max": 89 },
+        "moderate": { "min": 30, "max": 59 },
+        "severe":   { "min": 15, "max": 29 },
+        "failure":  { "max": 15 }
+      }
+    },
+    "ALT": {
+      "full_name": "Alanine Aminotransferase (SGPT)",
+      "ranges": {
+        "male":   { "max": 45, "unit": "U/L" },
+        "female": { "max": 35, "unit": "U/L" }
+      },
+      "interpretation": "Elevated indicates liver damage"
+    },
+    "AST": {
+      "full_name": "Aspartate Aminotransferase (SGOT)",
+      "ranges": {
+        "normal": { "min": 10, "max": 40, "unit": "U/L" }
+      },
+      "interpretation": "Elevated in liver or heart disease"
+    },
+    "ALP": {
+      "full_name": "Alkaline Phosphatase",
+      "ranges": {
+        "adult": { "min": 44, "max": 147, "unit": "U/L" }
+      },
+      "interpretation": "Elevated in liver or bone disease"
+    },
+    "Total Bilirubin": {
+      "full_name": "Total Bilirubin",
+      "ranges": {
+        "normal": { "min": 0.1, "max": 1.2, "unit": "mg/dL" }
+      },
+      "interpretation": ">2.5 mg/dL causes visible jaundice"
+    },
+    "Direct Bilirubin": {
+      "full_name": "Direct (Conjugated) Bilirubin",
+      "ranges": {
+        "normal": { "max": 0.3, "unit": "mg/dL" }
+      }
+    },
+    "Total Protein": {
+      "full_name": "Total Serum Protein",
+      "ranges": {
+        "normal": { "min": 6.3, "max": 8.2, "unit": "g/dL" }
+      }
+    },
+    "Albumin": {
+      "full_name": "Serum Albumin",
+      "ranges": {
+        "normal": { "min": 3.5, "max": 5.0, "unit": "g/dL" }
+      },
+      "interpretation": "Low albumin indicates malnutrition or liver disease"
+    },
+    "TSH": {
+      "full_name": "Thyroid Stimulating Hormone",
+      "ranges": {
+        "normal": { "min": 0.4, "max": 4.0, "unit": "mIU/L" }
+      },
+      "interpretation": "High = hypothyroidism, Low = hyperthyroidism"
+    },
+    "T3": {
+      "full_name": "Triiodothyronine (Total T3)",
+      "ranges": {
+        "normal": { "min": 80, "max": 200, "unit": "ng/dL" }
+      }
+    },
+    "T4": {
+      "full_name": "Thyroxine (Total T4)",
+      "ranges": {
+        "normal": { "min": 5.0, "max": 12.0, "unit": "µg/dL" }
+      }
+    },
+    "Free T4": {
+      "full_name": "Free Thyroxine",
+      "ranges": {
+        "normal": { "min": 0.8, "max": 1.8, "unit": "ng/dL" }
+      }
+    },
+    "Cholesterol": {
+      "full_name": "Total Cholesterol",
+      "ranges": {
+        "desirable":    { "max": 200, "unit": "mg/dL" },
+        "borderline":   { "min": 200, "max": 239, "unit": "mg/dL" },
+        "high":         { "min": 240, "unit": "mg/dL" }
+      }
+    },
+    "LDL": {
+      "full_name": "Low-Density Lipoprotein",
+      "ranges": {
+        "optimal":    { "max": 100, "unit": "mg/dL" },
+        "near_optimal": { "min": 100, "max": 129 },
+        "borderline": { "min": 130, "max": 159 },
+        "high":       { "min": 160, "max": 189 },
+        "very_high":  { "min": 190 }
+      }
+    },
+    "HDL": {
+      "full_name": "High-Density Lipoprotein",
+      "ranges": {
+        "low_risk":   { "min": 60, "unit": "mg/dL", "note": "Protective" },
+        "normal":     { "min": 40, "max": 59 },
+        "high_risk":  { "max": 40, "note": "Risk factor for heart disease" }
+      }
+    },
+    "Triglycerides": {
+      "full_name": "Serum Triglycerides",
+      "ranges": {
+        "normal":     { "max": 150, "unit": "mg/dL" },
+        "borderline": { "min": 150, "max": 199 },
+        "high":       { "min": 200, "max": 499 },
+        "very_high":  { "min": 500 }
+      }
+    },
+    "Sodium": {
+      "full_name": "Serum Sodium",
+      "ranges": {
+        "normal": { "min": 136, "max": 145, "unit": "mEq/L" }
+      },
+      "interpretation": "Low = hyponatremia, High = hypernatremia"
+    },
+    "Potassium": {
+      "full_name": "Serum Potassium",
+      "ranges": {
+        "normal": { "min": 3.5, "max": 5.1, "unit": "mEq/L" }
+      },
+      "interpretation": "Critical electrolyte for heart function"
+    },
+    "Chloride": {
+      "full_name": "Serum Chloride",
+      "ranges": {
+        "normal": { "min": 98, "max": 107, "unit": "mEq/L" }
+      }
+    },
+    "Calcium": {
+      "full_name": "Serum Calcium",
+      "ranges": {
+        "normal": { "min": 8.5, "max": 10.5, "unit": "mg/dL" }
+      }
+    },
+    "Phosphorus": {
+      "full_name": "Serum Phosphorus",
+      "ranges": {
+        "adult": { "min": 2.5, "max": 4.5, "unit": "mg/dL" }
+      }
+    },
+    "Magnesium": {
+      "full_name": "Serum Magnesium",
+      "ranges": {
+        "normal": { "min": 1.7, "max": 2.2, "unit": "mg/dL" }
+      }
+    },
+    "Vitamin D": {
+      "full_name": "25-Hydroxyvitamin D",
+      "ranges": {
+        "deficient":    { "max": 20, "unit": "ng/mL" },
+        "insufficient": { "min": 20, "max": 29 },
+        "sufficient":   { "min": 30, "max": 100 },
+        "toxic":        { "min": 100 }
+      }
+    },
+    "Vitamin B12": {
+      "full_name": "Cobalamin (Vitamin B12)",
+      "ranges": {
+        "normal": { "min": 200, "max": 900, "unit": "pg/mL" }
+      },
+      "interpretation": "Low causes anemia and nerve damage"
+    },
+    "Ferritin": {
+      "full_name": "Serum Ferritin",
+      "ranges": {
+        "male":   { "min": 20,  "max": 250, "unit": "ng/mL" },
+        "female": { "min": 10,  "max": 120, "unit": "ng/mL" }
+      },
+      "interpretation": "Best marker for iron stores"
+    },
+    "Serum Iron": {
+      "full_name": "Serum Iron",
+      "ranges": {
+        "male":   { "min": 65, "max": 176, "unit": "µg/dL" },
+        "female": { "min": 50, "max": 170, "unit": "µg/dL" }
+      }
+    },
+    "TIBC": {
+      "full_name": "Total Iron Binding Capacity",
+      "ranges": {
+        "normal": { "min": 250, "max": 370, "unit": "µg/dL" }
+      }
+    },
+    "INR": {
+      "full_name": "International Normalized Ratio",
+      "ranges": {
+        "normal":        { "min": 0.8, "max": 1.1, "unit": "ratio" },
+        "on_warfarin":   { "min": 2.0, "max": 3.0, "note": "Therapeutic range" }
+      }
+    },
+    "PT": {
+      "full_name": "Prothrombin Time",
+      "ranges": {
+        "normal": { "min": 11, "max": 13.5, "unit": "seconds" }
+      }
+    },
+    "APTT": {
+      "full_name": "Activated Partial Thromboplastin Time",
+      "ranges": {
+        "normal": { "min": 25, "max": 35, "unit": "seconds" }
+      }
+    },
+    "PSA": {
+      "full_name": "Prostate-Specific Antigen",
+      "ranges": {
+        "normal": { "max": 4.0, "unit": "ng/mL" },
+        "borderline": { "min": 4.0, "max": 10.0 },
+        "high": { "min": 10.0 }
+      }
+    },
+    "HCG": {
+      "full_name": "Human Chorionic Gonadotropin (Pregnancy Test)",
+      "ranges": {
+        "non_pregnant": { "max": 5, "unit": "mIU/mL" },
+        "pregnant":     { "min": 25, "note": "Positive" }
+      }
+    },
+    "Amylase": {
+      "full_name": "Serum Amylase",
+      "ranges": {
+        "normal": { "min": 30, "max": 110, "unit": "U/L" }
+      },
+      "interpretation": "Elevated in pancreatitis"
+    },
+    "Lipase": {
+      "full_name": "Serum Lipase",
+      "ranges": {
+        "normal": { "min": 0, "max": 160, "unit": "U/L" }
+      },
+      "interpretation": "More specific than amylase for pancreatitis"
+    },
+    "Troponin I": {
+      "full_name": "Cardiac Troponin I",
+      "ranges": {
+        "normal": { "max": 0.04, "unit": "ng/mL" }
+      },
+      "interpretation": "Elevated indicates heart muscle damage (heart attack)"
+    },
+    "D-Dimer": {
+      "full_name": "D-Dimer",
+      "ranges": {
+        "normal": { "max": 0.5, "unit": "mg/L FEU" }
+      },
+      "interpretation": "Elevated in DVT, PE, DIC"
+    },
+    "Dengue NS1": {
+      "full_name": "Dengue NS1 Antigen",
+      "ranges": {
+        "result": "Qualitative (Positive/Negative)",
+        "note": "Positive in early dengue (day 1-5 of fever)"
+      }
+    },
+    "Widal Test": {
+      "full_name": "Widal Test (Typhoid)",
+      "ranges": {
+        "significant_titer": { "min": 80, "note": "1:80 or higher considered significant in BD" }
+      },
+      "interpretation": "Titre ≥1:160 strongly suggestive of typhoid"
+    },
+    "Malaria RDT": {
+      "full_name": "Malaria Rapid Diagnostic Test",
+      "ranges": {
+        "result": "Qualitative (Positive/Negative)"
+      }
+    },
+    "Stool R/E": {
+      "full_name": "Stool Routine Examination",
+      "ranges": {
+        "WBC": { "normal": "0-5 per HPF" },
+        "RBC": { "normal": "None" },
+        "Ova/Cysts": { "normal": "None" }
+      }
+    },
+    "Urine R/E": {
+      "full_name": "Urine Routine Examination",
+      "ranges": {
+        "pH":       { "min": 4.5, "max": 8.0 },
+        "Protein":  { "normal": "Negative or trace" },
+        "Glucose":  { "normal": "Negative" },
+        "WBC":      { "normal": "0-5 per HPF" },
+        "RBC":      { "normal": "0-2 per HPF" }
+      }
+    },
+    "GGT": {
+      "full_name": "Gamma-Glutamyl Transferase",
+      "ranges": {
+        "male":   { "max": 55, "unit": "U/L" },
+        "female": { "max": 38, "unit": "U/L" }
+      }
+    },
+    "LDH": {
+      "full_name": "Lactate Dehydrogenase",
+      "ranges": {
+        "normal": { "min": 140, "max": 280, "unit": "U/L" }
+      }
+    },
+    "Cortisol": {
+      "full_name": "Serum Cortisol",
+      "ranges": {
+        "morning_8am": { "min": 6,  "max": 23,  "unit": "µg/dL" },
+        "afternoon_4pm": { "min": 2, "max": 11, "unit": "µg/dL" }
+      }
+    },
+    "Insulin (Fasting)": {
+      "full_name": "Fasting Serum Insulin",
+      "ranges": {
+        "normal": { "min": 2.6, "max": 24.9, "unit": "µIU/mL" }
+      }
+    }
+  }
+}

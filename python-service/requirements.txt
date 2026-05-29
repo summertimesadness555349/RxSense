@@ -1,0 +1,3 @@
+# Local dev only — Modal CLI to deploy and run functions
+modal>=0.64.0
+easyocr>=1.7.0   # resolves IDE import warning; installed in container via modal_app.py

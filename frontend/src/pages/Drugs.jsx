@@ -10,7 +10,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { checkDrugInteractions } from '../services/api.js';
 import { defaultDrugs } from '../data/mockDrugInteractions.js';
 
-function InteractionMatrix({ matrix }) {
+function InteractionMatrix({ matrix, drugs = [] }) {
   const severityColor = { safe: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400', warning: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', danger: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400', '-': 'bg-gray-100 dark:bg-gray-800 text-gray-400' };
   return (
     <div className="overflow-x-auto">
@@ -20,7 +20,19 @@ function InteractionMatrix({ matrix }) {
             <tr key={i}>
               {row.map((cell, j) => (
                 <td key={j} className={`px-2 py-1.5 text-center font-medium rounded ${i === 0 || j === 0 ? 'font-bold text-gray-700 dark:text-gray-300' : severityColor[cell] || 'bg-gray-50 dark:bg-gray-800'}`}>
-                  {i === 0 || j === 0 ? cell : cell === '-' ? '—' : cell.charAt(0).toUpperCase() + cell.slice(1)}
+                  {i === 0 || j === 0 ? (
+                    <div className="flex flex-col items-center">
+                      <div>{cell}</div>
+                      {(j > 0 && i === 0) || (i > 0 && j === 0) ? (() => {
+                        const idx = j > 0 && i === 0 ? j - 1 : (i > 0 && j === 0 ? i - 1 : -1);
+                        const d = drugs[idx];
+                        if (d && d.inputName && d.inputName.toLowerCase() !== String(cell).toLowerCase()) {
+                          return <div className="text-xs text-gray-500 dark:text-gray-400">({d.inputName})</div>;
+                        }
+                        return null;
+                      })() : null}
+                    </div>
+                  ) : (cell === '-' ? '—' : cell.charAt(0).toUpperCase() + cell.slice(1))}
                 </td>
               ))}
             </tr>
@@ -42,12 +54,27 @@ export default function Drugs() {
   const updateDrug = (id, data) => setDrugs((p) => p.map((d) => d.id === id ? data : d));
 
   const check = async () => {
+    // Filter out empty names before sending
+    const validDrugs = drugs
+      .map(d => ({ ...d, name: (d.name || '').trim() }))
+      .filter(d => d.name && d.name.length > 0);
+
+    if (validDrugs.length === 0) {
+      addToast('Please enter at least one medication name.', 'error');
+      return;
+    }
+
     setLoading(true);
-    // TODO: Replace with actual API call
-    const data = await checkDrugInteractions(drugs);
-    setResult(data);
-    setLoading(false);
-    addToast('Interaction check complete!', 'success');
+    try {
+      const data = await checkDrugInteractions(validDrugs);
+      setResult(data);
+      addToast('Interaction check complete!', 'success');
+    } catch (err) {
+      console.error('Drug interaction check failed:', err);
+      addToast(err.message || 'Interaction check failed', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,7 +109,7 @@ export default function Drugs() {
           <Plus className="w-4 h-4" /> Add Another Drug
         </button>
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <Button onClick={check} loading={loading} size="lg" className="w-full">
+          <Button onClick={check} loading={loading} size="lg" className="w-full" disabled={!drugs.some(d => (d.name || '').trim().length > 0)}>
             Check Interactions
           </Button>
         </div>
@@ -115,7 +142,7 @@ export default function Drugs() {
             {/* Matrix */}
             <Card>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Interaction Matrix</h3>
-              <InteractionMatrix matrix={result.matrix} />
+              <InteractionMatrix matrix={result.matrix} drugs={result.drugs} />
             </Card>
 
             {/* Data source */}

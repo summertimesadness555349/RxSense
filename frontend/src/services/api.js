@@ -721,6 +721,33 @@ export const createPrescription = async (patientId, items) => {
   return data;
 };
 
+export const addPatientAllergy = async (patientId, payload) => {
+  const data = await request(`/doctor/patients/${patientId}/allergies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return data.allergy || null;
+};
+
+export const addPatientVaccination = async (patientId, payload) => {
+  const data = await request(`/doctor/patients/${patientId}/vaccinations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return data.vaccination || null;
+};
+
+export const addPatientSurgery = async (patientId, payload) => {
+  const data = await request(`/doctor/patients/${patientId}/surgeries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return data.surgery || null;
+};
+
 export const searchDrugs = async (query) => {
   const data = await request(`/doctor/drugs/search?q=${encodeURIComponent(query)}`);
   return data.drugs || [];

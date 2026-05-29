@@ -308,6 +308,115 @@ class DoctorModel {
         }
     };
 
+    createPatientAllergy = async (patientId, doctorId, allergyData) => {
+        try {
+            const query = `
+                INSERT INTO patient_allergy (
+                    patient_id,
+                    drug_id,
+                    reaction_type,
+                    severity,
+                    confirmed_at,
+                    llm_flagged
+                )
+                VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), FALSE)
+                RETURNING *;
+            `;
+            const params = [
+                patientId,
+                allergyData.drugId,
+                allergyData.reactionType,
+                allergyData.severity,
+                allergyData.confirmedAt || null,
+            ];
+            const result = await this.db_connection.query_executor(query, params);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error(`Failed to create patient allergy: ${error.message}`);
+            throw error;
+        }
+    };
+
+    createPatientVaccination = async (patientId, doctorId, vaccinationData) => {
+        try {
+            const query = `
+                INSERT INTO vaccination_record (
+                    patient_id,
+                    administered_by,
+                    hospital_id,
+                    vaccine_name,
+                    cvx_code,
+                    dose_number,
+                    total_doses,
+                    administered_at,
+                    batch_number,
+                    site,
+                    next_due_date,
+                    notes
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, CURRENT_DATE), $9, $10, $11, $12)
+                RETURNING *;
+            `;
+            const params = [
+                patientId,
+                doctorId,
+                vaccinationData.hospitalId || null,
+                vaccinationData.vaccineName,
+                vaccinationData.cvxCode || null,
+                vaccinationData.doseNumber || null,
+                vaccinationData.totalDoses || null,
+                vaccinationData.administeredAt || null,
+                vaccinationData.batchNumber || null,
+                vaccinationData.site || null,
+                vaccinationData.nextDueDate || null,
+                vaccinationData.notes || null,
+            ];
+            const result = await this.db_connection.query_executor(query, params);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error(`Failed to create vaccination record: ${error.message}`);
+            throw error;
+        }
+    };
+
+    createPatientSurgery = async (patientId, doctorId, surgeryData) => {
+        try {
+            const query = `
+                INSERT INTO surgical_history (
+                    patient_id,
+                    hospital_id,
+                    surgeon_id,
+                    procedure_name,
+                    icd_10_pcs,
+                    performed_at,
+                    outcome,
+                    complications,
+                    anaesthesia_type,
+                    notes
+                )
+                VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_DATE), $7, $8, $9, $10)
+                RETURNING *;
+            `;
+            const params = [
+                patientId,
+                surgeryData.hospitalId || null,
+                doctorId,
+                surgeryData.procedureName,
+                surgeryData.icd10Pcs || null,
+                surgeryData.performedAt || null,
+                surgeryData.outcome || null,
+                surgeryData.complications || null,
+                surgeryData.anaesthesiaType || null,
+                surgeryData.notes || null,
+            ];
+            const result = await this.db_connection.query_executor(query, params);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error(`Failed to create surgical history record: ${error.message}`);
+            throw error;
+        }
+    };
+
     getPatientActivePrescriptions = async (patientId) => {
         try {
             const query = `
@@ -479,9 +588,9 @@ class DoctorModel {
         try {
             const query = `
                 UPDATE prescription_item pi
-                SET status = $1,
+                SET status = $1::varchar,
                     pause_duration_days = $2,
-                    paused_at = CASE WHEN $1 = 'paused' THEN NOW() ELSE NULL END,
+                    paused_at = CASE WHEN $1::varchar = 'paused' THEN NOW() ELSE NULL END,
                     modification_notes = $3
                 FROM prescription p
                 WHERE pi.prescription_id = p.prescription_id

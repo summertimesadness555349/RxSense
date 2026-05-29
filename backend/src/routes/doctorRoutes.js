@@ -22,6 +22,9 @@ doctorRouter.get('/patients', doctorController.getPatients);
 doctorRouter.get('/patients/:patientId', doctorController.getPatientChart);
 doctorRouter.post('/patients/:patientId/check-safety', doctorController.checkPrescriptionSafety);
 doctorRouter.post('/patients/:patientId/prescriptions', doctorController.createPrescription);
+doctorRouter.post('/patients/:patientId/allergies', doctorController.addPatientAllergy);
+doctorRouter.post('/patients/:patientId/vaccinations', doctorController.addPatientVaccination);
+doctorRouter.post('/patients/:patientId/surgeries', doctorController.addPatientSurgery);
 doctorRouter.patch('/patients/:patientId/prescription-items/:itemId', doctorController.modifyPrescriptionItem);
 doctorRouter.get('/drugs/search', doctorController.searchDrugs);
 

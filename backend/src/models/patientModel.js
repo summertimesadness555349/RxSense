@@ -17,7 +17,7 @@ class PatientModel {
                     gender,
                     blood_group AS "bloodGroup",
                     smoking_status AS "smokingStatus",
-                    phone,
+                    contact_info as phone,
                     username,
                     email,
                     height,

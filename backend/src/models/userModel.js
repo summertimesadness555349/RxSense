@@ -336,20 +336,18 @@ class UserModel {
 
     getUserByUsername = async(username)=>{
         try {
-            const patientQuery = `
-                SELECT patient_id, name, username, email, password, last_login, created_at, updated_at
-                FROM patient
-                WHERE username = $1
-                LIMIT 1;
-            `;
-            const patientResult = await this.db_connection.query_executor(patientQuery, [username]);
-            if(patientResult.rows[0]) return this.mapPatientUser(patientResult.rows[0]);
-
             const userQuery = `
-                SELECT *
-                FROM users
-                WHERE username = $1
-                LIMIT 1;
+                SELECT u.id, u.username, u.email, u.password_hash, u.full_name AS name,
+                        u.full_name, u.role, u.is_active, u.email_verified,
+                        u.login_attempts, u.locked_until, u.last_login,
+                        u.subscription_type, u.avatar_url, u.created_at, u.updated_at,
+                        p.patient_id, p.patient_id AS uuid,
+                        d.doctor_id
+                 FROM users u
+                 LEFT JOIN patient p ON p.user_id = u.id
+                 LEFT JOIN doctor  d ON d.user_id = u.id
+                 WHERE u.username = $1
+                 LIMIT 1;
             `;
             try {
                 const userResult = await this.db_connection.query_executor(userQuery, [username]);

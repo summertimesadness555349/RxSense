@@ -2,12 +2,24 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { register as apiRegister } from '../services/api.js';
+import { register as apiRegister, doctorRegister } from '../services/api.js';
 import Input, { Select } from '../components/ui/Input.jsx';
 import Button from '../components/ui/Button.jsx';
+import SpecialtyInput from '../components/ui/SpecialtyInput.jsx';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '+880', password: '', confirmPassword: '', role: 'patient' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '+880',
+    password: '',
+    confirmPassword: '',
+    role: 'patient',
+    specialty: [],
+    licenseNumber: '',
+    gender: 'male',
+    username: ''
+  });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { login } = useAuth();
@@ -22,6 +34,13 @@ export default function Register() {
     if (!form.email.includes('@')) e.email = 'Valid email required';
     if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
     if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    
+    if (form.role === 'doctor') {
+      if (!form.username.trim()) e.username = 'Username is required';
+      else if (form.username.length < 3) e.username = 'Username must be at least 3 characters';
+      if (!form.licenseNumber.trim()) e.licenseNumber = 'License number is required';
+      if (!form.specialty || form.specialty.length === 0) e.specialty = 'At least one specialty is required';
+    }
     return e;
   };
 
@@ -32,13 +51,26 @@ export default function Register() {
     setErrors({});
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      const { user } = await apiRegister(form);
-      login(user);
-      addToast(`Account created! Welcome, ${user.name}!`, 'success');
-      navigate('/dashboard');
-    } catch {
-      addToast('Registration failed. Please try again.', 'error');
+      if (form.role === 'doctor') {
+        await doctorRegister({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          specialty: form.specialty,
+          licenseNumber: form.licenseNumber,
+          gender: form.gender,
+          username: form.username
+        });
+        addToast('Doctor account registered successfully! Please sign in.', 'success');
+        navigate('/login');
+      } else {
+        const { user, token } = await apiRegister(form);
+        login(user, token);
+        addToast(`Account created! Welcome, ${user.name}!`, 'success');
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      addToast(err.message || 'Registration failed. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -57,7 +89,7 @@ export default function Register() {
           id="name"
           value={form.name}
           onChange={(e) => set('name', e.target.value)}
-          placeholder="Rahim Uddin"
+          placeholder="Dr. Rahim Uddin"
           error={errors.name}
           required
         />
@@ -71,14 +103,7 @@ export default function Register() {
           error={errors.email}
           required
         />
-        <Input
-          label="Phone Number (Bangladesh)"
-          id="phone"
-          type="tel"
-          value={form.phone}
-          onChange={(e) => set('phone', e.target.value)}
-          placeholder="+8801712345678"
-        />
+        
         <Select
           label="I am a..."
           id="role"
@@ -86,9 +111,60 @@ export default function Register() {
           onChange={(e) => set('role', e.target.value)}
         >
           <option value="patient">Patient</option>
-          <option value="healthworker">Health Worker</option>
           <option value="doctor">Doctor</option>
         </Select>
+
+        {form.role === 'doctor' && (
+          <>
+            <Input
+              label="Username"
+              id="username"
+              value={form.username}
+              onChange={(e) => set('username', e.target.value)}
+              placeholder="dr_rahim"
+              error={errors.username}
+              required
+            />
+            <SpecialtyInput
+              label="Specialties / Areas of Expertise"
+              value={form.specialty}
+              onChange={(val) => set('specialty', val)}
+              error={errors.specialty}
+            />
+            <Input
+              label="Medical License Number"
+              id="licenseNumber"
+              value={form.licenseNumber}
+              onChange={(e) => set('licenseNumber', e.target.value)}
+              placeholder="BMDC-12345"
+              error={errors.licenseNumber}
+              required
+            />
+            <Select
+              label="Gender"
+              id="gender"
+              value={form.gender}
+              onChange={(e) => set('gender', e.target.value)}
+            >
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </Select>
+          </>
+        )}
+
+        {form.role === 'patient' && (
+          <Input
+            label="Phone Number (Bangladesh)"
+            id="phone"
+            type="tel"
+            value={form.phone}
+            onChange={(e) => set('phone', e.target.value)}
+            placeholder="+8801712345678"
+          />
+        )}
+
         <Input
           label="Password"
           id="password"

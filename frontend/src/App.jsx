@@ -23,6 +23,7 @@ import Drugs from './pages/Drugs.jsx';
 import NearMe from './pages/NearMe.jsx';
 import Settings from './pages/Settings.jsx';
 import DoctorPatients from './pages/DoctorPatients.jsx';
+import DoctorDashboard from './pages/DoctorDashboard.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
                 {/* Protected */}
                 <Route element={<MainLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
                   <Route path="/prescription" element={<Prescription />} />
                   <Route path="/report" element={<Report />} />
                   <Route path="/doctor/patients" element={<DoctorPatients />} />

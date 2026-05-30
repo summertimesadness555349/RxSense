@@ -1,10 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { X, Activity } from 'lucide-react';
-import { navItems } from './navItems.js';
+import { patientNavItems, doctorNavItems } from './navItems.js';
 import { useLanguage } from '../../context/LanguageContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function Sidebar({ open, onClose }) {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const navItems = user?.role === 'doctor' ? doctorNavItems : patientNavItems;
   return (
     <>
       {/* Backdrop */}

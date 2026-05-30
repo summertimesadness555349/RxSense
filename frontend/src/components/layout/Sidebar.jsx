@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 export default function Sidebar({ open, onClose }) {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const navItems = user?.role === 'doctor' ? doctorNavItems : patientNavItems;
+  const items = user?.role === 'doctor' ? doctorNavItems : patientNavItems;
   return (
     <>
       {/* Backdrop */}
@@ -45,7 +45,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, labelKey, highlight }) => (
+          {items.map(({ to, icon: Icon, labelKey, highlight }) => (
             <NavLink
               key={to}
               to={to}

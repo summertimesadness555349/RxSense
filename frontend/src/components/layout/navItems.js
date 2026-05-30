@@ -1,7 +1,6 @@
 import {
   LayoutDashboard, FileText, FlaskConical,
-  History, Stethoscope, Pill, MapPin,
-  Users, Settings,
+  History, Stethoscope, Pill, MapPin, Users, Building2,
 } from 'lucide-react';
 
 // labelKey / tooltipKey map to translation keys in translations.js
@@ -17,7 +16,7 @@ export const patientNavItems = [
 ];
 
 export const doctorNavItems = [
-  { to: '/doctor/dashboard', icon: LayoutDashboard, labelKey: 'navDoctorDashboard', tooltipKey: 'navTooltipDoctorDashboard' },
-  { to: '/doctor/patients',  icon: Users,           labelKey: 'navDoctorPatients',  tooltipKey: 'navTooltipDoctorPatients', highlight: true },
-  { to: '/settings',         icon: Settings,        labelKey: 'navDoctorSettings',  tooltipKey: 'navTooltipDoctorSettings' },
+  { to: '/doctor/dashboard', icon: LayoutDashboard, labelKey: 'navDashboard',    tooltipKey: 'navDashboard' },
+  { to: '/doctor/patients',  icon: Users,            labelKey: 'navMyPatients',   tooltipKey: 'navTooltipMyPatients' },
+  { to: '/doctor/settings',  icon: Building2,        labelKey: 'navAffiliations', tooltipKey: 'navTooltipAffiliations' },
 ];

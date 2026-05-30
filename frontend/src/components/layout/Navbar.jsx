@@ -14,7 +14,7 @@ export default function Navbar({ onMenuToggle }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const isDoctor = user?.role === 'doctor';
-  const navItems = isDoctor ? doctorNavItems : patientNavItems;
+  const items = isDoctor ? doctorNavItems : patientNavItems;
   const homePath = isDoctor ? '/doctor/dashboard' : '/dashboard';
 
   const handleLogout = () => {
@@ -46,7 +46,7 @@ export default function Navbar({ onMenuToggle }) {
 
         {/* Nav links — centered in the middle column */}
         <nav className="hidden lg:flex justify-center items-center gap-0.5">
-          {navItems.map(({ to, icon: Icon, labelKey, tooltipKey, highlight }) => (
+          {items.map(({ to, icon: Icon, labelKey, tooltipKey, highlight }) => (
             <div key={to} className="relative group">
               <NavLink
                 to={to}
@@ -129,15 +129,15 @@ export default function Navbar({ onMenuToggle }) {
                       onClick={() => setShowDropdown(false)}
                       className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
-                      <User className="w-4 h-4" /> {t('navDoctorPatients')}
+                      <User className="w-4 h-4" /> {t('navMyPatients')}
                     </Link>
                   )}
                   <Link
-                    to="/settings"
+                    to={isDoctor ? '/doctor/settings' : '/settings'}
                     onClick={() => setShowDropdown(false)}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    <Settings className="w-4 h-4" /> {isDoctor ? t('navDoctorSettings') : t('navPersonalProfile')}
+                    <Settings className="w-4 h-4" /> {t('navPersonalProfile')}
                   </Link>
                   <button
                     onClick={handleLogout}

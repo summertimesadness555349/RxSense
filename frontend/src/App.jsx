@@ -22,9 +22,11 @@ import Symptoms from './pages/Symptoms.jsx';
 import Drugs from './pages/Drugs.jsx';
 import NearMe from './pages/NearMe.jsx';
 import Settings from './pages/Settings.jsx';
-import DoctorPatients from './pages/DoctorPatients.jsx';
 import DoctorDashboard from './pages/DoctorDashboard.jsx';
+import DoctorPatients from './pages/DoctorPatients.jsx';
+import DoctorSettings from './pages/DoctorSettings.jsx';
 import NotFound from './pages/NotFound.jsx';
+import Docs from './pages/Docs.jsx';
 
 export default function App() {
   return (
@@ -36,6 +38,7 @@ export default function App() {
               <Routes>
                 {/* Public */}
                 <Route path="/" element={<Landing />} />
+                <Route path="/docs" element={<Docs />} />
 
                 {/* Auth */}
                 <Route element={<AuthLayout />}>
@@ -47,9 +50,10 @@ export default function App() {
                 <Route element={<MainLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+                  <Route path="/doctor/patients" element={<DoctorPatients />} />
+                  <Route path="/doctor/settings" element={<DoctorSettings />} />
                   <Route path="/prescription" element={<Prescription />} />
                   <Route path="/report" element={<Report />} />
-                  <Route path="/doctor/patients" element={<DoctorPatients />} />
                   <Route path="/history" element={<History />}>
                     <Route index element={<HistoryTimeline />} />
                     <Route path="profile" element={<HistoryProfile />} />

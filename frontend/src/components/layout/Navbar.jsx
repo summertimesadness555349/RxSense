@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useLanguage } from '../../context/LanguageContext.jsx';
 import LanguageToggle from '../ui/LanguageToggle.jsx';
-import { navItems } from './navItems.js';
+import { navItems, doctorNavItems } from './navItems.js';
 
 export default function Navbar({ onMenuToggle }) {
   const { user, logout } = useAuth();
@@ -13,6 +13,9 @@ export default function Navbar({ onMenuToggle }) {
   const { t } = useLanguage();
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
+  const isDoctor = user?.role === 'doctor';
+  const items = isDoctor ? doctorNavItems : navItems;
+  const homeLink = isDoctor ? '/doctor/dashboard' : '/dashboard';
 
   const handleLogout = () => {
     logout();
@@ -26,7 +29,7 @@ export default function Navbar({ onMenuToggle }) {
 
         {/* Brand + mobile hamburger */}
         <div className="flex items-center gap-2">
-          <Link to="/dashboard" className="flex items-center gap-2">
+          <Link to={homeLink} className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-emerald-500" />
             <span className="font-bold text-base text-gray-900 dark:text-white">RxSense</span>
           </Link>
@@ -43,7 +46,7 @@ export default function Navbar({ onMenuToggle }) {
 
         {/* Nav links — centered in the middle column */}
         <nav className="hidden lg:flex justify-center items-center gap-0.5">
-          {navItems.map(({ to, icon: Icon, labelKey, tooltipKey, highlight }) => (
+          {items.map(({ to, icon: Icon, labelKey, tooltipKey, highlight }) => (
             <div key={to} className="relative group">
               <NavLink
                 to={to}
@@ -111,15 +114,17 @@ export default function Navbar({ onMenuToggle }) {
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                   </div>
+                  {!isDoctor && (
+                    <Link
+                      to="/history/profile"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <User className="w-4 h-4" /> {t('navHealthProfile')}
+                    </Link>
+                  )}
                   <Link
-                    to="/history/profile"
-                    onClick={() => setShowDropdown(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <User className="w-4 h-4" /> {t('navHealthProfile')}
-                  </Link>
-                  <Link
-                    to="/settings"
+                    to={isDoctor ? '/doctor/settings' : '/settings'}
                     onClick={() => setShowDropdown(false)}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >

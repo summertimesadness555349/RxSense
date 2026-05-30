@@ -22,7 +22,9 @@ import Symptoms from './pages/Symptoms.jsx';
 import Drugs from './pages/Drugs.jsx';
 import NearMe from './pages/NearMe.jsx';
 import Settings from './pages/Settings.jsx';
+import DoctorDashboard from './pages/DoctorDashboard.jsx';
 import DoctorPatients from './pages/DoctorPatients.jsx';
+import DoctorSettings from './pages/DoctorSettings.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -45,9 +47,11 @@ export default function App() {
                 {/* Protected */}
                 <Route element={<MainLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+                  <Route path="/doctor/patients" element={<DoctorPatients />} />
+                  <Route path="/doctor/settings" element={<DoctorSettings />} />
                   <Route path="/prescription" element={<Prescription />} />
                   <Route path="/report" element={<Report />} />
-                  <Route path="/doctor/patients" element={<DoctorPatients />} />
                   <Route path="/history" element={<History />}>
                     <Route index element={<HistoryTimeline />} />
                     <Route path="profile" element={<HistoryProfile />} />

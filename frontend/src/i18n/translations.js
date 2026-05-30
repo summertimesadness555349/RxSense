@@ -26,6 +26,10 @@ const translations = {
     navHealthProfile:         'Health Profile',
     navPersonalProfile:       'Personal Profile',
     navLogout:                'Logout',
+    navMyPatients:            'My Patients',
+    navAffiliations:          'Affiliations',
+    navTooltipMyPatients:     'Patient List',
+    navTooltipAffiliations:   'Hospital Affiliations',
 
     // ── History tabs ──────────────────────────────────────────────────────
     historyTitle:             'Smart Health Record',
@@ -447,6 +451,10 @@ const translations = {
     navHealthProfile:         'স্বাস্থ্য প্রোফাইল',
     navPersonalProfile:       'ব্যক্তিগত প্রোফাইল',
     navLogout:                'লগআউট',
+    navMyPatients:            'আমার রোগী',
+    navAffiliations:          'হাসপাতাল সংযোগ',
+    navTooltipMyPatients:     'রোগীর তালিকা',
+    navTooltipAffiliations:   'হাসপাতাল সংযোগ',
 
     historyTitle:             'স্মার্ট স্বাস্থ্য রেকর্ড',
     historySubtitle:          'আপনার সম্পূর্ণ স্বাস্থ্য ইতিহাস — প্রতিটি স্ক্যান, ভিজিট ও তথ্য এক জায়গায়।',

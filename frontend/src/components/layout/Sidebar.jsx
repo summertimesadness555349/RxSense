@@ -1,10 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { X, Activity } from 'lucide-react';
-import { navItems } from './navItems.js';
+import { navItems, doctorNavItems } from './navItems.js';
 import { useLanguage } from '../../context/LanguageContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function Sidebar({ open, onClose }) {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const items = user?.role === 'doctor' ? doctorNavItems : navItems;
   return (
     <>
       {/* Backdrop */}
@@ -42,7 +45,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, labelKey, highlight }) => (
+          {items.map(({ to, icon: Icon, labelKey, highlight }) => (
             <NavLink
               key={to}
               to={to}

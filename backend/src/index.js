@@ -176,8 +176,8 @@ app.get('/', (req, res)=>{
 })
  
 
-server.listen(PORT, 'localhost', ()=>{    
-    console.log(`Listening on: http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', ()=>{
+    console.log(`Listening on: http://0.0.0.0:${PORT}`);
     if(process.env.ENABLE_WEBSOCKETS === 'true'){
         console.log("Websockets enabled");
     }

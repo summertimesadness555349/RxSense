@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon } from 'lucide-react';
+import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon, PlayCircle } from 'lucide-react';
 import Modal from '../components/ui/Modal.jsx';
 import { getPatientActiveMedications, getPrescriptionHistoryLocal } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';

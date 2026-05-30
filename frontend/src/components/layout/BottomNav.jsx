@@ -8,8 +8,8 @@ export default function BottomNav() {
   const items = user?.role === 'doctor'
     ? [
         { to: '/doctor/dashboard', icon: LayoutDashboard, label: 'Home' },
-        { to: '/doctor/patients',  icon: Users,            label: 'Patients', center: true },
-        { to: '/doctor/settings',  icon: Settings,         label: 'Settings' },
+        { to: '/doctor/patients', icon: Users, label: 'Patients', center: true },
+        { to: '/settings', icon: Settings, label: 'Settings' },
       ]
     : [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },

@@ -1,0 +1,1499 @@
+openapi: 3.0.3
+info:
+  title: RxSense API
+  description: >
+    Full API for RxSense — AI-powered health management platform.
+    Covers patient health records, prescription analysis, lab report interpretation,
+    symptom checking, drug interaction detection, family health network, and doctor portal.
+  version: 1.0.0
+  contact:
+    name: RxSense Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://your-production-url.com/api
+    description: Production
+
+tags:
+  - name: Auth
+    description: Registration, login, token management, email verification, password reset
+  - name: User
+    description: User profile, avatar, subscription
+  - name: Patient
+    description: Patient profile, health summary, reports, timeline, medications
+  - name: Doctor
+    description: Doctor portal — patients, prescriptions, affiliations
+  - name: Prescription
+    description: Prescription image analysis and AI chat
+  - name: Drug
+    description: Drug interaction checker
+  - name: Symptom
+    description: AI-powered symptom checker
+  - name: Insights
+    description: Health insights, risk scores, patient and doctor summaries
+  - name: Family
+    description: Family health network — share codes and member links
+  - name: Places
+    description: Nearby hospitals, clinics, and pharmacies
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BasicSuccess:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password, full_name]
+      properties:
+        username: { type: string, example: john_doe }
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 8 }
+        full_name: { type: string, example: John Doe }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    LoginResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: integer }
+            username: { type: string }
+            email: { type: string }
+            role: { type: string, enum: [patient, doctor] }
+
+    GoogleLoginRequest:
+      type: object
+      required: [credential]
+      properties:
+        credential: { type: string, description: Google OAuth ID token }
+
+    PasswordResetRequestInit:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+
+    PasswordResetConfirm:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string }
+        newPassword: { type: string, format: password, minLength: 8 }
+
+    PasswordChangeRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 8 }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        email: { type: string }
+        full_name: { type: string }
+        role: { type: string }
+        is_active: { type: boolean }
+        email_verified: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        full_name: { type: string }
+        username: { type: string }
+
+    SubscriptionUpdateRequest:
+      type: object
+      required: [subscription_type]
+      properties:
+        subscription_type: { type: string, enum: [free, pro] }
+
+    AvatarUploadResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        avatar_url: { type: string, format: uri }
+
+    PatientProfile:
+      type: object
+      properties:
+        patient_id: { type: string, format: uuid }
+        name: { type: string }
+        date_of_birth: { type: string, format: date }
+        gender: { type: string }
+        phone: { type: string }
+        height: { type: number, description: cm }
+        weight: { type: number, description: kg }
+        blood_group: { type: string }
+        smoking_status: { type: string }
+        blood_pressure_systolic: { type: integer }
+        blood_pressure_diastolic: { type: integer }
+        emergency_contact_name: { type: string }
+        emergency_contact_phone: { type: string }
+        emergency_contact_relation: { type: string }
+
+    ReportAnalysisResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        report_id: { type: string, format: uuid }
+        report_type: { type: string }
+        metrics:
+          type: array
+          items:
+            type: object
+            properties:
+              parameter_name: { type: string }
+              value: { type: string }
+              unit: { type: string }
+              reference_range: { type: string }
+              status: { type: string, enum: [normal, low, high, critical_low, critical_high] }
+              llm_flagged: { type: boolean }
+        raw_analysis: { type: object }
+        image_url: { type: string, format: uri }
+
+    ChatMessage:
+      type: object
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string }
+
+    ChatRequest:
+      type: object
+      required: [question, messages]
+      properties:
+        question: { type: string }
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+
+    PrescriptionScan:
+      type: object
+      properties:
+        scan_id: { type: string, format: uuid }
+        image_url: { type: string, format: uri }
+        doctor_name: { type: string }
+        doctor_specialty: { type: string }
+        hospital_name: { type: string }
+        rx_date: { type: string }
+        diseases: { type: array, items: { type: string } }
+        medications:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              dosage: { type: string }
+              frequency: { type: string }
+        notes: { type: string }
+        follow_up: { type: string }
+        confidence: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    DrugInteractionRequest:
+      type: object
+      required: [drugs]
+      properties:
+        drugs:
+          type: array
+          minItems: 2
+          items: { type: string }
+          example: [Metformin, Aspirin, Atorvastatin]
+
+    DrugInteractionResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        interactions:
+          type: array
+          items:
+            type: object
+            properties:
+              drug_a: { type: string }
+              drug_b: { type: string }
+              severity: { type: string, enum: [mild, moderate, severe, critical] }
+              description: { type: string }
+
+    SymptomCheckRequest:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        sessionId: { type: string }
+
+    InsightsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        cached: { type: boolean }
+        insights:
+          type: object
+          properties:
+            health_score: { type: integer, minimum: 0, maximum: 100 }
+            risk_breakdown: { type: object }
+            trend_alerts: { type: array, items: { type: string } }
+            recommended_actions: { type: array, items: { type: string } }
+
+    FamilyCode:
+      type: object
+      properties:
+        share_code: { type: string, example: ABC123XY }
+
+    FamilyMember:
+      type: object
+      properties:
+        link_id: { type: string, format: uuid }
+        member_id: { type: integer }
+        full_name: { type: string }
+        relationship: { type: string }
+        created_at: { type: string, format: date-time }
+
+    NearbyPlacesResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              address: { type: string }
+              type: { type: string }
+              distance: { type: number }
+              lat: { type: number }
+              lng: { type: number }
+
+paths:
+
+  # ─── AUTH ────────────────────────────────────────────────────────────────────
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new patient account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '409':
+          description: Email or username already taken
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/google-login:
+    post:
+      tags: [Auth]
+      summary: Login or register via Google OAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Google login success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid Google credential
+
+  /auth/logout/{userId}:
+    post:
+      tags: [Auth]
+      summary: Logout and invalidate refresh token
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Logged out successfully
+        '401':
+          description: Unauthorized
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+
+  /auth/verify-token:
+    get:
+      tags: [Auth]
+      summary: Verify validity of access token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token is valid
+        '401':
+          description: Invalid or expired token
+
+  /auth/send-verification-email:
+    post:
+      tags: [Auth]
+      summary: Send email verification link
+      responses:
+        '200':
+          description: Verification email sent
+        '429':
+          description: Rate limited
+
+  /auth/verify-email:
+    get:
+      tags: [Auth]
+      summary: Verify email using token from email link
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Email verified
+        '400':
+          description: Invalid or expired token
+
+  /auth/password/request:
+    post:
+      tags: [Auth]
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestInit'
+      responses:
+        '200':
+          description: Reset email sent
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Reset password using reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid or expired token
+
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      summary: Change password (authenticated)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '200':
+          description: Password changed
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+
+  # ─── USER ────────────────────────────────────────────────────────────────────
+
+  /user/get-profile/{userId}:
+    get:
+      tags: [User]
+      summary: Get user profile by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+  /user/update-profile/{userId}:
+    patch:
+      tags: [User]
+      summary: Update user profile fields
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated
+        '403':
+          description: Forbidden
+
+  /user/subscription/{userId}:
+    patch:
+      tags: [User]
+      summary: Update subscription type
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdateRequest'
+      responses:
+        '200':
+          description: Subscription updated
+        '403':
+          description: Forbidden
+
+  /user/avatar/{userId}:
+    post:
+      tags: [User]
+      summary: Upload or replace user avatar
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          description: Invalid file type or size
+
+  # ─── PATIENT ─────────────────────────────────────────────────────────────────
+
+  /patient/me:
+    get:
+      tags: [Patient]
+      summary: Get current patient profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Patient profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfile'
+    put:
+      tags: [Patient]
+      summary: Update current patient profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientProfile'
+      responses:
+        '200':
+          description: Profile updated
+
+  /patient/me/health-summary:
+    get:
+      tags: [Patient]
+      summary: Get AI-generated health summary for current patient
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Health summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  health_score: { type: integer }
+                  summary: { type: string }
+                  latest_metrics: { type: array, items: { type: object } }
+
+  /patient/me/documents:
+    get:
+      tags: [Patient]
+      summary: Get all uploaded documents for current patient
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of reports and prescription scans
+
+  /patient/me/active-medications:
+    get:
+      tags: [Patient]
+      summary: Get active medications for current patient
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active medication list
+
+  /patient/profile/{patientId}:
+    get:
+      tags: [Patient]
+      summary: Get patient profile by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Patient profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfile'
+
+  /patient/reports/analyze:
+    post:
+      tags: [Patient]
+      summary: Upload and analyze a lab report image
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [report]
+              properties:
+                report:
+                  type: string
+                  format: binary
+                  description: Lab report image (JPEG, PNG, PDF)
+      responses:
+        '200':
+          description: Report analyzed and metrics extracted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportAnalysisResponse'
+        '400':
+          description: No file provided
+        '500':
+          description: Analysis failed
+
+  /patient/reports/chat:
+    post:
+      tags: [Patient]
+      summary: Chat with AI about an uploaded lab report
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ChatRequest'
+                - type: object
+                  properties:
+                    report: { type: object, description: Report context object }
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply: { type: string }
+
+  /patient/timeline:
+    get:
+      tags: [Patient]
+      summary: Get chronological health timeline for current patient
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Timeline of all health events
+
+  # ─── DOCTOR ──────────────────────────────────────────────────────────────────
+
+  /doctor/register:
+    post:
+      tags: [Doctor]
+      summary: Register a new doctor account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, license_number]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                license_number: { type: string }
+                specialty: { type: array, items: { type: string } }
+                gender: { type: string }
+                username: { type: string }
+      responses:
+        '201':
+          description: Doctor account created
+        '409':
+          description: Email or license already registered
+
+  /doctor/login:
+    post:
+      tags: [Doctor]
+      summary: Doctor login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+
+  /doctor/hospitals-list:
+    get:
+      tags: [Doctor]
+      summary: Get all hospitals in the system
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of hospitals
+
+  /doctor/get-profile/{doctorId}:
+    get:
+      tags: [Doctor]
+      summary: Get doctor profile
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: doctorId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Doctor profile
+
+  /doctor/update-profile/{doctorId}:
+    patch:
+      tags: [Doctor]
+      summary: Update doctor profile
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: doctorId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                specialty: { type: array, items: { type: string } }
+                gender: { type: string }
+      responses:
+        '200':
+          description: Profile updated
+
+  /doctor/change-password/{doctorId}:
+    post:
+      tags: [Doctor]
+      summary: Change doctor password
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: doctorId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '200':
+          description: Password changed
+
+  /doctor/hospitals/{doctorId}:
+    post:
+      tags: [Doctor]
+      summary: Add hospital affiliation for a doctor
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: doctorId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hospital_id]
+              properties:
+                hospital_id: { type: string, format: uuid }
+                role: { type: string, example: Consultant }
+                is_primary: { type: boolean }
+      responses:
+        '201':
+          description: Affiliation added
+    get:
+      tags: [Doctor]
+      summary: Get hospital affiliations for a doctor
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: doctorId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: List of hospital affiliations
+
+  /doctor/patients:
+    get:
+      tags: [Doctor]
+      summary: Get all patients assigned to the doctor
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Patient list
+
+  /doctor/patients/{patientId}:
+    get:
+      tags: [Doctor]
+      summary: Get full patient chart
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Full patient chart including conditions, allergies, reports, medications
+
+  /doctor/patients/{patientId}/check-safety:
+    post:
+      tags: [Doctor]
+      summary: Check prescription safety for a patient (drug interactions + allergies)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                drugs:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Safety check result with interaction and allergy flags
+
+  /doctor/patients/{patientId}/prescriptions:
+    post:
+      tags: [Doctor]
+      summary: Create a prescription for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      drug_id: { type: string, format: uuid }
+                      dosage: { type: string }
+                      frequency: { type: string }
+                      duration_days: { type: integer }
+                      instructions: { type: string }
+      responses:
+        '201':
+          description: Prescription created
+
+  /doctor/patients/{patientId}/allergies:
+    post:
+      tags: [Doctor]
+      summary: Add a drug allergy record for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drug_id]
+              properties:
+                drug_id: { type: string, format: uuid }
+                reaction_type: { type: string }
+                severity: { type: string, enum: [mild, moderate, severe, critical] }
+      responses:
+        '201':
+          description: Allergy recorded
+
+  /doctor/patients/{patientId}/vaccinations:
+    post:
+      tags: [Doctor]
+      summary: Record a vaccination for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vaccine_name, administered_at]
+              properties:
+                vaccine_name: { type: string }
+                cvx_code: { type: string }
+                dose_number: { type: integer }
+                total_doses: { type: integer }
+                administered_at: { type: string, format: date }
+                next_due_date: { type: string, format: date }
+                notes: { type: string }
+      responses:
+        '201':
+          description: Vaccination recorded
+
+  /doctor/patients/{patientId}/surgeries:
+    post:
+      tags: [Doctor]
+      summary: Record a surgery for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [procedure_name]
+              properties:
+                procedure_name: { type: string }
+                performed_at: { type: string, format: date }
+                outcome: { type: string, enum: [successful, complicated, failed, ongoing] }
+                complications: { type: string }
+                anaesthesia_type: { type: string }
+                notes: { type: string }
+      responses:
+        '201':
+          description: Surgery recorded
+
+  /doctor/patients/{patientId}/prescription-items/{itemId}:
+    patch:
+      tags: [Doctor]
+      summary: Modify a prescription line item
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: patientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dosage: { type: string }
+                frequency: { type: string }
+                duration_days: { type: integer }
+                instructions: { type: string }
+      responses:
+        '200':
+          description: Prescription item updated
+
+  /doctor/drugs/search:
+    get:
+      tags: [Doctor]
+      summary: Search drug catalog by name
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+          description: Drug name to search (generic or brand)
+      responses:
+        '200':
+          description: Matching drugs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    drug_id: { type: string, format: uuid }
+                    generic_name: { type: string }
+                    brand_name: { type: string }
+                    drug_class: { type: string }
+
+  # ─── PRESCRIPTION ─────────────────────────────────────────────────────────────
+
+  /prescription/analyze:
+    post:
+      tags: [Prescription]
+      summary: Upload and analyze a prescription image using MedGemma OCR + AI
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Prescription image (JPEG, PNG, PDF)
+      responses:
+        '200':
+          description: Extracted prescription data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrescriptionScan'
+        '400':
+          description: No image provided
+        '500':
+          description: Analysis error
+
+  /prescription/history:
+    get:
+      tags: [Prescription]
+      summary: Get prescription scan history for authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: List of prescription scans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrescriptionScan'
+
+  /prescription/chat:
+    post:
+      tags: [Prescription]
+      summary: Chat with AI about a prescription using DrugBank + RAG context
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ChatRequest'
+                - type: object
+                  properties:
+                    prescription: { type: object, description: Prescription scan object }
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply: { type: string }
+
+  # ─── DRUG ─────────────────────────────────────────────────────────────────────
+
+  /drugs/interactions:
+    post:
+      tags: [Drug]
+      summary: Check interactions between a list of drug names
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrugInteractionRequest'
+      responses:
+        '200':
+          description: Interaction results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrugInteractionResponse'
+        '400':
+          description: Fewer than 2 drugs provided
+
+  # ─── SYMPTOM ─────────────────────────────────────────────────────────────────
+
+  /symptom/check:
+    post:
+      tags: [Symptom]
+      summary: Run AI symptom assessment using Claude agent with patient history context
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SymptomCheckRequest'
+      responses:
+        '200':
+          description: AI symptom assessment response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply: { type: string }
+                  sessionId: { type: string }
+
+  # ─── INSIGHTS ─────────────────────────────────────────────────────────────────
+
+  /insights:
+    get:
+      tags: [Insights]
+      summary: Get health insights (cached or freshly generated)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: force
+          schema: { type: boolean }
+          description: Set true to bypass cache and regenerate
+      responses:
+        '200':
+          description: Health insights
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightsResponse'
+
+  /insights/patient-summary:
+    post:
+      tags: [Insights]
+      summary: Generate AI patient-facing health narrative summary
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Patient summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary: { type: string }
+
+  /insights/doctor-summary:
+    post:
+      tags: [Insights]
+      summary: Generate AI clinical summary for doctor view
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Doctor summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary: { type: string }
+
+  # ─── FAMILY ──────────────────────────────────────────────────────────────────
+
+  /family/my-code:
+    get:
+      tags: [Family]
+      summary: Get current user's family share code
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Share code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyCode'
+
+  /family/my-code/regenerate:
+    post:
+      tags: [Family]
+      summary: Regenerate family share code
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: New share code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyCode'
+
+  /family/lookup:
+    post:
+      tags: [Family]
+      summary: Look up a user by share code
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, example: ABC123XY }
+      responses:
+        '200':
+          description: User found
+        '404':
+          description: Code not found
+
+  /family/link:
+    post:
+      tags: [Family]
+      summary: Link a family member using their share code
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, relationship]
+              properties:
+                code: { type: string }
+                relationship: { type: string, enum: [Spouse, Parent, Child, Sibling, Guardian, Other] }
+      responses:
+        '201':
+          description: Family member linked
+        '409':
+          description: Already linked
+
+  /family/members:
+    get:
+      tags: [Family]
+      summary: Get all linked family members
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of family members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FamilyMember'
+
+  /family/members/{linkId}/health:
+    get:
+      tags: [Family]
+      summary: Get health summary for a linked family member
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: linkId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Family member health summary
+        '403':
+          description: Not authorized to view this member
+
+  /family/link/{linkId}:
+    delete:
+      tags: [Family]
+      summary: Remove a family member link
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: linkId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Link removed
+        '404':
+          description: Link not found
+
+  # ─── PLACES ──────────────────────────────────────────────────────────────────
+
+  /places/nearby:
+    get:
+      tags: [Places]
+      summary: Find nearby hospitals, clinics, and pharmacies
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: lat
+          required: true
+          schema: { type: number }
+        - in: query
+          name: lng
+          required: true
+          schema: { type: number }
+        - in: query
+          name: type
+          schema: { type: string, enum: [hospital, clinic, pharmacy], default: hospital }
+        - in: query
+          name: radius
+          schema: { type: integer, default: 5000, description: Radius in meters }
+      responses:
+        '200':
+          description: Nearby places
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbyPlacesResponse'
+
+  /places/geocode:
+    get:
+      tags: [Places]
+      summary: Convert an address to lat/lng coordinates
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: address
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Geocode result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lat: { type: number }
+                  lng: { type: number }
+                  formatted_address: { type: string }
+
+  /places/infer-specialty:
+    post:
+      tags: [Places]
+      summary: Infer doctor specialty from facility name using AI
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: Dhaka Heart Institute }
+      responses:
+        '200':
+          description: Inferred specialty
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  specialty: { type: string }

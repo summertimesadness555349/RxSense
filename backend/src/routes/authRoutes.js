@@ -7,98 +7,9 @@ const authRouter = express.Router();
 const userController = new UserController();
 const authenticateToken = new AuthenticateToken();
 
-/**
- * @openapi
- * /api/auth/init-table:
- *   get:
- *     tags: [Auth]
- *     summary: Initialize (create) users table if it does not exist
- *     responses:
- *       200:
- *         description: Table created or already exists
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/BasicSuccess'
- *       500:
- *         description: Internal error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
 authRouter.get('/init-table', userController.createTable);
-
-/**
- * @openapi
- * /api/auth/register:
- *   post:
- *     tags: [Auth]
- *     summary: Register a new user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RegisterRequest'
- *     responses:
- *       201:
- *         description: User created (may require email verification)
- *         content:
- *           application/json:
- *             schema:
- *               oneOf:
- *                 - $ref: '#/components/schemas/BasicSuccess'
- *                 - $ref: '#/components/schemas/ErrorResponse'
- *       400:
- *         description: Validation error
- *       409:
- *         description: Conflict (duplicate email/username)
- */
 authRouter.post('/register', userController.register);
-
-/**
- * @openapi
- * /api/auth/login:
- *   post:
- *     tags: [Auth]
- *     summary: Login with username & password
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/AuthLoginRequest'
- *     responses:
- *       200:
- *         description: Login success
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthLoginResponse'
- *       401:
- *         description: Invalid credentials
- */
 authRouter.post('/login', userController.login);
-
-/**
- * @openapi
- * /api/auth/me:
- *   get:
- *     tags: [Auth]
- *     summary: Get current logged in user
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Current user
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       401:
- *         description: Unauthorized
- */
 authRouter.get('/me', authenticateToken.authenticateToken, userController.getProfile);
 
 /**

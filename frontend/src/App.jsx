@@ -26,6 +26,7 @@ import DoctorDashboard from './pages/DoctorDashboard.jsx';
 import DoctorPatients from './pages/DoctorPatients.jsx';
 import DoctorSettings from './pages/DoctorSettings.jsx';
 import NotFound from './pages/NotFound.jsx';
+import Docs from './pages/Docs.jsx';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
               <Routes>
                 {/* Public */}
                 <Route path="/" element={<Landing />} />
+                <Route path="/docs" element={<Docs />} />
 
                 {/* Auth */}
                 <Route element={<AuthLayout />}>

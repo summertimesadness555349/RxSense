@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useLanguage } from '../../context/LanguageContext.jsx';
 import LanguageToggle from '../ui/LanguageToggle.jsx';
-import { navItems, doctorNavItems } from './navItems.js';
+import { patientNavItems, doctorNavItems } from './navItems.js';
 
 export default function Navbar({ onMenuToggle }) {
   const { user, logout } = useAuth();
@@ -14,8 +14,8 @@ export default function Navbar({ onMenuToggle }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const isDoctor = user?.role === 'doctor';
-  const items = isDoctor ? doctorNavItems : navItems;
-  const homeLink = isDoctor ? '/doctor/dashboard' : '/dashboard';
+  const items = isDoctor ? doctorNavItems : patientNavItems;
+  const homePath = isDoctor ? '/doctor/dashboard' : '/dashboard';
 
   const handleLogout = () => {
     logout();
@@ -29,7 +29,7 @@ export default function Navbar({ onMenuToggle }) {
 
         {/* Brand + mobile hamburger */}
         <div className="flex items-center gap-2">
-          <Link to={homeLink} className="flex items-center gap-2">
+          <Link to={homePath} className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-emerald-500" />
             <span className="font-bold text-base text-gray-900 dark:text-white">RxSense</span>
           </Link>
@@ -121,6 +121,15 @@ export default function Navbar({ onMenuToggle }) {
                       className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       <User className="w-4 h-4" /> {t('navHealthProfile')}
+                    </Link>
+                  )}
+                  {isDoctor && (
+                    <Link
+                      to="/doctor/patients"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <User className="w-4 h-4" /> {t('navMyPatients')}
                     </Link>
                   )}
                   <Link

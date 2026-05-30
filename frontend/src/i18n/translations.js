@@ -9,6 +9,9 @@ const translations = {
   // ── Navigation ────────────────────────────────────────────────────────────
   en: {
     navDashboard:             'Dashboard',
+    navDoctorDashboard:       'Doctor Dashboard',
+    navDoctorPatients:        'My Patients',
+    navDoctorSettings:        'Doctor Settings',
     navPrescriptions:         'Prescriptions',
     navReports:               'Reports',
     navHealthRecord:          'Health Record',
@@ -16,6 +19,9 @@ const translations = {
     navDrugCheck:             'Drug Check',
     navNearMe:                'Near Me',
     navCore:                  'Core',
+    navTooltipDoctorDashboard:'Doctor Home',
+    navTooltipDoctorPatients: 'Patient Registry',
+    navTooltipDoctorSettings: 'Doctor Preferences',
     navTooltipPrescriptions:  'Prescription Reader',
     navTooltipReports:        'Report Analyzer',
     navTooltipHealthRecord:   'Health Record',
@@ -434,6 +440,9 @@ const translations = {
   // ═══════════════════════════════════════════════════════════════════════
   bn: {
     navDashboard:             'ড্যাশবোর্ড',
+    navDoctorDashboard:       'ডাক্তার ড্যাশবোর্ড',
+    navDoctorPatients:        'আমার রোগী',
+    navDoctorSettings:        'ডাক্তার সেটিংস',
     navPrescriptions:         'প্রেসক্রিপশন',
     navReports:               'রিপোর্ট',
     navHealthRecord:          'স্বাস্থ্য রেকর্ড',
@@ -441,6 +450,9 @@ const translations = {
     navDrugCheck:             'ওষুধ পরীক্ষা',
     navNearMe:                'কাছের সেবা',
     navCore:                  'মূল',
+    navTooltipDoctorDashboard:'ডাক্তার হোম',
+    navTooltipDoctorPatients: 'রোগী তালিকা',
+    navTooltipDoctorSettings: 'ডাক্তার প্রেফারেন্স',
     navTooltipPrescriptions:  'প্রেসক্রিপশন রিডার',
     navTooltipReports:        'রিপোর্ট বিশ্লেষণ',
     navTooltipHealthRecord:   'স্বাস্থ্য রেকর্ড',

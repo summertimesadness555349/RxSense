@@ -220,7 +220,7 @@ export default function Docs() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
                 {[
                   { label: 'API Endpoints', value: '47' },
-                  { label: 'Database Tables', value: '24' },
+                  { label: 'Database Tables', value: '28' },
                   { label: 'AI Models', value: '5' },
                   { label: 'RAG Sources', value: '4' },
                 ].map(({ label, value }) => (
@@ -636,16 +636,17 @@ export default function Docs() {
 
           {/* ── DATABASE ── */}
           <section>
-            <SectionHeading id="database" title="Database Schema" subtitle="24 PostgreSQL tables" />
+            <SectionHeading id="database" title="Database Schema" subtitle="28 PostgreSQL tables" />
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { group: 'Auth & Users', tables: ['users', 'patient', 'doctor'], color: 'blue' },
                 { group: 'Healthcare Facilities', tables: ['hospital', 'doctor_hospital'], color: 'teal' },
                 { group: 'Patient Health', tables: ['known_condition', 'surgical_history', 'vaccination_record', 'patient_allergy'], color: 'emerald' },
-                { group: 'Medications', tables: ['drug', 'drug_interaction', 'drugbank_drug', 'prescription', 'prescription_item', 'prescription_scan'], color: 'purple' },
+                { group: 'Medications', tables: ['drug', 'drugs', 'drug_interaction', 'drug_interactions', 'drugbank_drug', 'prescription', 'prescription_item', 'prescription_scan'], color: 'purple' },
                 { group: 'Reports & Metrics', tables: ['medical_report', 'report_metric', 'lab_test_info'], color: 'amber' },
                 { group: 'AI & Intelligence', tables: ['symptom_log', 'ai_risk_assessment', 'llm_query_log', 'rag_documents', 'patient_insights'], color: 'red' },
                 { group: 'Social', tables: ['family_link'], color: 'slate' },
+                { group: 'Chat', tables: ['chat_session', 'chat_message'], color: 'teal' },
               ].map(({ group, tables, color }) => (
                 <Card key={group}>
                   <div className="font-semibold text-white mb-3">{group}</div>

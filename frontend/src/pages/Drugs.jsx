@@ -9,7 +9,11 @@ import DisclaimerBanner from '../components/ui/DisclaimerBanner.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { checkDrugInteractions } from '../services/api.js';
-import { defaultDrugs } from '../data/mockDrugInteractions.js';
+
+const defaultDrugs = [
+  { id: 'dd1', name: 'Warfarin', dosage: '500mg' },
+  { id: 'dd2', name: 'Aspirin', dosage: '75mg' },
+];
 
 function InteractionMatrix({ matrix, drugs = [] }) {
   const severityColor = { safe: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400', warning: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', danger: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400', '-': 'bg-gray-100 dark:bg-gray-800 text-gray-400' };

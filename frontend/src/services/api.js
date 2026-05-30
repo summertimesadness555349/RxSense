@@ -5,7 +5,6 @@ import { mockCurrentMedications, mockPastMedications } from '../data/mockMedicat
 import { mockDocuments } from '../data/mockDocuments.js';
 import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '../data/mockFamilyHistory.js';
 import { mockConversation } from '../data/mockConversations.js';
-import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
@@ -391,7 +390,7 @@ export const checkDrugInteractions = async (drugList) => {
   } catch (err) {
     // Fallback to mock data on error
     await delay(500);
-    return mockDrugInteractionResult;
+    return null;
   }
 };
 

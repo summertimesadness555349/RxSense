@@ -16,7 +16,7 @@ export const patientNavItems = [
 ];
 
 export const doctorNavItems = [
-  { to: '/doctor/dashboard', icon: LayoutDashboard, labelKey: 'navDashboard',    tooltipKey: 'navDashboard' },
-  { to: '/doctor/patients',  icon: Users,            labelKey: 'navMyPatients',   tooltipKey: 'navTooltipMyPatients' },
-  { to: '/doctor/settings',  icon: Building2,        labelKey: 'navAffiliations', tooltipKey: 'navTooltipAffiliations' },
+  { to: '/doctor/dashboard', icon: LayoutDashboard, labelKey: 'navDashboard',  tooltipKey: 'navDashboard' },
+  { to: '/doctor/patients',  icon: Users,           labelKey: 'navMyPatients', tooltipKey: 'navTooltipMyPatients' },
+  { to: '/doctor/settings',  icon: Building2,       labelKey: 'navSettings',   tooltipKey: 'navTooltipSettings' },
 ];

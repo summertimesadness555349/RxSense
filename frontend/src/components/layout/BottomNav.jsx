@@ -7,7 +7,7 @@ export default function BottomNav() {
 
   const items = user?.role === 'doctor'
     ? [
-        { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+        { to: '/doctor/dashboard', icon: LayoutDashboard, label: 'Home' },
         { to: '/doctor/patients', icon: Users, label: 'Patients', center: true },
         { to: '/settings', icon: Settings, label: 'Settings' },
       ]

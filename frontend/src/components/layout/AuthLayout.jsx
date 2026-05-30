@@ -6,7 +6,10 @@ export default function AuthLayout() {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const target = user?.role === 'doctor' ? '/doctor/dashboard' : '/dashboard';
+    return <Navigate to={target} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/30 to-blue-50/20 dark:from-[#0a0f1a] dark:via-[#0a1a14] dark:to-[#0a0f1a] flex items-stretch">

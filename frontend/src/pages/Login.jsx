@@ -28,7 +28,7 @@ export default function Login() {
       const { user, token } = res;
       login(user, token);
       addToast(`Welcome back, ${user.name}!`, 'success');
-      navigate('/dashboard');
+      navigate(user?.role === 'doctor' ? '/doctor/dashboard' : '/dashboard');
     } catch (err) {
       addToast(err.message || 'Invalid email or password.', 'error');
     } finally {

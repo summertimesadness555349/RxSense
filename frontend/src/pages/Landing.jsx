@@ -2,49 +2,52 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, FileText, FlaskConical, History, Stethoscope, Pill, Upload, Brain, Database, Share2, Shield } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { Sun, Moon } from 'lucide-react';
-
-const stats = [
-  { n: '170M+', l: 'People We Can Help' },
-  { n: '0.58', l: 'Doctors per 1,000 People' },
-  { n: '~60%', l: "Can't Read Prescriptions" },
-  { n: '#1', l: 'Cause: Miscommunication' },
-];
-
-const features = [
-  { icon: FileText, label: 'Prescription Reader', desc: 'Understand handwritten prescriptions in plain language', to: '/prescription', color: 'emerald' },
-  { icon: FlaskConical, label: 'Report Analyzer', desc: 'Know what your blood test results mean', to: '/report', color: 'blue' },
-  { icon: History, label: 'Health Record', desc: 'Your lifelong smart medical history — all connected', to: '/history', color: 'purple', highlight: true },
-  { icon: Stethoscope, label: 'Symptom Checker', desc: 'AI-powered symptom assessment with urgency triage', to: '/symptoms', color: 'amber' },
-  { icon: Pill, label: 'Drug Interactions', desc: 'Check if your medications are safe together', to: '/drugs', color: 'red' },
-];
-
-const steps = [
-  { icon: Upload, n: '01', title: 'Upload', desc: 'Snap a photo of your prescription or upload your lab report' },
-  { icon: Brain, n: '02', title: 'AI Analyzes', desc: 'Our AI reads, interprets and risk-assesses your documents in seconds' },
-  { icon: FileText, n: '03', title: 'Plain Language', desc: 'Get clear explanations in Bangla or English — no medical jargon' },
-  { icon: Database, n: '04', title: 'Auto-Saved', desc: 'Every result feeds your smart health record. AI connects dots over time.' },
-];
-
-const whyCards = [
-  { icon: '📋', title: 'Understand Your Documents', desc: "Can't read your prescription? Don't know what HbA1c means? RxSense explains everything in simple language, in your language." },
-  { icon: '📈', title: 'Build Your Health Story', desc: 'Every scan feeds your lifelong health record. AI spots patterns, flags rising risks, and tracks your progress over time.' },
-  { icon: Share2, title: 'Share with Confidence', desc: 'Generate doctor summaries, shareable emergency cards, and family risk profiles — all in one tap.' },
-];
 
 const colorMap = {
   emerald: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-900/10 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400',
-  blue: 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400',
-  purple: 'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400',
-  amber: 'from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400',
-  red: 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400',
+  blue:    'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400',
+  purple:  'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400',
+  amber:   'from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400',
+  red:     'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400',
 };
 
 export default function Landing() {
   const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLang, t } = useLanguage();
+
+  const stats = [
+    { n: t('landingStat1N'), l: t('landingStat1L') },
+    { n: t('landingStat2N'), l: t('landingStat2L') },
+    { n: t('landingStat3N'), l: t('landingStat3L') },
+    { n: t('landingStat4N'), l: t('landingStat4L') },
+  ];
+
+  const features = [
+    { icon: FileText,    label: t('landingFeat1Label'), desc: t('landingFeat1Desc'), to: '/prescription', color: 'emerald' },
+    { icon: FlaskConical,label: t('landingFeat2Label'), desc: t('landingFeat2Desc'), to: '/report',       color: 'blue' },
+    { icon: History,     label: t('landingFeat3Label'), desc: t('landingFeat3Desc'), to: '/history',      color: 'purple', highlight: true },
+    { icon: Stethoscope, label: t('landingFeat4Label'), desc: t('landingFeat4Desc'), to: '/symptoms',     color: 'amber' },
+    { icon: Pill,        label: t('landingFeat5Label'), desc: t('landingFeat5Desc'), to: '/drugs',        color: 'red' },
+  ];
+
+  const steps = [
+    { icon: Upload,   n: '01', title: t('landingStep1Title'), desc: t('landingStep1Desc') },
+    { icon: Brain,    n: '02', title: t('landingStep2Title'), desc: t('landingStep2Desc') },
+    { icon: FileText, n: '03', title: t('landingStep3Title'), desc: t('landingStep3Desc') },
+    { icon: Database, n: '04', title: t('landingStep4Title'), desc: t('landingStep4Desc') },
+  ];
+
+  const whyCards = [
+    { icon: '📋',  title: t('landingWhy1Title'), desc: t('landingWhy1Desc') },
+    { icon: '📈',  title: t('landingWhy2Title'), desc: t('landingWhy2Desc') },
+    { icon: Share2, title: t('landingWhy3Title'), desc: t('landingWhy3Desc') },
+  ];
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0f1a] text-gray-900 dark:text-white">
+
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#0a0f1a]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
@@ -53,17 +56,25 @@ export default function Landing() {
             <span className="font-bold text-xl">RxSense</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Language toggle */}
+            <button
+              onClick={toggleLang}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+            >
+              {lang === 'bn' ? 'EN' : 'বাং'}
+            </button>
+            {/* Theme toggle */}
             <button onClick={toggleTheme} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <Link to="/login" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 px-3 py-2">
-              Login
+              {t('landingLogin')}
             </Link>
             <Link
               to="/register"
               className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
             >
-              Get Started
+              {t('landingGetStarted')}
             </Link>
           </div>
         </div>
@@ -79,33 +90,30 @@ export default function Landing() {
             transition={{ duration: 0.7 }}
           >
             <span className="inline-block bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-3 py-1 rounded-full mb-4">
-              🏆 Infinity AI Buildfest 2026 — HealthTech Track
+              {t('landingBadge')}
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-5 tracking-tight">
-              RxSense —{' '}
-              <span className="text-emerald-500">Your Medical Documents,</span>
+              {t('landingHero1')}{' '}
+              <span className="text-emerald-500">{t('landingHero2')}</span>
               <br className="hidden sm:block" />
-              Finally Understood.
-              <br />
-              <span className="text-blue-500">Your Health History,</span>
-              <br className="hidden sm:block" />
-              Finally Connected.
+              {t('landingHero3')}{' '}
+              <span className="text-blue-500">{t('landingHero4')}</span>
             </h1>
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-              Upload prescriptions and blood reports. Get clear explanations in Bangla and English. Every result builds your smart health record — so you and your doctor always see the full picture.
+              {t('landingSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 to="/register"
                 className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-7 py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40"
               >
-                Start For Free <ArrowRight className="w-4 h-4" />
+                {t('landingStartFree')} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/login"
                 className="inline-flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-400 font-medium px-7 py-3.5 rounded-xl text-sm transition-all"
               >
-                Log In
+                {t('landingLogIn')}
               </Link>
             </div>
           </motion.div>
@@ -127,8 +135,8 @@ export default function Landing() {
       {/* Features */}
       <section className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2">Everything You Need in One Place</h2>
-          <p className="text-gray-500 dark:text-gray-400">Five powerful tools that work together to protect your health</p>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">{t('landingFeaturesTitle')}</h2>
+          <p className="text-gray-500 dark:text-gray-400">{t('landingFeaturesSubtitle')}</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map(({ icon: Icon, label, desc, to, color, highlight }) => (
@@ -143,13 +151,13 @@ export default function Landing() {
                   <Icon className={`w-5 h-5 ${colorMap[color].split(' ').pop()}`} />
                 </div>
                 {highlight && (
-                  <span className="text-xs font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">CORE FEATURE</span>
+                  <span className="text-xs font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">{t('landingCoreBadge')}</span>
                 )}
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{label}</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
               <div className="mt-3 flex items-center gap-1 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                Try it <ArrowRight className="w-3 h-3" />
+                {t('landingTryIt')} <ArrowRight className="w-3 h-3" />
               </div>
             </Link>
           ))}
@@ -160,8 +168,8 @@ export default function Landing() {
       <section className="bg-gray-50 dark:bg-gray-900/40 py-16">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">How It Works</h2>
-            <p className="text-gray-500 dark:text-gray-400">From confused patient to fully informed — in seconds</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">{t('landingHowTitle')}</h2>
+            <p className="text-gray-500 dark:text-gray-400">{t('landingHowSubtitle')}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map(({ icon: Icon, n, title, desc }) => (
@@ -183,8 +191,8 @@ export default function Landing() {
       {/* Why RxSense */}
       <section className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2">Why RxSense?</h2>
-          <p className="text-gray-500 dark:text-gray-400">More than an analyzer — a lifelong health companion</p>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">{t('landingWhyTitle')}</h2>
+          <p className="text-gray-500 dark:text-gray-400">{t('landingWhySubtitle')}</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {whyCards.map(({ icon, title, desc }) => (
@@ -200,13 +208,13 @@ export default function Landing() {
       {/* CTA */}
       <section className="py-16 bg-gradient-to-r from-emerald-600 to-emerald-700">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Start Your Health Journey Today</h2>
-          <p className="text-emerald-100 mb-6">Free to use. No medical knowledge needed. Works in Bangla and English.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">{t('landingCtaTitle')}</h2>
+          <p className="text-emerald-100 mb-6">{t('landingCtaSubtitle')}</p>
           <Link
             to="/register"
             className="inline-flex items-center gap-2 bg-white text-emerald-700 font-semibold px-8 py-3.5 rounded-xl text-sm hover:bg-emerald-50 transition-all shadow-lg"
           >
-            Create Free Account <ArrowRight className="w-4 h-4" />
+            {t('landingCtaBtn')} <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
@@ -220,9 +228,9 @@ export default function Landing() {
           </div>
           <div className="flex items-center justify-center gap-1.5 text-xs text-amber-400 bg-amber-900/20 border border-amber-800 rounded-xl px-4 py-2 max-w-2xl mx-auto">
             <Shield className="w-4 h-4 flex-shrink-0" />
-            <span>RxSense does not replace professional medical advice. Always consult a qualified doctor before making any medical decisions.</span>
+            <span>{t('landingDisclaimer')}</span>
           </div>
-          <p className="text-xs mt-4">© 2026 RxSense • Built for Infinity AI Buildfest 2026 • Bangladesh</p>
+          <p className="text-xs mt-4">{t('landingFooter')}</p>
         </div>
       </footer>
     </div>

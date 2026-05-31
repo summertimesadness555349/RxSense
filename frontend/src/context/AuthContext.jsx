@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
   const login = (userData, token) => {
     setUser(userData);
     localStorage.setItem('rxsense_user', JSON.stringify(userData));
-    localStorage.setItem('rxsense_token', token);
+    if (token) localStorage.setItem('rxsense_token', token);
   };
 
   const logout = () => {

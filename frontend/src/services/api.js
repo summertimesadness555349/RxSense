@@ -1,10 +1,6 @@
 
-import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
 import { mockUser } from '../data/mockUser.js';
 import { mockCurrentMedications, mockPastMedications } from '../data/mockMedications.js';
-import { mockDocuments } from '../data/mockDocuments.js';
-import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '../data/mockFamilyHistory.js';
-import { mockConversation } from '../data/mockConversations.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
@@ -480,17 +476,17 @@ export const updateMedication = async (userId, medId, data) => {
   return { id: medId, ...data };
 };
 
-// GET /api/documents/:userId
-export const getDocuments = async (userId) => {
-  await delay(600);
-  return mockDocuments;
-};
+// // GET /api/documents/:userId
+// export const getDocuments = async (userId) => {
+//   await delay(600);
+//   return mockDocuments;
+// };
 
-// POST /api/documents/:userId
-export const uploadDocument = async (userId, file, metadata) => {
-  await delay(1500);
-  return { id: `doc_${Date.now()}`, filename: file.name, ...metadata };
-};
+// // POST /api/documents/:userId
+// export const uploadDocument = async (userId, file, metadata) => {
+//   await delay(1500);
+//   return { id: `doc_${Date.now()}`, filename: file.name, ...metadata };
+// };
 
 // GET /api/insights  (?force=true to bypass cache)
 export const getInsights = async ({ force = false } = {}) => {
@@ -520,21 +516,21 @@ export const getInsights = async ({ force = false } = {}) => {
   };
 };
 
-// GET /api/family/:userId
-export const getFamilyHistory = async (userId) => {
-  await delay(600);
-  return {
-    members: mockFamilyMembers,
-    risks: mockHereditaryRisks,
-    geneticScores: mockGeneticRiskScores,
-  };
-};
+// // GET /api/family/:userId
+// export const getFamilyHistory = async (userId) => {
+//   await delay(600);
+//   return {
+//     members: mockFamilyMembers,
+//     risks: mockHereditaryRisks,
+//     geneticScores: mockGeneticRiskScores,
+//   };
+// };
 
-// POST /api/family/:userId/member
-export const addFamilyMember = async (userId, member) => {
-  await delay(800);
-  return { ...member, id: `fam_${Date.now()}` };
-};
+// // POST /api/family/:userId/member
+// export const addFamilyMember = async (userId, member) => {
+//   await delay(800);
+//   return { ...member, id: `fam_${Date.now()}` };
+// };
 
 // ── Places / Nearby ───────────────────────────────────────────────────────
 

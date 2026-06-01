@@ -34,7 +34,8 @@ class DoctorModel {
     getDoctorById = async (doctorId) => {
         try {
             const query = `
-                SELECT doctor_id, name, specialty, license_number, gender, username, email, last_login, created_at, updated_at
+                SELECT doctor_id, name, specialty, license_number, gender, username, email,
+                       last_login, daily_patient_limit, created_at, updated_at
                 FROM doctor
                 WHERE doctor_id = $1
                 LIMIT 1;
@@ -91,12 +92,12 @@ class DoctorModel {
             if (!updates || Object.keys(updates).length === 0) {
                 throw new Error("No updates were sent");
             }
-
-            const allowed = new Set(["name", "specialty", "gender", "username", "email", "password"]);
+ 
+            const allowed = new Set(["name", "specialty", "gender", "username", "email", "password", "daily_patient_limit"]);
             const sets = [];
             const values = [];
             let idx = 1;
-
+ 
             for (let [key, value] of Object.entries(updates)) {
                 if (!allowed.has(key)) continue;
                 
@@ -113,19 +114,20 @@ class DoctorModel {
                 sets.push(`${key} = $${idx++}`);
                 values.push(value);
             }
-
+ 
             if (sets.length === 0) {
                 throw new Error("No valid updates provided");
             }
-
+ 
             sets.push(`updated_at = NOW()`);
             values.push(doctorId);
-
+ 
             const query = `
                 UPDATE doctor
                 SET ${sets.join(', ')}
                 WHERE doctor_id = $${idx}
-                RETURNING doctor_id, name, specialty, license_number, gender, username, email, created_at, updated_at;
+                RETURNING doctor_id, name, specialty, license_number, gender, username, email,
+                          daily_patient_limit, created_at, updated_at;
             `;
             const result = await this.db_connection.query_executor(query, values);
             return result.rows[0] || null;
@@ -217,6 +219,235 @@ class DoctorModel {
             console.error(`Failed to get patients: ${error.message}`);
             throw error;
         }
+    };
+
+    getDoctorsForBooking = async () => {
+        try {
+            const query = `
+                SELECT doctor_id, name, specialty, gender, daily_patient_limit
+                FROM doctor
+                ORDER BY name ASC;
+            `;
+            const result = await this.db_connection.query_executor(query);
+            return result.rows || [];
+        } catch (error) {
+            console.error(`Failed to get doctors: ${error.message}`);
+            throw error;
+        }
+    };
+
+    getAvailabilityByDate = async (doctorId, availabilityDate) => {
+        try {
+            const query = `
+                SELECT
+                    da.availability_id,
+                    da.doctor_id,
+                    da.availability_date,
+                    da.start_time,
+                    da.end_time,
+                    da.daily_limit,
+                    da.created_at,
+                    da.updated_at
+                FROM doctor_availability da
+                WHERE da.doctor_id = $1
+                  AND da.availability_date = $2
+                LIMIT 1;
+            `;
+            const result = await this.db_connection.query_executor(query, [doctorId, availabilityDate]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error(`Failed to get availability: ${error.message}`);
+            throw error;
+        }
+    };
+
+    upsertAvailability = async ({ doctorId, availabilityDate, startTime, endTime, dailyLimit }) => {
+        const normalizeTime = (value) => (value ? String(value).slice(0, 5) : null);
+
+        return this.db_connection.run_in_transaction(async (client) => {
+            const existingResult = await client.query(
+                `SELECT availability_id, start_time, end_time, daily_limit
+                 FROM doctor_availability
+                 WHERE doctor_id = $1
+                   AND availability_date = $2
+                 FOR UPDATE;`,
+                [doctorId, availabilityDate]
+            );
+            const existing = existingResult.rows[0] || null;
+
+            const countResult = await client.query(
+                `SELECT COUNT(*)::int AS count
+                 FROM appointment
+                 WHERE doctor_id = $1
+                   AND appointment_date = $2
+                   AND status IN ('booked', 'late', 'in_progress', 'completed');`,
+                [doctorId, availabilityDate]
+            );
+            const bookedCount = countResult.rows[0]?.count || 0;
+
+            if (bookedCount > 0) {
+                if (!existing) {
+                    const error = new Error('This date already has appointments. You can only set availability for future dates without any bookings.');
+                    error.code = 'SCHEDULE_LOCKED';
+                    throw error;
+                }
+
+                const existingStart = normalizeTime(existing.start_time);
+                const existingEnd = normalizeTime(existing.end_time);
+                if (existingStart !== normalizeTime(startTime) || existingEnd !== normalizeTime(endTime)) {
+                    const error = new Error('This date has existing appointments. Time changes only apply to future dates without bookings. Please pick a different date to change the time window.');
+                    error.code = 'SCHEDULE_LOCKED';
+                    throw error;
+                }
+
+                if (dailyLimit !== null && dailyLimit !== undefined) {
+                    const limitValue = Number(dailyLimit);
+                    if (Number.isFinite(limitValue) && bookedCount >= limitValue) {
+                        const error = new Error('Daily limit cannot be lower than the number of booked appointments');
+                        error.code = 'LIMIT_LOCKED';
+                        throw error;
+                    }
+                }
+            }
+
+            let result;
+            if (existing) {
+                const updateResult = await client.query(
+                    `UPDATE doctor_availability
+                     SET start_time = $1,
+                         end_time = $2,
+                         daily_limit = $3,
+                         updated_at = NOW()
+                     WHERE availability_id = $4
+                     RETURNING *;`,
+                    [startTime, endTime, dailyLimit, existing.availability_id]
+                );
+                result = updateResult.rows[0];
+            } else {
+                const insertResult = await client.query(
+                    `INSERT INTO doctor_availability
+                        (doctor_id, availability_date, start_time, end_time, daily_limit)
+                     VALUES ($1, $2, $3, $4, $5)
+                     RETURNING *;`,
+                    [doctorId, availabilityDate, startTime, endTime, dailyLimit]
+                );
+                result = insertResult.rows[0];
+            }
+
+            // Propagate start_time/end_time to all future dates without bookings
+            await client.query(
+                `UPDATE doctor_availability
+                 SET start_time = $1, end_time = $2, updated_at = NOW()
+                 WHERE doctor_id = $3
+                   AND availability_date > $4
+                   AND NOT EXISTS (
+                       SELECT 1 FROM appointment
+                       WHERE appointment.doctor_id = doctor_availability.doctor_id
+                         AND appointment.appointment_date = doctor_availability.availability_date
+                         AND appointment.status IN ('booked', 'late', 'in_progress', 'completed')
+                   );`,
+                [startTime, endTime, doctorId, availabilityDate]
+            );
+
+            return result;
+        });
+    };
+
+    getPatientsByAppointmentDate = async (doctorId, appointmentDate) => {
+        try {
+            const query = `
+                SELECT
+                    p.patient_id,
+                    p.name,
+                    p.date_of_birth,
+                    p.gender,
+                    p.phone,
+                    p.email,
+                    a.appointment_id,
+                    a.appointment_date,
+                    a.status,
+                    a.priority_flag,
+                    a.priority_reason,
+                    a.arrival_time,
+                    a.seen_at,
+                    a.serial_number,
+                    da.start_time AS availability_start_time
+                FROM appointment a
+                JOIN patient p ON p.patient_id = a.patient_id
+                LEFT JOIN doctor_availability da ON da.doctor_id = a.doctor_id AND da.availability_date = a.appointment_date
+                WHERE a.doctor_id = $1
+                  AND a.appointment_date = $2
+                  AND a.status IN ('booked', 'late', 'in_progress', 'completed')
+                ORDER BY a.priority_flag DESC,
+                         a.serial_number ASC;
+            `;
+            const result = await this.db_connection.query_executor(query, [doctorId, appointmentDate]);
+            return result.rows || [];
+        } catch (error) {
+            console.error(`Failed to get appointment patients: ${error.message}`);
+            throw error;
+        }
+    };
+
+    getAppointmentsByDate = async (doctorId, appointmentDate) => {
+        try {
+            const query = `
+                SELECT
+                    a.*,
+                    p.name AS patient_name,
+                    p.phone AS patient_phone,
+                    p.email AS patient_email
+                FROM appointment a
+                JOIN patient p ON p.patient_id = a.patient_id
+                WHERE a.doctor_id = $1
+                  AND a.appointment_date = $2
+                ORDER BY a.priority_flag DESC,
+                         a.serial_number ASC;
+            `;
+            const result = await this.db_connection.query_executor(query, [doctorId, appointmentDate]);
+            return result.rows || [];
+        } catch (error) {
+            console.error(`Failed to get appointments: ${error.message}`);
+            throw error;
+        }
+    };
+
+    updateAppointment = async (appointmentId, doctorId, updates) => {
+        if (!updates || Object.keys(updates).length === 0) return null;
+
+        const allowed = new Set([
+            'status',
+            'arrival_time',
+            'seen_at',
+            'priority_flag',
+            'priority_reason',
+            'updated_at',
+        ]);
+
+        const sets = [];
+        const values = [];
+        let idx = 1;
+
+        for (const [key, value] of Object.entries(updates)) {
+            if (!allowed.has(key)) continue;
+            sets.push(`${key} = $${idx++}`);
+            values.push(value);
+        }
+
+        if (!sets.length) return null;
+
+        values.push(appointmentId, doctorId);
+
+        const query = `
+            UPDATE appointment
+            SET ${sets.join(', ')}
+            WHERE appointment_id = $${idx++}
+              AND doctor_id = $${idx}
+            RETURNING *;
+        `;
+
+        const result = await this.db_connection.query_executor(query, values);
+        return result.rows[0] || null;
     };
 
     getPatientById = async (patientId) => {

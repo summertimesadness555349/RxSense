@@ -55,6 +55,11 @@ CREATE TYPE risk_level_type AS ENUM (
   'high',
   'critical'
 );
+
+DO $$ BEGIN
+  CREATE TYPE appointment_status AS ENUM ('booked', 'late', 'in_progress', 'completed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 -- New ENUM types
 DO $$ BEGIN
   CREATE TYPE condition_status AS ENUM ('active', 'resolved', 'managed', 'chronic');
@@ -92,27 +97,30 @@ COMMENT ON COLUMN hospital.type       IS 'Facility type: public | private | clin
 -- ============================================================
 
 CREATE TABLE doctor (
-  doctor_id      UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-  name           VARCHAR(100) NOT NULL,
-  specialty      VARCHAR(100)[],
-  license_number VARCHAR(50)  NOT NULL UNIQUE,
-  gender         VARCHAR(20),
+  doctor_id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                VARCHAR(100) NOT NULL,
+  specialty           VARCHAR(100)[],
+  license_number      VARCHAR(50)  NOT NULL UNIQUE,
+  gender              VARCHAR(20),
+  daily_patient_limit INTEGER      NOT NULL DEFAULT 30,
+  
   
   -- Auth fields
-  username       VARCHAR(50)  NOT NULL UNIQUE,
-  email          VARCHAR(255) NOT NULL UNIQUE,
-  password       VARCHAR(255) NOT NULL, -- To store hashed password strings
+  username            VARCHAR(50)  NOT NULL UNIQUE,
+  email               VARCHAR(255) NOT NULL UNIQUE,
+  password            VARCHAR(255) NOT NULL, -- To store hashed password strings
   
   -- Tracking & Metadata
-  last_login     TIMESTAMPTZ,
-  created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  last_login          TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE  doctor            IS 'Physician profiles and credentials';
-COMMENT ON COLUMN doctor.password   IS 'Hashed password for doctor portal access';
-COMMENT ON COLUMN doctor.gender     IS 'Gender identifier (e.g., Male, Female, Non-binary)';
-COMMENT ON COLUMN doctor.last_login IS 'Timestamp of the user''s most recent successful login';
+COMMENT ON TABLE  doctor                      IS 'Physician profiles and credentials';
+COMMENT ON COLUMN doctor.password             IS 'Hashed password for doctor portal access';
+COMMENT ON COLUMN doctor.gender               IS 'Gender identifier (e.g., Male, Female, Non-binary)';
+COMMENT ON COLUMN doctor.last_login           IS 'Timestamp of the user''s most recent successful login';
+COMMENT ON COLUMN doctor.daily_patient_limit  IS 'Max patients the doctor will see per day';
 
 
 
@@ -173,6 +181,59 @@ COMMENT ON COLUMN patient.height     IS 'Patient height in centimeters (cm)';
 COMMENT ON COLUMN patient.weight     IS 'Patient weight in kilograms (kg)';
 COMMENT ON COLUMN patient.last_login IS 'Timestamp of the patient''s most recent successful login';
 
+
+-- ============================================================
+--  TABLE: APPOINTMENT
+--  Patient appointment bookings with fixed time slots.
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE appointment_status AS ENUM ('booked', 'late', 'in_progress', 'completed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS appointment (
+  appointment_id    UUID               PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id         UUID               NOT NULL REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+  patient_id        UUID               NOT NULL REFERENCES patient(patient_id) ON DELETE CASCADE,
+  appointment_date  DATE               NOT NULL,
+  status            appointment_status NOT NULL DEFAULT 'booked',
+  arrival_time      TIMESTAMPTZ,
+  seen_at           TIMESTAMPTZ,
+  priority_flag     BOOLEAN            NOT NULL DEFAULT FALSE,
+  priority_reason   VARCHAR(120),
+  rescheduled_from  UUID               REFERENCES appointment(appointment_id),
+  serial_number     INTEGER,
+  created_at        TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
+
+  UNIQUE (doctor_id, patient_id, appointment_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_appointment_doctor_date
+  ON appointment (doctor_id, appointment_date);
+
+
+CREATE INDEX IF NOT EXISTS idx_appointment_patient_date
+  ON appointment (patient_id, appointment_date);
+
+
+CREATE TABLE IF NOT EXISTS doctor_availability (
+  availability_id   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id         UUID        NOT NULL REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+  availability_date DATE        NOT NULL,
+  start_time        TIME        NOT NULL,
+  end_time          TIME        NOT NULL,
+  daily_limit       INTEGER,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE (doctor_id, availability_date),
+  CHECK  (end_time > start_time)
+);
+
+CREATE INDEX IF NOT EXISTS idx_doctor_availability_doctor_date
+  ON doctor_availability (doctor_id, availability_date);
 
 -- ============================================================
 --  RxSense — Add 3 new tables to existing Neon DB schema

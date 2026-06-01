@@ -16,6 +16,7 @@ import {
   Play,
   XCircle,
   AlertCircle,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -26,14 +27,19 @@ import {
   checkPrescriptionSafety,
   createPrescription,
   modifyPrescriptionItem,
-   addPatientAllergy,
+  addPatientAllergy,
   addPatientVaccination,
   addPatientSurgery,
+  markAppointmentLate,
+  markAppointmentArrived,
+  startAppointment,
+  completeAppointment,
 } from "../services/api.js";
 import Button from "../components/ui/Button.jsx";
 import Input from "../components/ui/Input.jsx";
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
+
 
 const formatChartDate = (value) => {
   if (!value) return "N/A";
@@ -243,6 +249,8 @@ export default function DoctorPatients() {
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [appointmentDate, setAppointmentDate] = useState(todayInputValue());
 
   const [chartData, setChartData] = useState(null);
   const [loadingChart, setLoadingChart] = useState(false);
@@ -269,21 +277,64 @@ export default function DoctorPatients() {
   const [medicationActionNotes, setMedicationActionNotes] = useState("");
   const [pauseDurationDays, setPauseDurationDays] = useState("3");
   const [updatingMedicationId, setUpdatingMedicationId] = useState(null);
+  const [updatingAppointmentId, setUpdatingAppointmentId] = useState(null);
+
+  // New forms show/hide toggles
+  const [showAddAllergyForm, setShowAddAllergyForm] = useState(false);
+  const [showAddVaccinationForm, setShowAddVaccinationForm] = useState(false);
+  const [showAddSurgeryForm, setShowAddSurgeryForm] = useState(false);
+
+  // Allergy Form state
+  const [allergyDrugSearch, setAllergyDrugSearch] = useState("");
+  const [allergyDrugResults, setAllergyDrugResults] = useState([]);
+  const [selectedAllergyDrug, setSelectedAllergyDrug] = useState(null);
+  const [reactionType, setReactionType] = useState("");
+  const [allergySeverity, setAllergySeverity] = useState("moderate");
+  const [allergyConfirmedAt, setAllergyConfirmedAt] = useState(todayInputValue());
+  const [submittingAllergy, setSubmittingAllergy] = useState(false);
+
+  // Vaccination Form state
+  const [vaccineName, setVaccineName] = useState("");
+  const [vaccineCvxCode, setVaccineCvxCode] = useState("");
+  const [vaccineDoseNumber, setVaccineDoseNumber] = useState("");
+  const [vaccineTotalDoses, setVaccineTotalDoses] = useState("");
+  const [vaccineAdministeredAt, setVaccineAdministeredAt] = useState(todayInputValue());
+  const [vaccineBatchNumber, setVaccineBatchNumber] = useState("");
+  const [vaccineSite, setVaccineSite] = useState("");
+  const [vaccineNextDueDate, setVaccineNextDueDate] = useState("");
+  const [vaccineNotes, setVaccineNotes] = useState("");
+  const [submittingVaccination, setSubmittingVaccination] = useState(false);
+
+  // Surgery Form state
+  const [surgeryProcedureName, setSurgeryProcedureName] = useState("");
+  const [surgeryIcd10Pcs, setSurgeryIcd10Pcs] = useState("");
+  const [surgeryPerformedAt, setSurgeryPerformedAt] = useState(todayInputValue());
+  const [surgeryOutcome, setSurgeryOutcome] = useState("successful");
+  const [surgeryComplications, setSurgeryComplications] = useState("");
+  const [surgeryAnaesthesiaType, setSurgeryAnaesthesiaType] = useState("");
+  const [surgeryNotes, setSurgeryNotes] = useState("");
+  const [submittingSurgery, setSubmittingSurgery] = useState(false);
 
   const searchDebounceRef = useRef(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      getDoctorPatients(user.id)
-        .then((data) => {
-          setPatients(data);
-          setFilteredPatients(data);
-        })
-        .catch((err) => {
-          addToast(err.message || "Failed to load patients list", "error");
-        });
+  const loadPatients = async () => {
+    if (!user?.id) return;
+    try {
+      const data = await getDoctorPatients(user.id, appointmentDate);
+      setPatients(data);
+      setFilteredPatients(data);
+      if (selectedPatientId) {
+        const refreshed = data.find((p) => p.patient_id === selectedPatientId) || null;
+        setSelectedPatient(refreshed);
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to load patients list", "error");
     }
-  }, [user?.id]);
+  };
+
+  useEffect(() => {
+    loadPatients();
+  }, [user?.id, appointmentDate]);
 
   useEffect(() => {
       if(chartData) {
@@ -307,8 +358,9 @@ export default function DoctorPatients() {
     }
   }, [searchTerm, patients]);
 
-  const handleSelectPatient = async (patientId) => {
-    setSelectedPatientId(patientId);
+  const handleSelectPatient = async (patient) => {
+    setSelectedPatientId(patient.patient_id);
+    setSelectedPatient(patient);
     setLoadingChart(true);
     setChartData(null);
     setPrescriptionItems([]);
@@ -316,7 +368,7 @@ export default function DoctorPatients() {
     setVisitDate(todayInputValue());
     setPrescriptionDraft(createEmptyPrescriptionDraft());
     try {
-      const data = await getDoctorPatientChart(patientId);
+      const data = await getDoctorPatientChart(patient.patient_id);
       console.log("frontend getDoctorPatientChart data:", data);
       setChartData(data);
       setPrescriptionDraft(createPrescriptionDraftFromChart(data));
@@ -324,6 +376,156 @@ export default function DoctorPatients() {
       addToast(err.message || "Failed to load patient chart", "error");
     } finally {
       setLoadingChart(false);
+    }
+  };
+
+  // Allergy Drug Search Autocomplete handler
+  const handleAllergyDrugSearchChange = (e) => {
+    const val = e.target.value;
+    setAllergyDrugSearch(val);
+    setSelectedAllergyDrug(null);
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    if (!val.trim()) {
+      setAllergyDrugResults([]);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const results = await searchDrugs(val);
+        setAllergyDrugResults(results);
+      } catch (err) {
+        console.error("Allergy drug search error:", err);
+      }
+    }, 400);
+  };
+
+  const handleAddAllergy = async (e) => {
+    e.preventDefault();
+    if (!selectedAllergyDrug) {
+      addToast("Please search and select a drug allergen", "warning");
+      return;
+    }
+    if (!reactionType.trim()) {
+      addToast("Reaction type is required", "warning");
+      return;
+    }
+
+    setSubmittingAllergy(true);
+    try {
+      const payload = {
+        drugId: selectedAllergyDrug.drug_id,
+        reactionType: reactionType.trim(),
+        severity: allergySeverity,
+        confirmedAt: allergyConfirmedAt || null,
+      };
+      await addPatientAllergy(selectedPatientId, payload);
+      addToast("Allergy added successfully!", "success");
+      
+      // Reset form
+      setAllergyDrugSearch("");
+      setAllergyDrugResults([]);
+      setSelectedAllergyDrug(null);
+      setReactionType("");
+      setAllergySeverity("moderate");
+      setAllergyConfirmedAt(todayInputValue());
+      setShowAddAllergyForm(false);
+
+      // Refresh chart
+      const refreshedData = await getDoctorPatientChart(selectedPatientId);
+      setChartData(refreshedData);
+    } catch (err) {
+      addToast(err.message || "Failed to add allergy", "error");
+    } finally {
+      setSubmittingAllergy(false);
+    }
+  };
+
+  const handleAddVaccination = async (e) => {
+    e.preventDefault();
+    if (!vaccineName.trim()) {
+      addToast("Vaccine name is required", "warning");
+      return;
+    }
+
+    setSubmittingVaccination(true);
+    try {
+      const payload = {
+        vaccineName: vaccineName.trim(),
+        cvxCode: vaccineCvxCode.trim() || null,
+        doseNumber: vaccineDoseNumber ? parseInt(vaccineDoseNumber, 10) : null,
+        totalDoses: vaccineTotalDoses ? parseInt(vaccineTotalDoses, 10) : null,
+        administeredAt: vaccineAdministeredAt || null,
+        batchNumber: vaccineBatchNumber.trim() || null,
+        site: vaccineSite.trim() || null,
+        nextDueDate: vaccineNextDueDate || null,
+        notes: vaccineNotes.trim() || null,
+      };
+      await addPatientVaccination(selectedPatientId, payload);
+      addToast("Vaccination recorded successfully!", "success");
+
+      // Reset form
+      setVaccineName("");
+      setVaccineCvxCode("");
+      setVaccineDoseNumber("");
+      setVaccineTotalDoses("");
+      setVaccineAdministeredAt(todayInputValue());
+      setVaccineBatchNumber("");
+      setVaccineSite("");
+      setVaccineNextDueDate("");
+      setVaccineNotes("");
+      setShowAddVaccinationForm(false);
+
+      // Refresh chart
+      const refreshedData = await getDoctorPatientChart(selectedPatientId);
+      setChartData(refreshedData);
+    } catch (err) {
+      addToast(err.message || "Failed to record vaccination", "error");
+    } finally {
+      setSubmittingVaccination(false);
+    }
+  };
+
+  const handleAddSurgery = async (e) => {
+    e.preventDefault();
+    if (!surgeryProcedureName.trim()) {
+      addToast("Procedure name is required", "warning");
+      return;
+    }
+
+    setSubmittingSurgery(true);
+    try {
+      const payload = {
+        procedureName: surgeryProcedureName.trim(),
+        icd10Pcs: surgeryIcd10Pcs.trim() || null,
+        performedAt: surgeryPerformedAt || null,
+        outcome: surgeryOutcome || null,
+        complications: surgeryComplications.trim() || null,
+        anaesthesiaType: surgeryAnaesthesiaType.trim() || null,
+        notes: surgeryNotes.trim() || null,
+      };
+      await addPatientSurgery(selectedPatientId, payload);
+      addToast("Surgical history recorded successfully!", "success");
+
+      // Reset form
+      setSurgeryProcedureName("");
+      setSurgeryIcd10Pcs("");
+      setSurgeryPerformedAt(todayInputValue());
+      setSurgeryOutcome("successful");
+      setSurgeryComplications("");
+      setSurgeryAnaesthesiaType("");
+      setSurgeryNotes("");
+      setShowAddSurgeryForm(false);
+
+      // Refresh chart
+      const refreshedData = await getDoctorPatientChart(selectedPatientId);
+      setChartData(refreshedData);
+    } catch (err) {
+      addToast(err.message || "Failed to record surgical history", "error");
+    } finally {
+      setSubmittingSurgery(false);
     }
   };
 
@@ -548,15 +750,28 @@ export default function DoctorPatients() {
         <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">
           Patient Registry
         </h2>
-        <div className="relative mb-3 flex-shrink-0">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-white text-sm focus:outline-none focus:border-emerald-500 placeholder-gray-400"
-            placeholder="Search patient name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="grid gap-2 mb-3 flex-shrink-0">
+          <label className="block">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">
+              Appointment Date
+            </span>
+            <input
+              type="date"
+              value={appointmentDate}
+              onChange={(e) => setAppointmentDate(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-white text-sm px-3 py-2 focus:outline-none focus:border-emerald-500"
+            />
+          </label>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-white text-sm focus:outline-none focus:border-emerald-500 placeholder-gray-400"
+              placeholder="Search patient name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
@@ -564,20 +779,38 @@ export default function DoctorPatients() {
             filteredPatients.map((p) => (
               <button
                 key={p.patient_id}
-                onClick={() => handleSelectPatient(p.patient_id)}
+                onClick={() => handleSelectPatient(p)}
                 className={`w-full text-left p-3 rounded-2xl flex items-center gap-3 transition-colors ${
                   selectedPatientId === p.patient_id
                     ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                     : "hover:bg-gray-50 dark:hover:bg-gray-800/40 text-gray-700 dark:text-gray-300 border border-transparent"
                 }`}
               >
-                <div className="w-9 h-9 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <div className="relative w-9 h-9 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                   <User className="w-5 h-5" />
+                  {p.arrival_time && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-white" />
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{p.name}</p>
+                  <p className="font-bold text-sm truncate flex items-center gap-1.5 justify-between">
+                    <span>{p.name}</span>
+                    {p.serial_number && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 flex-shrink-0">
+                        #{p.serial_number}
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-gray-400 truncate">
                     {p.gender} · {calculateAge(p.date_of_birth)}
+
+                  </p>
+                  <p className="text-[10px] text-gray-400 truncate">
+                    {String(p.status || "booked")}
+                    {p.priority_flag ? " · priority" : ""}
+                    {p.arrival_time ? " · ✓ Arrived" : ""}
                   </p>
                 </div>
               </button>
@@ -620,8 +853,13 @@ export default function DoctorPatients() {
                     <User className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       {chartData.patient?.name}
+                      {selectedPatient?.serial_number && (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Serial #{selectedPatient.serial_number}
+                        </span>
+                      )}
                     </h2>
                     <p className="text-xs text-gray-400">
                       {chartData.patient?.gender} ·{" "}
@@ -796,6 +1034,131 @@ export default function DoctorPatients() {
                           No drug allergies on record.
                         </p>
                       )}
+
+                      <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-800">
+                        {!showAddAllergyForm ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowAddAllergyForm(true)}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 transition-all"
+                          >
+                            <PlusCircle className="w-4 h-4" /> Add Allergy
+                          </button>
+                        ) : (
+                          <form onSubmit={handleAddAllergy} className="bg-rose-500/5 rounded-2xl border border-rose-200/20 p-4 space-y-4">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                                Add Allergy
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => setShowAddAllergyForm(false)}
+                                className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                            
+                            <div className="grid gap-4 md:grid-cols-2">
+                              {/* Drug Autocomplete */}
+                              <div className="relative md:col-span-2">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Drug Allergen
+                                </label>
+                                <div className="relative">
+                                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                  <input
+                                    type="text"
+                                    className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-2 pl-9 pr-3 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                    placeholder="Search drug by generic or brand..."
+                                    value={allergyDrugSearch}
+                                    onChange={handleAllergyDrugSearchChange}
+                                  />
+                                </div>
+
+                                {allergyDrugResults.length > 0 && (
+                                  <div className="absolute left-0 right-0 z-35 mt-1 max-h-50 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
+                                    {allergyDrugResults.map((drug) => (
+                                      <button
+                                        key={drug.drug_id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedAllergyDrug(drug);
+                                          setAllergyDrugSearch(
+                                            drug.brand_name
+                                              ? `${drug.brand_name} (${drug.generic_name})`
+                                              : drug.generic_name,
+                                          );
+                                          setAllergyDrugResults([]);
+                                        }}
+                                        className="flex w-full justify-between gap-3 px-4 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
+                                      >
+                                        <span className="min-w-0">
+                                          <span className="font-bold">
+                                            {drug.brand_name || "N/A"}
+                                          </span>
+                                          <span className="ml-2 text-gray-500">
+                                            ({drug.generic_name})
+                                          </span>
+                                        </span>
+                                        <span className="flex-shrink-0 rounded bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] text-gray-500">
+                                          {drug.drug_class || "General"}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Reaction Type
+                                </label>
+                                <input
+                                  type="text"
+                                  value={reactionType}
+                                  onChange={(e) => setReactionType(e.target.value)}
+                                  placeholder="e.g. Skin Rash, Anaphylaxis"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Severity
+                                </label>
+                                <select
+                                  value={allergySeverity}
+                                  onChange={(e) => setAllergySeverity(e.target.value)}
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
+                                >
+                                  <option value="mild">Mild</option>
+                                  <option value="moderate">Moderate</option>
+                                  <option value="severe">Severe</option>
+                                  <option value="critical">Critical</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Confirmed Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={allergyConfirmedAt}
+                                  onChange={(e) => setAllergyConfirmedAt(e.target.value)}
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+
+                            <Button type="submit" loading={submittingAllergy} className="w-full bg-rose-500 hover:bg-rose-600 text-white">
+                              Add Allergy
+                            </Button>
+                          </form>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1001,6 +1364,133 @@ export default function DoctorPatients() {
                           No surgical history on record.
                         </p>
                       )}
+
+                      <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-800">
+                        {!showAddSurgeryForm ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowAddSurgeryForm(true)}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-all"
+                          >
+                            <PlusCircle className="w-4 h-4" /> Record Surgery
+                          </button>
+                        ) : (
+                          <form onSubmit={handleAddSurgery} className="bg-emerald-500/5 rounded-2xl border border-emerald-200/20 p-4 space-y-4">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                Record Surgery
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => setShowAddSurgeryForm(false)}
+                                className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Procedure / Surgery Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={surgeryProcedureName}
+                                  onChange={(e) => setSurgeryProcedureName(e.target.value)}
+                                  placeholder="e.g. Appendectomy, Coronary Bypass"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  ICD-10 PCS Code
+                                </label>
+                                <input
+                                  type="text"
+                                  value={surgeryIcd10Pcs}
+                                  onChange={(e) => setSurgeryIcd10Pcs(e.target.value)}
+                                  placeholder="e.g. 0DB94ZZ"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Date Performed
+                                </label>
+                                <input
+                                  type="date"
+                                  value={surgeryPerformedAt}
+                                  onChange={(e) => setSurgeryPerformedAt(e.target.value)}
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Outcome
+                                </label>
+                                <select
+                                  value={surgeryOutcome}
+                                  onChange={(e) => setSurgeryOutcome(e.target.value)}
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
+                                >
+                                  <option value="successful">Successful</option>
+                                  <option value="complicated">Complicated</option>
+                                  <option value="failed">Failed</option>
+                                  <option value="ongoing">Ongoing</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Anaesthesia Type
+                                </label>
+                                <input
+                                  type="text"
+                                  value={surgeryAnaesthesiaType}
+                                  onChange={(e) => setSurgeryAnaesthesiaType(e.target.value)}
+                                  placeholder="e.g. General, Local, Epidural"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Complications
+                                </label>
+                                <input
+                                  type="text"
+                                  value={surgeryComplications}
+                                  onChange={(e) => setSurgeryComplications(e.target.value)}
+                                  placeholder="e.g. Mild post-op bleeding, none"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Notes
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={surgeryNotes}
+                                  onChange={(e) => setSurgeryNotes(e.target.value)}
+                                  placeholder="Any additional details or recommendations..."
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 resize-none"
+                                />
+                              </div>
+                            </div>
+
+                            <Button type="submit" loading={submittingSurgery} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white">
+                              Record Surgery
+                            </Button>
+                          </form>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1033,6 +1523,157 @@ export default function DoctorPatients() {
                           No vaccinations on record.
                         </p>
                       )}
+
+                      <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-800">
+                        {!showAddVaccinationForm ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowAddVaccinationForm(true)}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 transition-all"
+                          >
+                            <PlusCircle className="w-4 h-4" /> Record Vaccination
+                          </button>
+                        ) : (
+                          <form onSubmit={handleAddVaccination} className="bg-teal-500/5 rounded-2xl border border-teal-200/20 p-4 space-y-4">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                                Record Vaccination
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => setShowAddVaccinationForm(false)}
+                                className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Vaccine Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={vaccineName}
+                                  onChange={(e) => setVaccineName(e.target.value)}
+                                  placeholder="e.g. COVID-19 mRNA, Influenza"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  CVX Code
+                                </label>
+                                <input
+                                  type="text"
+                                  value={vaccineCvxCode}
+                                  onChange={(e) => setVaccineCvxCode(e.target.value)}
+                                  placeholder="e.g. 207"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Administered Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={vaccineAdministeredAt}
+                                  onChange={(e) => setVaccineAdministeredAt(e.target.value)}
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Dose Number
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={vaccineDoseNumber}
+                                  onChange={(e) => setVaccineDoseNumber(e.target.value)}
+                                  placeholder="e.g. 1, 2"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Total Doses (Series)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={vaccineTotalDoses}
+                                  onChange={(e) => setVaccineTotalDoses(e.target.value)}
+                                  placeholder="e.g. 2, 3"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Batch / Lot Number
+                                </label>
+                                <input
+                                  type="text"
+                                  value={vaccineBatchNumber}
+                                  onChange={(e) => setVaccineBatchNumber(e.target.value)}
+                                  placeholder="e.g. EN9582"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Administration Site
+                                </label>
+                                <input
+                                  type="text"
+                                  value={vaccineSite}
+                                  onChange={(e) => setVaccineSite(e.target.value)}
+                                  placeholder="e.g. Left Deltoid"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Next Due Date (Booster)
+                                </label>
+                                <input
+                                  type="date"
+                                  value={vaccineNextDueDate}
+                                  onChange={(e) => setVaccineNextDueDate(e.target.value)}
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                                  Notes
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={vaccineNotes}
+                                  onChange={(e) => setVaccineNotes(e.target.value)}
+                                  placeholder="Any additional details or observations..."
+                                  className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 resize-none"
+                                />
+                              </div>
+                            </div>
+
+                            <Button type="submit" loading={submittingVaccination} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
+                              Record Vaccination
+                            </Button>
+                          </form>
+                        )}
+                      </div>
                     </div>
                   )}
 

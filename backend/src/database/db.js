@@ -52,6 +52,44 @@ class DB_Connection{
             client.release();
         }
     }
+
+    withTransaction = async (callback) => {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const result = await callback(client);
+            await client.query('COMMIT');
+            return result;
+        } catch (error) {
+            try {
+                await client.query('ROLLBACK');
+            } catch (rollbackError) {
+                console.log('Transaction rollback failed:', rollbackError.message);
+            }
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    run_in_transaction = async (handler) => {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const result = await handler(client);
+            await client.query('COMMIT');
+            return result;
+        } catch (error) {
+            try {
+                await client.query('ROLLBACK');
+            } catch (rollbackError) {
+                console.error('Transaction rollback failed:', rollbackError.message);
+            }
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = DB_Connection;

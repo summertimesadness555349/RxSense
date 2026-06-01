@@ -745,7 +745,7 @@ export const updateDoctorDailyLimit = async (dailyPatientLimit) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ dailyPatientLimit }),
   });
-  return data.doctor || null;
+  return { doctor: data.doctor || null, effectiveDate: data.effectiveDate || null };
 };
 
 export const getDoctorAvailability = async (date) => {
@@ -760,7 +760,7 @@ export const setDoctorAvailability = async (payload) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return data.availability || null;
+  return { availability: data.availability || null, message: data.message || null };
 };
 
 export const changeDoctorPassword = async (doctorId, passwords) => {

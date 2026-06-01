@@ -148,9 +148,12 @@ export default function DoctorSettings() {
     }
     setLimitLoading(true);
     try {
-      const updated = await updateDoctorDailyLimit(limitValue);
-      login({ ...user, ...updated }, localStorage.getItem('rxsense_token'));
-      addToast('Scheduling settings updated', 'success');
+      const result = await updateDoctorDailyLimit(limitValue);
+      login({ ...user, ...result.doctor }, localStorage.getItem('rxsense_token'));
+      const msg = result.effectiveDate
+        ? `Daily limit updated. Active from ${result.effectiveDate} onwards.`
+        : `Daily limit updated. Active immediately.`;
+      addToast(msg, 'success');
     } catch (err) {
       addToast(err.message || 'Failed to update scheduling', 'error');
     } finally {
@@ -189,13 +192,13 @@ export default function DoctorSettings() {
     }
     setAvailabilitySaving(true);
     try {
-      await setDoctorAvailability({
+      const result = await setDoctorAvailability({
         date: availabilityForm.date,
         startTime: availabilityForm.startTime,
         endTime: availabilityForm.endTime,
         dailyLimit: availabilityForm.dailyLimit,
       });
-      addToast('Availability updated', 'success');
+      addToast(result.message || 'Availability updated', 'success');
       await loadAvailability(availabilityForm.date);
     } catch (err) {
       addToast(err.message || 'Failed to update availability', 'error');

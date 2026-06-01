@@ -354,9 +354,17 @@ class DoctorController {
 
             const updatedDoctor = await this.doctorModel.updateDoctor(req.doctor.doctor_id, updates);
 
+            let effectiveDate = null;
+            // console.log(`[updateDailyLimit] doctorId=${req.doctor.doctor_id} newLimit=${updates.daily_patient_limit} checking for effective date...`);
+            if (updates.daily_patient_limit !== undefined) {
+                effectiveDate = await this.doctorModel.findFirstAvailableDate(req.doctor.doctor_id, updates.daily_patient_limit);
+                console.log(`[updateDailyLimit] doctorId=${req.doctor.doctor_id} newLimit=${updates.daily_patient_limit} effectiveDate=${effectiveDate}`);
+            }
+
             return res.status(200).json({
                 success: true,
                 doctor: updatedDoctor,
+                effectiveDate,
             });
         } catch (error) {
             console.error('Update daily limit error:', error);
@@ -405,7 +413,11 @@ class DoctorController {
                 dailyLimit: limitValue,
             });
 
-            return res.status(200).json({ success: true, availability });
+            return res.status(200).json({
+                success: true,
+                availability,
+                message: `Availability active from ${date} onwards. Dates with existing bookings retain their original times.`,
+            });
         } catch (error) {
             if (error.code === 'SCHEDULE_LOCKED') {
                 return res.status(409).json({

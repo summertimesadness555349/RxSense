@@ -137,6 +137,60 @@ class DoctorModel {
         }
     };
 
+  findFirstAvailableDate = async (doctorId, newLimit) => {
+    // Helper to get local YYYY-MM-DD string without timezone shifting issues
+    const getLocalDateStr = (date) => {
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+        return localDate.toISOString().slice(0, 10);
+    };
+
+    const todayStr = getLocalDateStr(new Date());
+
+    try {
+        // 1. Cast appointment_date to ::date so Postgres groups by calendar day, not exact time.
+        const query = `
+            SELECT appointment_date::date AS appointment_day, COUNT(*)::int AS count
+            FROM appointment
+            WHERE doctor_id = $1
+              AND appointment_date >= $2
+              AND status IN ('booked', 'late', 'in_progress', 'completed')
+            GROUP BY appointment_date::date
+            HAVING COUNT(*) >= $3
+            ORDER BY appointment_day ASC;
+        `;
+        
+        const result = await this.db_connection.query_executor(query, [doctorId, todayStr, newLimit]);
+
+        if (result.rows.length === 0) return todayStr;
+
+        // 2. Safely parse the DB date to a YYYY-MM-DD string format for your Set
+        const blockedDates = new Set(
+            result.rows.map(r => {
+                // If it's already a JS Date, convert it. If it's a string, slice it.
+                const d = new Date(r.appointment_day);
+                return getLocalDateStr(d);
+            })
+        );
+
+        let checkDate = new Date(); // Starts at today
+        
+        for (let i = 0; i < 365; i++) {
+            const dateStr = getLocalDateStr(checkDate);
+            
+            // 3. Now this comparison works perfectly (String vs String)
+            if (!blockedDates.has(dateStr)) {
+                return dateStr;
+            }
+            checkDate.setDate(checkDate.getDate() + 1);
+        }
+
+        return todayStr;
+    } catch (error) {
+        console.error(`Failed to find available date: ${error.message}`);
+        return todayStr;
+    }
+};
     setLastLogin = async (doctorId) => {
         try {
             const query = `
@@ -265,6 +319,16 @@ class DoctorModel {
         const normalizeTime = (value) => (value ? String(value).slice(0, 5) : null);
 
         return this.db_connection.run_in_transaction(async (client) => {
+            // Resolve daily limit: use provided value, else fall back to doctor's daily_patient_limit
+            let effectiveDailyLimit = dailyLimit;
+            if (effectiveDailyLimit === null || effectiveDailyLimit === undefined) {
+                const docResult = await client.query(
+                    `SELECT daily_patient_limit FROM doctor WHERE doctor_id = $1;`,
+                    [doctorId]
+                );
+                effectiveDailyLimit = docResult.rows[0]?.daily_patient_limit ?? 30;
+            }
+
             const existingResult = await client.query(
                 `SELECT availability_id, start_time, end_time, daily_limit
                  FROM doctor_availability
@@ -300,8 +364,8 @@ class DoctorModel {
                     throw error;
                 }
 
-                if (dailyLimit !== null && dailyLimit !== undefined) {
-                    const limitValue = Number(dailyLimit);
+                if (effectiveDailyLimit !== null && effectiveDailyLimit !== undefined) {
+                    const limitValue = Number(effectiveDailyLimit);
                     if (Number.isFinite(limitValue) && bookedCount >= limitValue) {
                         const error = new Error('Daily limit cannot be lower than the number of booked appointments');
                         error.code = 'LIMIT_LOCKED';
@@ -320,7 +384,7 @@ class DoctorModel {
                          updated_at = NOW()
                      WHERE availability_id = $4
                      RETURNING *;`,
-                    [startTime, endTime, dailyLimit, existing.availability_id]
+                    [startTime, endTime, effectiveDailyLimit, existing.availability_id]
                 );
                 result = updateResult.rows[0];
             } else {
@@ -329,7 +393,7 @@ class DoctorModel {
                         (doctor_id, availability_date, start_time, end_time, daily_limit)
                      VALUES ($1, $2, $3, $4, $5)
                      RETURNING *;`,
-                    [doctorId, availabilityDate, startTime, endTime, dailyLimit]
+                     [doctorId, availabilityDate, startTime, endTime, effectiveDailyLimit]
                 );
                 result = insertResult.rows[0];
             }

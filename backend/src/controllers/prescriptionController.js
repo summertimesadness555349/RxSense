@@ -78,11 +78,11 @@ async function saveScan(db, { userId, imageUrl, imagePublicId, data, drugs, conf
         const result = await db.query_executor(
             `INSERT INTO prescription_scan
                 (user_id, patient_id, image_url, image_public_id,
-                 doctor_name, doctor_specialty, hospital_name, patient_name_rx,
-                 rx_date, diseases, tests, medications,
+                 doctor_name, doctor_specialty, doctor_qualification, hospital_name,
+                 patient_name_rx, patient_json, rx_date, diseases, tests, medications,
                  notes, follow_up, confidence, models_used)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-             RETURNING scan_id, created_at`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+             RETURNING *`,
             [
                 isUUID ? null : parseInt(userId) || null,           // user_id (integer)
                 isUUID ? userId : null,                              // patient_id (UUID)
@@ -90,8 +90,10 @@ async function saveScan(db, { userId, imageUrl, imagePublicId, data, drugs, conf
                 imagePublicId || null,
                 data.doctor?.name        || null,
                 data.doctor?.specialization || null,
+                data.doctor?.qualification || null,
                 data.clinic?.name        || null,
                 data.patient?.name       || null,
+                JSON.stringify(data.patient || {}),
                 rx.date                  || null,
                 JSON.stringify(rx.diagnosis ? [rx.diagnosis] : []),
                 JSON.stringify(rx.tests   || []),
@@ -255,21 +257,28 @@ class PrescriptionController {
 
             return res.status(200).json({
                 success: true,
-                scan_id:   scanRow?.scan_id   || null,
-                image_url: imageUrl,
-                drugs,
-                needs_review,
-                patient:  data.patient || null,
-                doctor:   data.doctor  || null,
-                hospital: data.clinic  || null,
-                date:     rxDate,
-                diseases: diagnosis ? [diagnosis] : [],
-                tests:    rxTests,
-                notes:    rxNotes,
-                followUp: rxFollowUp,
-                models_used,
+                scans:   scanRow?.rows || [],
                 vlm_available: true,
+                total:   result.rowCount,
             });
+            
+            // return res.status(200).json({
+            //     success: true,
+            //     scan_id:   scanRow?.scan_id   || null,
+            //     image_url: imageUrl,
+            //     medications: drugs,
+            //     needs_review,
+            //     patient:  data.patient || null,
+            //     doctor:   data.doctor  || null,
+            //     hospital: data.clinic  || null,
+            //     date:     rxDate,
+            //     diseases: diagnosis ? [diagnosis] : [],
+            //     tests:    rxTests,
+            //     notes:    rxNotes,
+            //     followUp: rxFollowUp,
+            //     models_used,
+            //     vlm_available: true,
+            // });
 
         } catch (error) {
             console.error('[Prescription] Analysis error:', error);

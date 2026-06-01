@@ -53,6 +53,24 @@ export const analyzePrescription = async (imageFile) => {
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || 'Analysis failed');
 
+    // Persist to localStorage prescription history
+    const result = savePrescriptionToLocal(data.scans);
+
+    return result;
+  } catch (err) {
+    throw new Error(err.message || 'Analysis failed');
+  }
+};
+
+const PRESCRIPTION_HISTORY_KEY = 'rxsense_prescription_history';
+const MAX_LOCAL_HISTORY = 30;
+
+function savePrescriptionToLocal(data) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const match = existing.find((e) => e.scan_id === data.scan_id);
+    if (match) return match;
+    
     const drugs = data.drugs || [];
 
     // Map confidence string → percentage for the UI gauge
@@ -66,7 +84,7 @@ export const analyzePrescription = async (imageFile) => {
 
     const medications = drugs.map((d, i) => ({
       id: i + 1,
-      name: d.matched_brand || d.extracted_name,
+      name:         d.matched_brand || d.extracted_name,
       generic:      d.generic      || null,
       dosage:       d.dosage_from_prescription || d.strength || null,
       frequency:    d.frequency    || null,
@@ -86,14 +104,15 @@ export const analyzePrescription = async (imageFile) => {
       });
     }
 
-    const diseases = data.diseases || [];
-    const tests    = data.tests    || [];
-    const patient  = data.patient  || null;
-    const doctor   = data.doctor   || null;
-    const hospital = data.hospital || null;
+    const doctor = {
+      name: data.doctor_name || '',
+      specialization: data.doctor_speciality || data.doctor_specialization || '',
+      qualification: data.doctor_qualification || '',
+    };
+    const hospital = {name: data.hospital_name || ''};
 
-    const diseaseList = diseases.join(', ');
-    const testList    = tests.join(', ');
+    const diseaseList = data.diseases.join(', ');
+    const testList    = data.tests.join(', ');
     const explanation =
       medications.length > 0
         ? `Prescribed ${medications.length} medication${medications.length !== 1 ? 's' : ''}: ` +
@@ -107,54 +126,51 @@ export const analyzePrescription = async (imageFile) => {
       ? new Date(data.date).toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' })
       : new Date().toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const result = {
-      scan_id:    data.scan_id   || null,
-      image_url:  data.image_url || null,
-      confidence: avgConf,
-      date:       rxDate,
-      patient,
-      doctor,
-      hospital,
-      notes:    data.notes    || null,
-      followUp: data.followUp || null,
-      medications,
-      diseases,
-      tests,
-      explanation,
-      warnings,
-    };
+    // const result = {
+    //   scan_id:    data.scan_id   || null,
+    //   image_url:  data.image_url || null,
+    //   confidence: avgConf,
+    //   date:       rxDate,
+    //   patient,
+    //   doctor,
+    //   hospital,
+    //   notes:    data.notes    || null,
+    //   followUp: data.followUp || null,
+    //   medications,
+    //   diseases,
+    //   tests,
+    //   explanation,
+    //   warnings,
+    // };
 
-    // Persist to localStorage prescription history
-    savePrescriptionToLocal(result);
-
-    return result;
-  } catch (err) {
-    throw new Error(err.message || 'Analysis failed');
-  }
-};
-
-const PRESCRIPTION_HISTORY_KEY = 'rxsense_prescription_history';
-const MAX_LOCAL_HISTORY = 30;
-
-function savePrescriptionToLocal(result) {
-  try {
-    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
     const entry = {
-      scan_id:     result.scan_id,
-      image_url:   result.image_url,
-      date:        result.date,
+      scan_id:     data.scan_id || null,
+      image_url:   data.image_url || null,
+      date:        rxDate,
       savedAt:     new Date().toISOString(),
-      confidence:  result.confidence,
-      doctor:      result.doctor,
-      hospital:    result.hospital,
-      diseases:    result.diseases,
-      tests:       result.tests,
-      medications: result.medications,
-      notes:       result.notes,
-      followUp:    result.followUp,
+      confidence:  avgConf,
+      doctor:      doctor,
+      hospital:    hospital,
+      diseases:    data.diseases,
+      tests:       data.tests,
+      medications: medications,
+      notes:       data.notes,
+      followUp:    data.followUp,
     };
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_HISTORY);
     localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+
+    return entry;
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+function saveAllPrescriptionToLocal(scans) {
+  try {
+    for (const scan of scans) {
+      savePrescriptionToLocal(scan);
+    }
   } catch {
     // localStorage unavailable — silently ignore
   }
@@ -170,8 +186,26 @@ export const getPrescriptionHistoryLocal = () => {
 
 // GET /api/prescription/history
 export const getPrescriptionHistory = async ({ limit = 50, offset = 0 } = {}) => {
+  // If local cache exists, return it instead of fetching
+  try {
+    const raw = localStorage.getItem(PRESCRIPTION_HISTORY_KEY);
+    if (raw !== null) {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+  } catch {
+    // ignore and fall through to fetch
+  }
+
   const data = await request(`/prescription/history?limit=${limit}&offset=${offset}`);
-  return data.scans || [];
+  const scans = data.scans || [];
+  // persist fetched scans to localStorage
+  try { saveAllPrescriptionToLocal(scans); } catch {}
+  return JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
 };
 
 // POST /api/prescription/chat

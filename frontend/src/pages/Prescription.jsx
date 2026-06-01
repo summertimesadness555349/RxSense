@@ -5,7 +5,7 @@ import FileDropzone from '../components/ui/FileDropzone.jsx';
 import PrescriptionChatbot from '../components/prescription/PrescriptionChatbot.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
-import { analyzePrescription, getPrescriptionHistoryLocal } from '../services/api.js';
+import { analyzePrescription, getPrescriptionHistory } from '../services/api.js';
 
 // ── Processing spinner ────────────────────────────────────────────────────────
 function ProcessingView({ stepIdx }) {
@@ -277,12 +277,19 @@ export default function Prescription() {
   const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
-    const h = getPrescriptionHistoryLocal();
-    setHistory(h);
-    if (h.length > 0) {
-      setActiveScan(h[0]);
-      setPhase('result');
-    }
+    (async () => {
+      try {
+        const h = await getPrescriptionHistory();
+        setHistory(h || []);
+        if ((h || []).length > 0) {
+          setActiveScan(h[0]);
+          setPhase('result');
+        }
+      } catch (err) {
+        console.error('Failed to load prescription history', err);
+        setHistory([]);
+      }
+    })();
   }, []);
 
   const handleUpload = async (file) => {
@@ -300,8 +307,12 @@ export default function Prescription() {
       clearInterval(stepTimer);
       setActiveScan(result);
       setPhase('result');
-      const updated = getPrescriptionHistoryLocal();
-      setHistory(updated);
+      try {
+        const updated = await getPrescriptionHistory();
+        setHistory(updated || []);
+      } catch (e) {
+        console.error('Failed to refresh prescription history', e);
+      }
       addToast(t('prescriptionSavedToast'), 'success');
     } catch (err) {
       clearInterval(stepTimer);

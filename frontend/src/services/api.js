@@ -339,20 +339,26 @@ export const checkSymptoms = async (question, messages = []) => {
 export const checkDrugInteractions = async (drugList) => {
   // Expecting drugList: [{ id?, name, dosage? }, ...]
   try {
+
     const payload = { drugs: (Array.isArray(drugList) ? drugList : []).map(d => ({ name: d.name || d })) };
     const data = await request('/drugs/interactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+
+// ─── Doctor Appointments ───────────────────────────────────────────────
+
       body: JSON.stringify(payload),
     });
 
     // Map backend shape to frontend expected shape
     const canonical = data.canonical || [];
+
     const matrix = data.matrix || [];
     const summary = data.summary || { safe: 0, warning: 0, danger: 0 };
 
     const inputs = payload.drugs.map(d => d.name);
     const names = canonical.length ? canonical : inputs;
+
     const drugs = names.map((n, idx) => ({
       id: `d${idx+1}`,
       name: n,
@@ -361,24 +367,28 @@ export const checkDrugInteractions = async (drugList) => {
     }));
 
     const interactions = (data.interactions || []).map((it) => {
+
       const aInput = (drugs.find(d => d.name.toLowerCase() === it.drugA.toLowerCase()) || {}).inputName || it.drugA;
       const bInput = (drugs.find(d => d.name.toLowerCase() === it.drugB.toLowerCase()) || {}).inputName || it.drugB;
       return {
         id: it.id || `${it.drugA}_${it.drugB}`,
         drug1: it.drugA,
         drug2: it.drugB,
+
         drug1_input: aInput,
         drug2_input: bInput,
         severity: it.category || (it.severity || 'warning'),
         title: `${it.drugA} (${aInput}) + ${it.drugB} (${bInput})`,
         description: it.description || '',
         recommendation: null,
+
       };
     });
 
     return {
       drugs,
       interactions,
+
       matrix,
       summary,
       dataSource: data.dataSource || 'Local drug interactions database',
@@ -724,6 +734,30 @@ export const updateDoctorProfile = async (doctorId, profileData) => {
   return data.doctor || null;
 };
 
+export const updateDoctorDailyLimit = async (dailyPatientLimit) => {
+  const data = await request('/doctor/limits', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dailyPatientLimit }),
+  });
+  return { doctor: data.doctor || null, effectiveDate: data.effectiveDate || null };
+};
+
+export const getDoctorAvailability = async (date) => {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const data = await request(`/doctor/availability${query}`);
+  return data.availability || null;
+};
+
+export const setDoctorAvailability = async (payload) => {
+  const data = await request('/doctor/availability', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return { availability: data.availability || null, message: data.message || null };
+};
+
 export const changeDoctorPassword = async (doctorId, passwords) => {
   const data = await request(`/doctor/change-password/${doctorId}`, {
     method: 'POST',
@@ -752,14 +786,91 @@ export const getDoctorAffiliations = async (doctorId) => {
   return data.affiliations || [];
 };
 
-export const getDoctorPatients = async (doctorId) => {
-  const data = await request(`/doctor/patients`);
+export const getDoctorPatients = async (doctorId, date) => {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const data = await request(`/doctor/patients${query}`);
   return data.patients || [];
 };
 
 export const getDoctorPatientChart = async (patientId) => {
   const data = await request(`/doctor/patients/${patientId}`);
   return data;
+};
+
+export const getDoctorAppointments = async (date) => {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const data = await request(`/doctor/appointments${query}`);
+  return data.appointments || [];
+};
+
+export const markAppointmentLate = async (appointmentId) => {
+  const data = await request(`/doctor/appointments/${appointmentId}/late`, {
+    method: 'PATCH',
+  });
+  return data.appointment || null;
+};
+
+export const markAppointmentArrived = async (appointmentId) => {
+  const data = await request(`/doctor/appointments/${appointmentId}/arrived`, {
+    method: 'PATCH',
+  });
+  return data.appointment || null;
+};
+
+export const startAppointment = async (appointmentId) => {
+  const data = await request(`/doctor/appointments/${appointmentId}/start`, {
+    method: 'PATCH',
+  });
+  return data.appointment || null;
+};
+
+export const completeAppointment = async (appointmentId) => {
+  const data = await request(`/doctor/appointments/${appointmentId}/complete`, {
+    method: 'PATCH',
+  });
+  return data.appointment || null;
+};
+
+export const getDoctorsForBooking = async () => {
+  const data = await request('/patient/doctors');
+  return data.doctors || [];
+};
+
+export const getDoctorAvailabilityForPatient = async (doctorId, date) => {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const data = await request(`/patient/doctors/${doctorId}/availability${query}`);
+  return data;
+};
+
+// ─── Patient Appointment APIs ──────────────────────────────────────────
+
+export const createAppointment = async (payload) => {
+  const data = await request('/patient/appointments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return data.appointment || null;
+};
+
+export const getPatientAppointments = async (date) => {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const data = await request(`/patient/appointments${query}`);
+  return data.appointments || [];
+};
+
+export const patientMarkArrived = async (appointmentId) => {
+  const data = await request(`/patient/appointments/${appointmentId}/arrive`, {
+    method: 'PATCH',
+  });
+  return data.appointment || null;
+};
+
+export const cancelAppointment = async (appointmentId) => {
+  const data = await request(`/patient/appointments/${appointmentId}/cancel`, {
+    method: 'PATCH',
+  });
+  return data.appointment || null;
 };
 
 export const checkPrescriptionSafety = async (patientId, items) => {

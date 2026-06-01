@@ -1,11 +1,29 @@
 const DB_Connection = require('../database/db.js');
+const AppointmentModel = require('./appointmentModel.js');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 class PatientModel {
     constructor() {
         this.db_connection = new DB_Connection();
+        this.appointmentModel = new AppointmentModel();
     }
+
+    bookAppointment = async ({ doctorId, patientId, appointmentDate }) => {
+        return this.appointmentModel.createAppointmentWithLimit({
+            doctorId,
+            patientId,
+            appointmentDate,
+        });
+    };
+
+    getPatientAppointments = async (patientId, appointmentDate = null) => {
+        return this.appointmentModel.getPatientAppointments(patientId, appointmentDate);
+    };
+
+    cancelAppointment = async (appointmentId, patientId) => {
+        return this.appointmentModel.cancelAppointmentForPatient(appointmentId, patientId);
+    };
 
     getPatientProfile = async ({ patientId } = {}) => {
         try {

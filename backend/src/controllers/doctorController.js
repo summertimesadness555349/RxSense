@@ -16,6 +16,29 @@ class DoctorController {
         this.refresh_token_expiry = process.env.REFRESH_TOKEN_DAYS || '30d';
     }
 
+    normalizeDate = (dateValue) => {
+        if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+            return dateValue;
+        }
+        if (dateValue) {
+            const parsed = new Date(dateValue);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toISOString().slice(0, 10);
+            }
+        }
+        return new Date().toISOString().slice(0, 10);
+    };
+
+    parseTimeToMinutes = (timeValue) => {
+        if (!timeValue || typeof timeValue !== 'string') return null;
+        const match = timeValue.match(/^(\d{2}):(\d{2})/);
+        if (!match) return null;
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+        return hours * 60 + minutes;
+    };
+
     generateTokens = (doctor) => {
         const accessPayload = {
             sub: doctor.doctor_id,
@@ -122,7 +145,8 @@ class DoctorController {
                     license_number: doctor.license_number,
                     gender: doctor.gender,
                     username: doctor.username,
-                    email: doctor.email
+                    email: doctor.email,
+                    daily_patient_limit: doctor.daily_patient_limit,
                 },
                 tokens: { accessToken, refreshToken }
             });
@@ -285,13 +309,197 @@ class DoctorController {
     // Patient Queries
     getPatients = async (req, res) => {
         try {
-            const patients = await this.doctorModel.getAllPatients();
+            const requestedDate = this.normalizeDate(req.query?.date);
+            const patients = await this.doctorModel.getPatientsByAppointmentDate(req.doctor.doctor_id, requestedDate);
             return res.status(200).json({
                 success: true,
                 patients
             });
         } catch (error) {
             console.error('Get patients list error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    getAppointments = async (req, res) => {
+        try {
+            const requestedDate = this.normalizeDate(req.query?.date);
+            const appointments = await this.doctorModel.getAppointmentsByDate(req.doctor.doctor_id, requestedDate);
+            return res.status(200).json({
+                success: true,
+                appointments
+            });
+        } catch (error) {
+            console.error('Get appointments error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    updateDailyLimit = async (req, res) => {
+        try {
+            const { dailyPatientLimit } = req.body || {};
+
+            const updates = {};
+            if (dailyPatientLimit !== undefined) {
+                const limitValue = Number(dailyPatientLimit);
+                if (!Number.isFinite(limitValue) || limitValue < 1) {
+                    return res.status(400).json({ success: false, error: 'dailyPatientLimit must be a positive number' });
+                }
+                updates.daily_patient_limit = limitValue;
+            }
+
+            if (Object.keys(updates).length === 0) {
+                return res.status(400).json({ success: false, error: 'No update parameters provided' });
+            }
+
+            const updatedDoctor = await this.doctorModel.updateDoctor(req.doctor.doctor_id, updates);
+
+            let effectiveDate = null;
+            // console.log(`[updateDailyLimit] doctorId=${req.doctor.doctor_id} newLimit=${updates.daily_patient_limit} checking for effective date...`);
+            if (updates.daily_patient_limit !== undefined) {
+                effectiveDate = await this.doctorModel.findFirstAvailableDate(req.doctor.doctor_id, updates.daily_patient_limit);
+                console.log(`[updateDailyLimit] doctorId=${req.doctor.doctor_id} newLimit=${updates.daily_patient_limit} effectiveDate=${effectiveDate}`);
+            }
+
+            return res.status(200).json({
+                success: true,
+                doctor: updatedDoctor,
+                effectiveDate,
+            });
+        } catch (error) {
+            console.error('Update daily limit error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    getAvailability = async (req, res) => {
+        try {
+            const requestedDate = this.normalizeDate(req.query?.date);
+            const availability = await this.doctorModel.getAvailabilityByDate(req.doctor.doctor_id, requestedDate);
+            return res.status(200).json({ success: true, availability });
+        } catch (error) {
+            console.error('Get availability error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    setAvailability = async (req, res) => {
+        try {
+            const { date, startTime, endTime, dailyLimit } = req.body || {};
+
+            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+                return res.status(400).json({ success: false, error: 'date must be YYYY-MM-DD' });
+            }
+
+            const startMinutes = this.parseTimeToMinutes(startTime);
+            const endMinutes = this.parseTimeToMinutes(endTime);
+            if (startMinutes == null || endMinutes == null || endMinutes <= startMinutes) {
+                return res.status(400).json({ success: false, error: 'Invalid availability time range' });
+            }
+
+            let limitValue = null;
+            if (dailyLimit !== undefined && dailyLimit !== null && String(dailyLimit).trim() !== '') {
+                limitValue = Number(dailyLimit);
+                if (!Number.isFinite(limitValue) || limitValue < 1) {
+                    return res.status(400).json({ success: false, error: 'dailyLimit must be a positive number' });
+                }
+            }
+
+            const availability = await this.doctorModel.upsertAvailability({
+                doctorId: req.doctor.doctor_id,
+                availabilityDate: date,
+                startTime,
+                endTime,
+                dailyLimit: limitValue,
+            });
+
+            return res.status(200).json({
+                success: true,
+                availability,
+                message: `Availability active from ${date} onwards. Dates with existing bookings retain their original times.`,
+            });
+        } catch (error) {
+            if (error.code === 'SCHEDULE_LOCKED') {
+                return res.status(409).json({
+                    success: false,
+                    error: error.message || 'Time changes only apply to future dates without bookings.',
+                });
+            }
+            if (error.code === 'LIMIT_LOCKED') {
+                return res.status(409).json({ success: false, error: 'Daily limit cannot be set below booked appointments' });
+            }
+            console.error('Set availability error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    markAppointmentLate = async (req, res) => {
+        try {
+            const { appointmentId } = req.params;
+            const updated = await this.doctorModel.updateAppointment(appointmentId, req.doctor.doctor_id, {
+                status: 'late',
+                priority_flag: true,
+                priority_reason: 'late',
+                updated_at: new Date().toISOString(),
+            });
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or not eligible' });
+            }
+            return res.status(200).json({ success: true, appointment: updated });
+        } catch (error) {
+            console.error('Mark appointment late error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    markAppointmentArrived = async (req, res) => {
+        try {
+            const { appointmentId } = req.params;
+            const updated = await this.doctorModel.updateAppointment(appointmentId, req.doctor.doctor_id, {
+                arrival_time: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or not eligible' });
+            }
+            return res.status(200).json({ success: true, appointment: updated });
+        } catch (error) {
+            console.error('Mark appointment arrived error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    startAppointment = async (req, res) => {
+        try {
+            const { appointmentId } = req.params;
+            const updated = await this.doctorModel.updateAppointment(appointmentId, req.doctor.doctor_id, {
+                status: 'in_progress',
+                seen_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or not eligible' });
+            }
+            return res.status(200).json({ success: true, appointment: updated });
+        } catch (error) {
+            console.error('Start appointment error:', error);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    completeAppointment = async (req, res) => {
+        try {
+            const { appointmentId } = req.params;
+            const updated = await this.doctorModel.updateAppointment(appointmentId, req.doctor.doctor_id, {
+                status: 'completed',
+                updated_at: new Date().toISOString(),
+            });
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or not eligible' });
+            }
+            return res.status(200).json({ success: true, appointment: updated });
+        } catch (error) {
+            console.error('Complete appointment error:', error);
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
     };

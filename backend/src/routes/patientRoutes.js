@@ -35,6 +35,36 @@ patientRouter.get('/me/active-medications',
     patientController.getActiveMedications
 );
 
+patientRouter.get('/doctors',
+    authenticateToken.authenticateToken,
+    patientController.listDoctors
+);
+
+patientRouter.get('/doctors/:doctorId/availability',
+    authenticateToken.authenticateToken,
+    patientController.getDoctorAvailability
+);
+
+patientRouter.post('/appointments',
+    authenticateToken.authenticateToken,
+    patientController.bookAppointment
+);
+
+patientRouter.get('/appointments',
+    authenticateToken.authenticateToken,
+    patientController.getAppointments
+);
+
+patientRouter.patch('/appointments/:appointmentId/arrive',
+    authenticateToken.authenticateToken,
+    patientController.markArrival
+);
+
+patientRouter.patch('/appointments/:appointmentId/cancel',
+    authenticateToken.authenticateToken,
+    patientController.cancelAppointment
+);
+
 patientRouter.get('/profile/:patientId',
     authenticateToken.authenticateToken,
     patientController.getProfile

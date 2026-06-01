@@ -21,6 +21,7 @@ import HistoryFamily from './pages/HistoryFamily.jsx';
 import Symptoms from './pages/Symptoms.jsx';
 import Drugs from './pages/Drugs.jsx';
 import NearMe from './pages/NearMe.jsx';
+import Appointments from './pages/Appointments.jsx';
 import Settings from './pages/Settings.jsx';
 import DoctorDashboard from './pages/DoctorDashboard.jsx';
 import DoctorPatients from './pages/DoctorPatients.jsx';
@@ -65,6 +66,7 @@ export default function App() {
                   <Route path="/symptoms" element={<Symptoms />} />
                   <Route path="/drugs" element={<Drugs />} />
                   <Route path="/near-me" element={<NearMe />} />
+                  <Route path="/appointments" element={<Appointments />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
 

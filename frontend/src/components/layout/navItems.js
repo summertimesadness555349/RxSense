@@ -9,6 +9,7 @@ export const patientNavItems = [
   { to: '/dashboard',    icon: LayoutDashboard, labelKey: 'navDashboard',     tooltipKey: 'navDashboard' },
   { to: '/prescription', icon: FileText,        labelKey: 'navPrescriptions',  tooltipKey: 'navTooltipPrescriptions' },
   { to: '/report',       icon: FlaskConical,    labelKey: 'navReports',        tooltipKey: 'navTooltipReports' },
+  { to: '/appointments', icon: Users,           labelKey: 'navAppointments',   tooltipKey: 'navTooltipAppointments' },
   { to: '/history',      icon: History,         labelKey: 'navHealthRecord',   tooltipKey: 'navTooltipHealthRecord', highlight: true },
   { to: '/symptoms',     icon: Stethoscope,     labelKey: 'navSymptoms',       tooltipKey: 'navTooltipSymptoms' },
   { to: '/drugs',        icon: Pill,            labelKey: 'navDrugCheck',      tooltipKey: 'navTooltipDrugCheck' },
@@ -20,3 +21,4 @@ export const doctorNavItems = [
   { to: '/doctor/patients',  icon: Users,           labelKey: 'navMyPatients', tooltipKey: 'navTooltipMyPatients' },
   { to: '/doctor/settings',  icon: Building2,       labelKey: 'navSettings',   tooltipKey: 'navTooltipSettings' },
 ];
+

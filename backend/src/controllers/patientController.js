@@ -2,6 +2,8 @@ const sharp         = require('sharp');
 const patientModel  = require('../models/patientModel');
 const ReportAnalysisUtils  = require('../utils/reportAnalysisUtils.js');
 const { uploadReportBuffer } = require('../utils/cloudinary.js');
+const AppointmentModel = require('../models/appointmentModel.js');
+const DoctorModel = require('../models/doctorModel.js');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -100,7 +102,14 @@ class PatientController {
     constructor() {
         this.patientModel        = new patientModel();
         this.reportAnalysisUtils = new ReportAnalysisUtils();
+        this.doctorModel         = new DoctorModel();
+        this.appointmentModel    = new AppointmentModel();
     }
+
+    resolvePatientId = async (userId) => {
+        const identity = await this.patientModel.resolvePatientIdentity(userId);
+        return identity.patientId || (UUID_RE.test(String(userId || '')) ? userId : null);
+    };
 
     analyzeReport = async (req, res) => {
         try {
@@ -280,6 +289,119 @@ class PatientController {
             return res.status(200).json({ success: true, medications });
         } catch (error) {
             console.error('[Patient] getActiveMedications error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    bookAppointment = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(400).json({ success: false, error: 'Patient ID required' });
+
+        const patientId = await this.resolvePatientId(userId);
+        if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+        const { doctorId, appointmentDate } = req.body || {};
+
+        if (!doctorId || !appointmentDate) {
+            return res.status(400).json({ success: false, error: 'doctorId and appointmentDate are required' });
+        }
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(appointmentDate))) {
+            return res.status(400).json({ success: false, error: 'appointmentDate must be YYYY-MM-DD' });
+        }
+
+        const toLocalDateString = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const today = toLocalDateString(new Date());
+        const tomorrow = toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
+        if (appointmentDate !== today && appointmentDate !== tomorrow) {
+            return res.status(400).json({
+                success: false,
+                error: 'Appointments can only be booked for today or tomorrow',
+            });
+        }
+
+        const appointment = await this.patientModel.bookAppointment({
+            doctorId,
+            patientId,
+            appointmentDate,
+        });
+
+        return res.status(201).json({ success: true, appointment });
+    } catch (error) {
+        if (error.code === 'DOCTOR_NOT_FOUND') {
+            return res.status(404).json({ success: false, error: 'Doctor not found' });
+        }
+        if (error.code === 'DAILY_LIMIT_REACHED') {
+            return res.status(409).json({ success: false, error: 'Doctor appointment limit reached for this date' });
+        }
+        if (error.code === 'PATIENT_ALREADY_BOOKED') {
+            return res.status(409).json({ success: false, error: 'You already have an appointment with this doctor on this date' });
+        }
+        console.error('[Patient] bookAppointment error:', error.message);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+    getAppointments = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Patient ID required' });
+
+            const patientId = await this.resolvePatientId(userId);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const date = req.query?.date || null;
+            const appointments = await this.patientModel.getPatientAppointments(patientId, date);
+            return res.status(200).json({ success: true, appointments });
+        } catch (error) {
+            console.error('[Patient] getAppointments error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    markArrival = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Auth required' });
+
+            const patientId = await this.resolvePatientId(userId);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const { appointmentId } = req.params;
+            const updated = await this.appointmentModel.patientMarkArrived(appointmentId, patientId);
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or not eligible' });
+            }
+            return res.status(200).json({ success: true, appointment: updated });
+        } catch (error) {
+            console.error('[Patient] markArrival error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    cancelAppointment = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Patient ID required' });
+
+            const patientId = await this.resolvePatientId(userId);
+            if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            const { appointmentId } = req.params;
+            const updated = await this.patientModel.cancelAppointment(appointmentId, patientId);
+            if (!updated) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or not eligible' });
+            }
+            return res.status(200).json({ success: true, appointment: updated });
+        } catch (error) {
+            console.error('[Patient] cancelAppointment error:', error.message);
             return res.status(500).json({ success: false, error: error.message });
         }
     };
@@ -584,6 +706,42 @@ class PatientController {
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
     };
+    
+    listDoctors = async (req, res) => {
+        try {
+            const doctors = await this.doctorModel.getDoctorsForBooking();
+            return res.status(200).json({ success: true, doctors });
+        } catch (error) {
+            console.error('[Doctors] list error:', error.message);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+    getDoctorAvailability = async (req, res) => {
+        try {
+            const { doctorId } = req.params || {};
+            const date = req.query?.date || null;
+
+            if (!doctorId) {
+                return res.status(400).json({ success: false, error: 'doctorId is required' });
+            }
+            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+                return res.status(400).json({ success: false, error: 'date must be YYYY-MM-DD' });
+            }
+
+            const availability = await this.doctorModel.getAvailabilityByDate(doctorId, date);
+
+            return res.status(200).json({
+                success: true,
+                availability
+            });
+        } catch (error) {
+            console.error('[Doctors] availability error:', error.message);
+            return res.status(500).json({ success: false, error: 'Internal server error' });
+        }
+    };
+
+
 }
 
 module.exports = PatientController;

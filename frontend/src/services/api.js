@@ -146,6 +146,7 @@ function savePrescriptionToLocal(data) {
 
     const entry = {
       scan_id:     data.scan_id || null,
+      patient_id:  data.patient_id || null,
       image_url:   data.image_url || null,
       date:        rxDate,
       savedAt:     new Date().toISOString(),
@@ -208,6 +209,47 @@ export const getPrescriptionHistory = async ({ limit = 50, offset = 0 } = {}) =>
   // persist fetched scans to localStorage
   try { saveAllPrescriptionToLocal(scans); } catch {}
   return JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+};
+
+function updatePrescriptionHistoryLocal(scanId, updater) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const updated = existing.map((entry) => {
+      if (entry.scan_id !== scanId) return entry;
+      return updater(entry);
+    });
+    localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+export const savePrescriptionScan = async (scanId) => {
+  const data = await request(`/prescription/save/${scanId}`, {
+    method: 'PATCH',
+  });
+
+  const patientId = data.scan?.patient_id ?? null;
+  updatePrescriptionHistoryLocal(scanId, (entry) => ({
+    ...entry,
+    patient_id: patientId,
+  }));
+
+  return data.scan || null;
+};
+
+export const removePrescriptionScan = async (scanId) => {
+  const data = await request(`/prescription/remove/${scanId}`, {
+    method: 'PATCH',
+  });
+
+  updatePrescriptionHistoryLocal(scanId, (entry) => ({
+    ...entry,
+    patient_id: null,
+  }));
+
+  return data.scan || null;
 };
 
 // POST /api/prescription/chat

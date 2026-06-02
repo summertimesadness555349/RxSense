@@ -112,6 +112,11 @@ const translations = {
     uploadPrescriptionBtn:    'Upload Prescription',
     scanAnotherBtn:           'Scan Another Prescription',
     cancelBtn:                'Cancel',
+    savePrescBtn:             'Save as Your Record',
+    removePrescBtn:           'Remove from Your Record',
+    prescriptionRemovedToast: 'Prescription removed from your Health Record!',
+    deletePrescBtn:           'Delete Prescription',
+    saveWarningForName:       'The name on the prescription ({name}) does not match your profile name ({profileName}). Are you sure you want to save this prescription to your health record?',
 
     // ── Report page ───────────────────────────────────────────────────────
     reportPageTitle:          'Medical Report Analyzer',
@@ -599,6 +604,11 @@ const translations = {
     uploadPrescriptionBtn:    'প্রেসক্রিপশন আপলোড করুন',
     scanAnotherBtn:           'আরেকটি প্রেসক্রিপশন স্ক্যান করুন',
     cancelBtn:                'বাতিল',
+    savePrescBtn:             'আপনার রেকর্ড হিসেবে সংরক্ষণ',
+    removePrescBtn:           'আপনার রেকর্ড থেকে মুছুন',
+    prescriptionRemovedToast: 'প্রেসক্রিপশন স্বাস্থ্য রেকর্ড থেকে মুছে ফেলা হয়েছে!',
+    deletePrescBtn:           'প্রেসক্রিপশন মুছুন',
+    saveWarningForName:       'প্রেসক্রিপশনের নাম ({name}) আপনার প্রোফাইলের নাম ({profileName}) এর সাথে মেলে না। আপনি কি নিশ্চিত যে এই প্রেসক্রিপশনটি আপনার স্বাস্থ্য রেকর্ডে সংরক্ষণ করতে চান?',
 
     reportPageTitle:          'মেডিকেল রিপোর্ট বিশ্লেষক',
     reportPageSubtitle:       'যেকোনো ল্যাব রিপোর্ট আপলোড করুন — আমরা বাংলায় সব ফলাফল ব্যাখ্যা করব।',

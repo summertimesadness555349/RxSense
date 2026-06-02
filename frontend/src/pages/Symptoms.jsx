@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatBubble from '../components/symptoms/ChatBubble.jsx';
 import NearMePanel from '../components/nearby/NearMePanel.jsx';
 import DisclaimerBanner from '../components/ui/DisclaimerBanner.jsx';
-import { quickSymptomChips } from '../data/mockConversations.js';
 import { checkSymptoms } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
@@ -12,6 +11,11 @@ import { dayLabel, needsDaySeparator, relativeTime } from '../utils/timeUtils.js
 
 const SESSIONS_KEY = 'rxsense_symptom_sessions';
 const MAX_SESSIONS = 20;
+
+const quickSymptomChips = [
+  'Headache', 'Fever', 'Chest Pain', 'Fatigue', 'Cough',
+  'Stomach Pain', 'Dizziness', 'Skin Rash', 'Shortness of Breath', 'Nausea',
+];
 
 function loadSessions() {
   try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) || '[]'); }

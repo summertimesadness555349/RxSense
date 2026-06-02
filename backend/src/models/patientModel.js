@@ -295,7 +295,7 @@ class PatientModel {
                 'report'           AS source,
                 report_type        AS doc_type,
                 image_url,
-                COALESCE(report_date, uploaded_at::date)::text AS doc_date,
+                COALESCE(report_date, uploaded_at::date::text)::text AS doc_date,
                 facility,
                 ordering_doctor    AS doctor,
                 uploaded_at        AS created_at
@@ -317,7 +317,7 @@ class PatientModel {
                     'prescription' AS source,
                     'prescription' AS doc_type,
                     image_url,
-                    COALESCE(rx_date, created_at::date)::text AS doc_date,
+                    COALESCE(rx_date, created_at::date::text)::text AS doc_date,
                     hospital_name  AS facility,
                     doctor_name    AS doctor,
                     created_at

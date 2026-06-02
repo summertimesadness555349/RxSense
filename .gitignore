@@ -4,6 +4,7 @@ node_modules/
 frontend/.env
 backend/src/.env
 backend/.env
+ignore/
 
 # Large binary files — keep local, never push
 extra/*.pdf

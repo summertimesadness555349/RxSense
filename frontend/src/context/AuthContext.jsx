@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
   const login = (userData, token) => {
     setUser(userData);
     localStorage.setItem('rxsense_user', JSON.stringify(userData));
-    localStorage.setItem('rxsense_token', token);
+    if (token) localStorage.setItem('rxsense_token', token);
   };
 
   const logout = () => {
@@ -29,6 +29,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('rxsense_user');
     localStorage.removeItem('rxsense_token');
     localStorage.removeItem('rxsense_access_token');
+
+    localStorage.removeItem('rxsense_prescription_chats');
+    localStorage.removeItem('rxsense_prescription_history');
+
+    localStorage.removeItem('rxsense_report_chats');
+    // localStorage.removeItem('rxsense_report_history');
+
+    localStorage.removeItem('rxsense_symptom_sessions');
   };
 
   return (

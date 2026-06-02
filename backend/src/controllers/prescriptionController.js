@@ -2,6 +2,8 @@ const sharp                        = require('sharp');
 const { matchAllTokens }           = require('../utils/drugMatcher.js');
 const { uploadPrescriptionBuffer } = require('../utils/cloudinary.js');
 const DB_Connection                = require('../database/db.js');
+const PatientModel                 = require('../models/patientModel');
+const patientModel                 = new PatientModel();
 
 // Formats PrescriptoAI cannot handle — convert to JPEG first
 const UNSUPPORTED_MIMETYPES = new Set([
@@ -72,26 +74,28 @@ async function callMedGemmaDosages(fileBuffer, mimetype, filename, drugNames) {
 
 async function saveScan(db, { userId, imageUrl, imagePublicId, data, drugs, confidence, modelsUsed }) {
     const rx = data.prescription || {};
-    const isUUID = UUID_RE.test(String(userId || ''));
+    const { patientId, userId: resolvedUserId } = await patientModel.resolvePatientIdentity(userId);
 
     try {
         const result = await db.query_executor(
             `INSERT INTO prescription_scan
                 (user_id, patient_id, image_url, image_public_id,
-                 doctor_name, doctor_specialty, hospital_name, patient_name_rx,
-                 rx_date, diseases, tests, medications,
+                 doctor_name, doctor_specialty, doctor_qualification, hospital_name,
+                 patient_name_rx, patient_json, rx_date, diseases, tests, medications,
                  notes, follow_up, confidence, models_used)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-             RETURNING scan_id, created_at`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+             RETURNING *`,
             [
-                isUUID ? null : parseInt(userId) || null,           // user_id (integer)
-                isUUID ? userId : null,                              // patient_id (UUID)
+                resolvedUserId,          // user_id (integer)
+                patientId,               // patient_id (UUID)
                 imageUrl,
                 imagePublicId || null,
                 data.doctor?.name        || null,
                 data.doctor?.specialization || null,
+                data.doctor?.qualification || null,
                 data.clinic?.name        || null,
                 data.patient?.name       || null,
+                JSON.stringify(data.patient || {}),
                 rx.date                  || null,
                 JSON.stringify(rx.diagnosis ? [rx.diagnosis] : []),
                 JSON.stringify(rx.tests   || []),
@@ -107,6 +111,27 @@ async function saveScan(db, { userId, imageUrl, imagePublicId, data, drugs, conf
         console.warn('[Prescription] Failed to save scan to DB:', err.message);
         return null;
     }
+}
+
+async function updateScanPatientId(db, { scanId, patientId }) {
+    const result = await db.query_executor(
+        `UPDATE prescription_scan
+         SET patient_id = $2
+         WHERE scan_id = $1
+         RETURNING *;`,
+        [scanId, patientId]
+    );
+    return result.rows[0] || null;
+}
+
+async function deleteScanById(db, { scanId }) {
+    const result = await db.query_executor(
+        `DELETE FROM prescription_scan
+         WHERE scan_id = $1
+         RETURNING *;`,
+        [scanId]
+    );
+    return result.rows[0] || null;
 }
 
 class PrescriptionController {
@@ -180,22 +205,30 @@ class PrescriptionController {
                 }) : null;
 
                 return res.status(200).json({
-                    success:   true,
-                    scan_id:   scanRow?.scan_id   || null,
-                    image_url: imageUrl,
-                    drugs: [],
-                    needs_review: [],
-                    patient:  data.patient || null,
-                    doctor:   data.doctor  || null,
-                    hospital: data.clinic  || null,
-                    date:     rxDate,
-                    diseases: diagnosis ? [diagnosis] : [],
-                    tests:    rxTests,
-                    notes:    rxNotes,
-                    followUp: rxFollowUp,
-                    models_used: ['prescriptoai'],
+                    success: true,
+                    scans:   scanRow?.rows || [],
+                    // vlm_available: true,
+                    total:   result.rowCount,
                     message: 'No medications detected',
                 });
+
+                // return res.status(200).json({
+                //     success:   true,
+                //     scan_id:   scanRow?.scan_id   || null,
+                //     image_url: imageUrl,
+                //     medications: [],
+                //     needs_review: [],
+                //     patient:  data.patient || null,
+                //     doctor:   data.doctor  || null,
+                //     hospital: data.clinic  || null,
+                //     date:     rxDate,
+                //     diseases: diagnosis ? [diagnosis] : [],
+                //     tests:    rxTests,
+                //     notes:    rxNotes,
+                //     followUp: rxFollowUp,
+                //     models_used: ['prescriptoai'],
+                //     message: 'No medications detected',
+                // });
             }
 
             // 3. Fuzzy match + MedGemma dosages in parallel
@@ -255,21 +288,28 @@ class PrescriptionController {
 
             return res.status(200).json({
                 success: true,
-                scan_id:   scanRow?.scan_id   || null,
-                image_url: imageUrl,
-                drugs,
-                needs_review,
-                patient:  data.patient || null,
-                doctor:   data.doctor  || null,
-                hospital: data.clinic  || null,
-                date:     rxDate,
-                diseases: diagnosis ? [diagnosis] : [],
-                tests:    rxTests,
-                notes:    rxNotes,
-                followUp: rxFollowUp,
-                models_used,
+                scans:   scanRow?.rows || [],
                 vlm_available: true,
+                total:   result.rowCount,
             });
+            
+            // return res.status(200).json({
+            //     success: true,
+            //     scan_id:   scanRow?.scan_id   || null,
+            //     image_url: imageUrl,
+            //     medications: drugs,
+            //     needs_review,
+            //     patient:  data.patient || null,
+            //     doctor:   data.doctor  || null,
+            //     hospital: data.clinic  || null,
+            //     date:     rxDate,
+            //     diseases: diagnosis ? [diagnosis] : [],
+            //     tests:    rxTests,
+            //     notes:    rxNotes,
+            //     followUp: rxFollowUp,
+            //     models_used,
+            //     vlm_available: true,
+            // });
 
         } catch (error) {
             console.error('[Prescription] Analysis error:', error);
@@ -294,8 +334,9 @@ class PrescriptionController {
             const offset = Math.max(parseInt(req.query.offset || '0'), 0);
 
             const result = await this.db.query_executor(
-                `SELECT scan_id, image_url, doctor_name, doctor_specialty, hospital_name,
-                        patient_name_rx, rx_date, diseases, tests, medications,
+                `SELECT scan_id, patient_id, image_url, doctor_name, doctor_specialty, doctor_qualification,
+                        hospital_name, patient_name_rx, patient_json,
+                        rx_date, diseases, tests, medications,
                         notes, follow_up, confidence, models_used, created_at
                  FROM prescription_scan
                  ${whereClause}
@@ -311,6 +352,68 @@ class PrescriptionController {
             });
         } catch (error) {
             console.error('[Prescription] History error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    savePrescriptionScan = async (req, res) => {
+        try {
+            const { scanId } = req.params;
+            if (!scanId) {
+                return res.status(400).json({ success: false, error: 'scan_id is required' });
+            }
+
+            const { patientId } = await patientModel.resolvePatientIdentity(req.user?.id);
+            if (!patientId) {
+                return res.status(400).json({ success: false, error: 'Unable to resolve patient identity' });
+            }
+
+            const scan = await updateScanPatientId(this.db, { scanId, patientId });
+            if (!scan) {
+                return res.status(404).json({ success: false, error: 'Prescription scan not found' });
+            }
+
+            return res.status(200).json({ success: true, scan });
+        } catch (error) {
+            console.error('[Prescription] Save scan error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    removePrescriptionScan = async (req, res) => {
+        try {
+            const { scanId } = req.params;
+            if (!scanId) {
+                return res.status(400).json({ success: false, error: 'scan_id is required' });
+            }
+
+            const scan = await updateScanPatientId(this.db, { scanId, patientId: null });
+            if (!scan) {
+                return res.status(404).json({ success: false, error: 'Prescription scan not found' });
+            }
+
+            return res.status(200).json({ success: true, scan });
+        } catch (error) {
+            console.error('[Prescription] Remove scan error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    deletePrescriptionScan = async (req, res) => {
+        try {
+            const { scanId } = req.params;
+            if (!scanId) {
+                return res.status(400).json({ success: false, error: 'scan_id is required' });
+            }
+
+            const scan = await deleteScanById(this.db, { scanId });
+            if (!scan) {
+                return res.status(404).json({ success: false, error: 'Prescription scan not found' });
+            }
+
+            return res.status(200).json({ success: true, scan });
+        } catch (error) {
+            console.error('[Prescription] Delete scan error:', error);
             return res.status(500).json({ success: false, error: error.message });
         }
     };

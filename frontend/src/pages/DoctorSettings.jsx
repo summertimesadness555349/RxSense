@@ -105,7 +105,8 @@ export default function DoctorSettings() {
     setProfileLoading(true);
     try {
       const updated = await updateDoctorProfile(user.id, profileForm);
-      login({ ...user, ...updated }, localStorage.getItem('rxsense_token'));
+      // login helper in AuthContext merges/updates stored user object; token preserved via context
+      login({ ...user, ...updated });
       addToast('Profile updated successfully!', 'success');
     } catch (err) {
       addToast(err.message || 'Failed to update profile', 'error');

@@ -1,11 +1,6 @@
 
-import { mockPrescriptionResult } from '../data/mockPrescriptions.js';
 import { mockUser } from '../data/mockUser.js';
 import { mockCurrentMedications, mockPastMedications } from '../data/mockMedications.js';
-import { mockDocuments } from '../data/mockDocuments.js';
-import { mockFamilyMembers, mockHereditaryRisks, mockGeneticRiskScores } from '../data/mockFamilyHistory.js';
-import { mockConversation } from '../data/mockConversations.js';
-import { mockDrugInteractionResult } from '../data/mockDrugInteractions.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
@@ -58,7 +53,25 @@ export const analyzePrescription = async (imageFile) => {
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || 'Analysis failed');
 
-    const drugs = data.drugs || [];
+    // Persist to localStorage prescription history
+    const result = savePrescriptionToLocal(data.scans);
+
+    return result;
+  } catch (err) {
+    throw new Error(err.message || 'Analysis failed');
+  }
+};
+
+const PRESCRIPTION_HISTORY_KEY = 'rxsense_prescription_history';
+const MAX_LOCAL_HISTORY = 30;
+
+function savePrescriptionToLocal(data) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const match = existing.find((e) => e.scan_id === data.scan_id);
+    if (match) return match;
+
+    const drugs = data.medications || [];
 
     // Map confidence string → percentage for the UI gauge
     const confMap = { high: 100, medium: 70, low: 30 };
@@ -71,7 +84,7 @@ export const analyzePrescription = async (imageFile) => {
 
     const medications = drugs.map((d, i) => ({
       id: i + 1,
-      name: d.matched_brand || d.extracted_name,
+      name:         d.matched_brand || d.extracted_name,
       generic:      d.generic      || null,
       dosage:       d.dosage_from_prescription || d.strength || null,
       frequency:    d.frequency    || null,
@@ -91,14 +104,16 @@ export const analyzePrescription = async (imageFile) => {
       });
     }
 
-    const diseases = data.diseases || [];
-    const tests    = data.tests    || [];
-    const patient  = data.patient  || null;
-    const doctor   = data.doctor   || null;
-    const hospital = data.hospital || null;
+    const patient = data.patient_json || {name: data.patient_name_rx || null, age: null, gender: null};
+    const doctor = {
+      name: data.doctor_name || '',
+      specialization: data.doctor_speciality || data.doctor_specialization || '',
+      qualification: data.doctor_qualification || '',
+    };
+    const hospital = {name: data.hospital_name || ''};
 
-    const diseaseList = diseases.join(', ');
-    const testList    = tests.join(', ');
+    const diseaseList = data.diseases.join(', ');
+    const testList    = data.tests.join(', ');
     const explanation =
       medications.length > 0
         ? `Prescribed ${medications.length} medication${medications.length !== 1 ? 's' : ''}: ` +
@@ -112,54 +127,53 @@ export const analyzePrescription = async (imageFile) => {
       ? new Date(data.date).toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' })
       : new Date().toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const result = {
-      scan_id:    data.scan_id   || null,
-      image_url:  data.image_url || null,
-      confidence: avgConf,
-      date:       rxDate,
-      patient,
-      doctor,
-      hospital,
-      notes:    data.notes    || null,
-      followUp: data.followUp || null,
-      medications,
-      diseases,
-      tests,
-      explanation,
-      warnings,
-    };
+    // const result = {
+    //   scan_id:    data.scan_id   || null,
+    //   image_url:  data.image_url || null,
+    //   confidence: avgConf,
+    //   date:       rxDate,
+    //   patient,
+    //   doctor,
+    //   hospital,
+    //   notes:    data.notes    || null,
+    //   followUp: data.followUp || null,
+    //   medications,
+    //   diseases,
+    //   tests,
+    //   explanation,
+    //   warnings,
+    // };
 
-    // Persist to localStorage prescription history
-    savePrescriptionToLocal(result);
-
-    return result;
-  } catch (err) {
-    throw new Error(err.message || 'Analysis failed');
-  }
-};
-
-const PRESCRIPTION_HISTORY_KEY = 'rxsense_prescription_history';
-const MAX_LOCAL_HISTORY = 30;
-
-function savePrescriptionToLocal(result) {
-  try {
-    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
     const entry = {
-      scan_id:     result.scan_id,
-      image_url:   result.image_url,
-      date:        result.date,
+      scan_id:     data.scan_id || null,
+      patient_id:  data.patient_id || null,
+      image_url:   data.image_url || null,
+      date:        rxDate,
       savedAt:     new Date().toISOString(),
-      confidence:  result.confidence,
-      doctor:      result.doctor,
-      hospital:    result.hospital,
-      diseases:    result.diseases,
-      tests:       result.tests,
-      medications: result.medications,
-      notes:       result.notes,
-      followUp:    result.followUp,
+      confidence:  avgConf,
+      patient:     patient,
+      doctor:      doctor,
+      hospital:    hospital,
+      diseases:    data.diseases,
+      tests:       data.tests,
+      medications: medications,
+      notes:       data.notes,
+      followUp:    data.followUp,
     };
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_HISTORY);
     localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+
+    return entry;
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+function saveAllPrescriptionToLocal(scans) {
+  try {
+    for (const scan of scans) {
+      savePrescriptionToLocal(scan);
+    }
   } catch {
     // localStorage unavailable — silently ignore
   }
@@ -175,8 +189,88 @@ export const getPrescriptionHistoryLocal = () => {
 
 // GET /api/prescription/history
 export const getPrescriptionHistory = async ({ limit = 50, offset = 0 } = {}) => {
+  // If local cache exists, return it instead of fetching
+  try {
+    const raw = localStorage.getItem(PRESCRIPTION_HISTORY_KEY);
+    if (raw !== null) {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+  } catch {
+    // ignore and fall through to fetch
+  }
+
   const data = await request(`/prescription/history?limit=${limit}&offset=${offset}`);
-  return data.scans || [];
+  const scans = data.scans || [];
+  // persist fetched scans to localStorage
+  try { saveAllPrescriptionToLocal(scans); } catch {}
+  return JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+};
+
+function updatePrescriptionHistoryLocal(scanId, updater) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const updated = existing.map((entry) => {
+      if (entry.scan_id !== scanId) return entry;
+      return updater(entry);
+    });
+    localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+function deletePrescriptionHistoryLocal(scanId) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const updated = existing.filter((entry) => entry.scan_id !== scanId);
+    localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+export const savePrescriptionScan = async (scanId) => {
+  const data = await request(`/prescription/save/${scanId}`, {
+    method: 'PATCH',
+  });
+
+  const patientId = data.scan?.patient_id ?? null;
+  updatePrescriptionHistoryLocal(scanId, (entry) => ({
+    ...entry,
+    patient_id: patientId,
+  }));
+
+  return data.scan || null;
+};
+
+export const removePrescriptionScan = async (scanId) => {
+  const data = await request(`/prescription/remove/${scanId}`, {
+    method: 'PATCH',
+  });
+
+  updatePrescriptionHistoryLocal(scanId, (entry) => ({
+    ...entry,
+    patient_id: null,
+  }));
+
+  return data.scan || null;
+};
+
+export const deletePrescriptionScan = async (scanId) => {
+  const data = await request(`/prescription/delete/${scanId}`, {
+    method: 'DELETE',
+  });
+
+  deletePrescriptionHistoryLocal(scanId);
+
+  return data.scan || null;
 };
 
 // POST /api/prescription/chat
@@ -401,7 +495,7 @@ export const checkDrugInteractions = async (drugList) => {
   } catch (err) {
     // Fallback to mock data on error
     await delay(500);
-    return mockDrugInteractionResult;
+    return null;
   }
 };
 
@@ -491,17 +585,17 @@ export const updateMedication = async (userId, medId, data) => {
   return { id: medId, ...data };
 };
 
-// GET /api/documents/:userId
-export const getDocuments = async (userId) => {
-  await delay(600);
-  return mockDocuments;
-};
+// // GET /api/documents/:userId
+// export const getDocuments = async (userId) => {
+//   await delay(600);
+//   return mockDocuments;
+// };
 
-// POST /api/documents/:userId
-export const uploadDocument = async (userId, file, metadata) => {
-  await delay(1500);
-  return { id: `doc_${Date.now()}`, filename: file.name, ...metadata };
-};
+// // POST /api/documents/:userId
+// export const uploadDocument = async (userId, file, metadata) => {
+//   await delay(1500);
+//   return { id: `doc_${Date.now()}`, filename: file.name, ...metadata };
+// };
 
 // GET /api/insights  (?force=true to bypass cache)
 export const getInsights = async ({ force = false } = {}) => {
@@ -531,21 +625,21 @@ export const getInsights = async ({ force = false } = {}) => {
   };
 };
 
-// GET /api/family/:userId
-export const getFamilyHistory = async (userId) => {
-  await delay(600);
-  return {
-    members: mockFamilyMembers,
-    risks: mockHereditaryRisks,
-    geneticScores: mockGeneticRiskScores,
-  };
-};
+// // GET /api/family/:userId
+// export const getFamilyHistory = async (userId) => {
+//   await delay(600);
+//   return {
+//     members: mockFamilyMembers,
+//     risks: mockHereditaryRisks,
+//     geneticScores: mockGeneticRiskScores,
+//   };
+// };
 
-// POST /api/family/:userId/member
-export const addFamilyMember = async (userId, member) => {
-  await delay(800);
-  return { ...member, id: `fam_${Date.now()}` };
-};
+// // POST /api/family/:userId/member
+// export const addFamilyMember = async (userId, member) => {
+//   await delay(800);
+//   return { ...member, id: `fam_${Date.now()}` };
+// };
 
 // ── Places / Nearby ───────────────────────────────────────────────────────
 

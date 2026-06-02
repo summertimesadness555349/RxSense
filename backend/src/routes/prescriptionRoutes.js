@@ -70,6 +70,87 @@ prescriptionRouter.get(
 
 /**
  * @openapi
+ * /api/prescription/save/{scanId}:
+ *   patch:
+ *     tags: [Prescription]
+ *     summary: Attach a prescription scan to the authenticated patient's profile
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: scanId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Scan updated successfully
+ *       400:
+ *         description: Missing scan id or patient identity
+ *       404:
+ *         description: Prescription scan not found
+ */
+prescriptionRouter.patch(
+    '/save/:scanId',
+    authenticateToken.authenticateToken,
+    prescriptionController.savePrescriptionScan
+);
+
+/**
+ * @openapi
+ * /api/prescription/remove/{scanId}:
+ *   patch:
+ *     tags: [Prescription]
+ *     summary: Detach a prescription scan from any patient profile
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: scanId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Scan updated successfully
+ *       400:
+ *         description: Missing scan id
+ *       404:
+ *         description: Prescription scan not found
+ */
+prescriptionRouter.patch(
+    '/remove/:scanId',
+    authenticateToken.authenticateToken,
+    prescriptionController.removePrescriptionScan
+);
+
+/**
+ * @openapi
+ * /api/prescription/delete/{scanId}:
+ *   delete:
+ *     tags: [Prescription]
+ *     summary: Permanently delete a prescription scan from the database
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: scanId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Scan deleted successfully
+ *       400:
+ *         description: Missing scan id
+ *       404:
+ *         description: Prescription scan not found
+ */
+prescriptionRouter.delete(
+    '/delete/:scanId',
+    authenticateToken.authenticateToken,
+    prescriptionController.deletePrescriptionScan
+);
+
+/**
+ * @openapi
  * /api/prescription/chat:
  *   post:
  *     tags: [Prescription]

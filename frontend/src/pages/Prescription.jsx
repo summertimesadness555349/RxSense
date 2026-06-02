@@ -2,10 +2,18 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Clock, Upload, ShieldAlert } from 'lucide-react';
 import FileDropzone from '../components/ui/FileDropzone.jsx';
+import Modal from '../components/ui/Modal.jsx';
 import PrescriptionChatbot from '../components/prescription/PrescriptionChatbot.jsx';
+import { useAuth }     from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
-import { analyzePrescription, getPrescriptionHistoryLocal } from '../services/api.js';
+import {
+  analyzePrescription,
+  getPrescriptionHistory,
+  deletePrescriptionScan,
+  removePrescriptionScan,
+  savePrescriptionScan,
+} from '../services/api.js';
 
 // ── Processing spinner ────────────────────────────────────────────────────────
 function ProcessingView({ stepIdx }) {
@@ -127,7 +135,7 @@ function ScanSelector({ history, activeScan, onSelect, onNew }) {
 }
 
 // ── Analysis result view ──────────────────────────────────────────────────────
-function ResultView({ result }) {
+function ResultView({ result, onSave, onRemove, onDelete }) {
   const { t } = useLanguage();
   return (
     <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800">
@@ -261,6 +269,25 @@ function ResultView({ result }) {
           ))}
         </div>
       )}
+      <div className="grid grid-cols-2 gap-4 pt-4">
+        <button
+          onClick={result.patient_id != null ? onRemove : onSave}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+            result.patient_id != null
+              ? "bg-amber-500 hover:bg-amber-600 text-white"
+              : "bg-emerald-500 hover:bg-emerald-600 text-white"
+          }`}
+        >
+          {result.patient_id != null ? t('removePrescBtn') : t('savePrescBtn')}
+        </button>
+        <button
+          onClick={onDelete}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors
+            bg-red-500 hover:bg-red-600 text-white`}
+        >
+          {t('deletePrescBtn')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -269,20 +296,117 @@ function ResultView({ result }) {
 export default function Prescription() {
   const { t } = useLanguage();
   const { addToast } = useToast();
+  const { user } = useAuth();
 
   const [phase, setPhase]           = useState('upload');
   const [stepIdx, setStepIdx]       = useState(0);
   const [activeScan, setActiveScan] = useState(null);
   const [history, setHistory]       = useState([]);
   const [showUpload, setShowUpload] = useState(false);
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+  const [pendingSaveScan, setPendingSaveScan] = useState(null);
+
+  const normalizeName = (name) => String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  const refreshPrescriptionHistory = async () => {
+    const updated = await getPrescriptionHistory();
+    setHistory(updated || []);
+    return updated || [];
+  };
+
+  const performSavePrescription = async (scan) => {
+    if (!scan?.scan_id) return;
+
+    try {
+      const savedScan = await savePrescriptionScan(scan.scan_id);
+      const updatedHistory = await refreshPrescriptionHistory();
+      const refreshedScan = updatedHistory.find((item) => item.scan_id === scan.scan_id) || {
+        ...scan,
+        patient_id: savedScan?.patient_id ?? scan.patient_id ?? null,
+      };
+      setActiveScan(refreshedScan);
+      addToast(t('prescriptionSavedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not save prescription', 'error');
+    }
+  };
+
+  const handleSavePrescription = async (scan) => {
+    if (!scan?.scan_id) return;
+
+    const profileName = user?.name;
+    const patientName = scan?.patient?.name;
+    if (profileName && patientName && normalizeName(profileName) !== normalizeName(patientName)) {
+      setPendingSaveScan(scan);
+      setSaveConfirmOpen(true);
+      return;
+    }
+
+    await performSavePrescription(scan);
+  };
+
+  const confirmSavePrescription = async () => {
+    const scan = pendingSaveScan;
+    setSaveConfirmOpen(false);
+    setPendingSaveScan(null);
+    if (scan) await performSavePrescription(scan);
+  };
+
+  const cancelSavePrescription = () => {
+    setSaveConfirmOpen(false);
+    setPendingSaveScan(null);
+  };
+
+  const handleRemovePrescription = async (scan) => {
+    if (!scan?.scan_id) return;
+
+    try {
+      const removedScan = await removePrescriptionScan(scan.scan_id);
+      const updatedHistory = await refreshPrescriptionHistory();
+      const refreshedScan = updatedHistory.find((item) => item.scan_id === scan.scan_id) || {
+        ...scan,
+        patient_id: removedScan?.patient_id ?? null,
+      };
+      setActiveScan(refreshedScan);
+      addToast(t('prescriptionRemovedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not remove prescription', 'error');
+    }
+  };
+
+  const handleDeletePrescription = async (scan) => {
+    if (!scan?.scan_id) return;
+
+    try {
+      await deletePrescriptionScan(scan.scan_id);
+      const updatedHistory = history.filter((item) => item.scan_id !== scan.scan_id);
+      setHistory(updatedHistory);
+
+      if (activeScan?.scan_id === scan.scan_id) {
+        setActiveScan(updatedHistory[0] || null);
+        setPhase(updatedHistory.length > 0 ? 'result' : 'upload');
+      }
+
+      addToast(t('prescriptionDeletedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not delete prescription', 'error');
+    }
+  };
 
   useEffect(() => {
-    const h = getPrescriptionHistoryLocal();
-    setHistory(h);
-    if (h.length > 0) {
-      setActiveScan(h[0]);
-      setPhase('result');
-    }
+    (async () => {
+      try {
+        const h = await getPrescriptionHistory();
+        setHistory(h || []);
+        if ((h || []).length > 0) {
+          setActiveScan(h[0]);
+          setPhase('result');
+        }
+      } catch (err) {
+        console.error('Failed to load prescription history', err);
+        setHistory([]);
+      }
+    })();
   }, []);
 
   const handleUpload = async (file) => {
@@ -300,8 +424,12 @@ export default function Prescription() {
       clearInterval(stepTimer);
       setActiveScan(result);
       setPhase('result');
-      const updated = getPrescriptionHistoryLocal();
-      setHistory(updated);
+      try {
+        const updated = await getPrescriptionHistory();
+        setHistory(updated || []);
+      } catch (e) {
+        console.error('Failed to refresh prescription history', e);
+      }
       addToast(t('prescriptionSavedToast'), 'success');
     } catch (err) {
       clearInterval(stepTimer);
@@ -315,6 +443,41 @@ export default function Prescription() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden gap-3 px-4 lg:px-8">
+      <Modal isOpen={saveConfirmOpen} onClose={cancelSavePrescription} title={t('savePrescBtn')} size="md">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/15 px-4 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex-shrink-0">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">{t('savePrescBtn')}</p>
+              <p className="text-sm leading-6 text-amber-800 dark:text-amber-200 mt-1">
+                {t('saveWarningForName', {
+                  name: pendingSaveScan?.patient?.name || t('notSpecified'),
+                  profileName: user?.name || t('notSpecified'),
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <button
+              type="button"
+              onClick={cancelSavePrescription}
+              className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {t('cancelBtn')}
+            </button>
+            <button
+              type="button"
+              onClick={confirmSavePrescription}
+              className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+            >
+              {t('savePrescBtn')}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center gap-3 flex-wrap">
@@ -370,7 +533,12 @@ export default function Prescription() {
           )}
 
           {activeScan && !isProcessing && (
-            <ResultView result={activeScan} />
+            <ResultView
+              result={activeScan}
+              onSave={() => handleSavePrescription(activeScan)}
+              onRemove={() => handleRemovePrescription(activeScan)}
+              onDelete={() => handleDeletePrescription(activeScan)}
+            />
           )}
 
           {!isProcessing && (

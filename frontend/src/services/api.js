@@ -225,6 +225,17 @@ function updatePrescriptionHistoryLocal(scanId, updater) {
   }
 }
 
+function deletePrescriptionHistoryLocal(scanId) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
+    const updated = existing.filter((entry) => entry.scan_id !== scanId);
+    localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
 export const savePrescriptionScan = async (scanId) => {
   const data = await request(`/prescription/save/${scanId}`, {
     method: 'PATCH',
@@ -248,6 +259,16 @@ export const removePrescriptionScan = async (scanId) => {
     ...entry,
     patient_id: null,
   }));
+
+  return data.scan || null;
+};
+
+export const deletePrescriptionScan = async (scanId) => {
+  const data = await request(`/prescription/delete/${scanId}`, {
+    method: 'DELETE',
+  });
+
+  deletePrescriptionHistoryLocal(scanId);
 
   return data.scan || null;
 };

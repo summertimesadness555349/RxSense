@@ -10,6 +10,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import {
   analyzePrescription,
   getPrescriptionHistory,
+  deletePrescriptionScan,
   removePrescriptionScan,
   savePrescriptionScan,
 } from '../services/api.js';
@@ -134,7 +135,7 @@ function ScanSelector({ history, activeScan, onSelect, onNew }) {
 }
 
 // ── Analysis result view ──────────────────────────────────────────────────────
-function ResultView({ result, onSave, onRemove }) {
+function ResultView({ result, onSave, onRemove, onDelete }) {
   const { t } = useLanguage();
   return (
     <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800">
@@ -268,16 +269,25 @@ function ResultView({ result, onSave, onRemove }) {
           ))}
         </div>
       )}
-      <button
-        onClick={result.patient_id != null ? onRemove : onSave}
-        className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-          result.patient_id != null
-            ? "bg-red-500 hover:bg-red-600 text-white"
-            : "bg-emerald-500 hover:bg-emerald-600 text-white"
-        }`}
-      >
-        {result.patient_id != null ? t('removePrescBtn') : t('savePrescBtn')}
-      </button>
+      <div className="grid grid-cols-2 gap-4 pt-4">
+        <button
+          onClick={result.patient_id != null ? onRemove : onSave}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+            result.patient_id != null
+              ? "bg-amber-500 hover:bg-amber-600 text-white"
+              : "bg-emerald-500 hover:bg-emerald-600 text-white"
+          }`}
+        >
+          {result.patient_id != null ? t('removePrescBtn') : t('savePrescBtn')}
+        </button>
+        <button
+          onClick={onDelete}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors
+            bg-red-500 hover:bg-red-600 text-white`}
+        >
+          {t('deletePrescBtn')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -361,6 +371,25 @@ export default function Prescription() {
       addToast(t('prescriptionRemovedToast'), 'success');
     } catch (error) {
       addToast(error.message || 'Could not remove prescription', 'error');
+    }
+  };
+
+  const handleDeletePrescription = async (scan) => {
+    if (!scan?.scan_id) return;
+
+    try {
+      await deletePrescriptionScan(scan.scan_id);
+      const updatedHistory = history.filter((item) => item.scan_id !== scan.scan_id);
+      setHistory(updatedHistory);
+
+      if (activeScan?.scan_id === scan.scan_id) {
+        setActiveScan(updatedHistory[0] || null);
+        setPhase(updatedHistory.length > 0 ? 'result' : 'upload');
+      }
+
+      addToast(t('prescriptionDeletedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not delete prescription', 'error');
     }
   };
 
@@ -508,6 +537,7 @@ export default function Prescription() {
               result={activeScan}
               onSave={() => handleSavePrescription(activeScan)}
               onRemove={() => handleRemovePrescription(activeScan)}
+              onDelete={() => handleDeletePrescription(activeScan)}
             />
           )}
 

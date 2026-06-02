@@ -124,6 +124,16 @@ async function updateScanPatientId(db, { scanId, patientId }) {
     return result.rows[0] || null;
 }
 
+async function deleteScanById(db, { scanId }) {
+    const result = await db.query_executor(
+        `DELETE FROM prescription_scan
+         WHERE scan_id = $1
+         RETURNING *;`,
+        [scanId]
+    );
+    return result.rows[0] || null;
+}
+
 class PrescriptionController {
     constructor() {
         this.db = DB_Connection.getInstance();
@@ -385,6 +395,25 @@ class PrescriptionController {
             return res.status(200).json({ success: true, scan });
         } catch (error) {
             console.error('[Prescription] Remove scan error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    deletePrescriptionScan = async (req, res) => {
+        try {
+            const { scanId } = req.params;
+            if (!scanId) {
+                return res.status(400).json({ success: false, error: 'scan_id is required' });
+            }
+
+            const scan = await deleteScanById(this.db, { scanId });
+            if (!scan) {
+                return res.status(404).json({ success: false, error: 'Prescription scan not found' });
+            }
+
+            return res.status(200).json({ success: true, scan });
+        } catch (error) {
+            console.error('[Prescription] Delete scan error:', error);
             return res.status(500).json({ success: false, error: error.message });
         }
     };

@@ -115,6 +115,7 @@ const translations = {
     savePrescBtn:             'Save as Your Record',
     removePrescBtn:           'Remove from Your Record',
     prescriptionRemovedToast: 'Prescription removed from your Health Record!',
+    prescriptionDeletedToast: 'Prescription deleted successfully!',
     deletePrescBtn:           'Delete Prescription',
     saveWarningForName:       'The name on the prescription ({name}) does not match your profile name ({profileName}). Are you sure you want to save this prescription to your health record?',
 
@@ -607,6 +608,7 @@ const translations = {
     savePrescBtn:             'আপনার রেকর্ড হিসেবে সংরক্ষণ',
     removePrescBtn:           'আপনার রেকর্ড থেকে মুছুন',
     prescriptionRemovedToast: 'প্রেসক্রিপশন স্বাস্থ্য রেকর্ড থেকে মুছে ফেলা হয়েছে!',
+    prescriptionDeletedToast: 'প্রেসক্রিপশন সফলভাবে মুছে ফেলা হয়েছে!',
     deletePrescBtn:           'প্রেসক্রিপশন মুছুন',
     saveWarningForName:       'প্রেসক্রিপশনের নাম ({name}) আপনার প্রোফাইলের নাম ({profileName}) এর সাথে মেলে না। আপনি কি নিশ্চিত যে এই প্রেসক্রিপশনটি আপনার স্বাস্থ্য রেকর্ডে সংরক্ষণ করতে চান?',
 

@@ -11,6 +11,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { relativeTime } from '../utils/timeUtils.js';
 import {
   getHealthSummary,
+  getPrescriptionHistory,
   getPrescriptionHistoryLocal,
   getReportHistoryLocal,
   getPatientSummary,
@@ -154,7 +155,7 @@ export default function Dashboard() {
     const cached = readCache(DASH_KEY);
     const rxHistory  = getPrescriptionHistoryLocal();
     const rptHistory = getReportHistoryLocal();
-    const freshRx    = rxHistory[0]  ?? null;
+    let freshRx    = rxHistory[0]  ?? null;
     const freshRpt   = rptHistory[0] ?? null;
 
     const stale = !cached
@@ -173,6 +174,8 @@ export default function Dashboard() {
       if (stale) setLoading(true);
       try {
         const { profile: p, metrics: raw } = await getHealthSummary();
+        const rxHistoryNew  = await getPrescriptionHistory();
+        freshRx = rxHistoryNew[0] ?? null;
         const comp = computeCompleteness(p, raw);
         setProfile(p);
         setCompleteness(comp);
@@ -189,6 +192,7 @@ export default function Dashboard() {
           cachedAt:         new Date().toISOString(),
         });
 
+        setLoading(false);
         await fetchSummary(p, freshRx, freshRpt);
       } catch {
         setLatestRx(freshRx);

@@ -182,22 +182,30 @@ class PrescriptionController {
                 }) : null;
 
                 return res.status(200).json({
-                    success:   true,
-                    scan_id:   scanRow?.scan_id   || null,
-                    image_url: imageUrl,
-                    drugs: [],
-                    needs_review: [],
-                    patient:  data.patient || null,
-                    doctor:   data.doctor  || null,
-                    hospital: data.clinic  || null,
-                    date:     rxDate,
-                    diseases: diagnosis ? [diagnosis] : [],
-                    tests:    rxTests,
-                    notes:    rxNotes,
-                    followUp: rxFollowUp,
-                    models_used: ['prescriptoai'],
+                    success: true,
+                    scans:   scanRow?.rows || [],
+                    // vlm_available: true,
+                    total:   result.rowCount,
                     message: 'No medications detected',
                 });
+
+                // return res.status(200).json({
+                //     success:   true,
+                //     scan_id:   scanRow?.scan_id   || null,
+                //     image_url: imageUrl,
+                //     medications: [],
+                //     needs_review: [],
+                //     patient:  data.patient || null,
+                //     doctor:   data.doctor  || null,
+                //     hospital: data.clinic  || null,
+                //     date:     rxDate,
+                //     diseases: diagnosis ? [diagnosis] : [],
+                //     tests:    rxTests,
+                //     notes:    rxNotes,
+                //     followUp: rxFollowUp,
+                //     models_used: ['prescriptoai'],
+                //     message: 'No medications detected',
+                // });
             }
 
             // 3. Fuzzy match + MedGemma dosages in parallel
@@ -303,8 +311,9 @@ class PrescriptionController {
             const offset = Math.max(parseInt(req.query.offset || '0'), 0);
 
             const result = await this.db.query_executor(
-                `SELECT scan_id, image_url, doctor_name, doctor_specialty, hospital_name,
-                        patient_name_rx, rx_date, diseases, tests, medications,
+                `SELECT scan_id, image_url, doctor_name, doctor_specialty, doctor_qualification,
+                        hospital_name, patient_name_rx, patient_json,
+                        rx_date, diseases, tests, medications,
                         notes, follow_up, confidence, models_used, created_at
                  FROM prescription_scan
                  ${whereClause}

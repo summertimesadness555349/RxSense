@@ -70,8 +70,8 @@ function savePrescriptionToLocal(data) {
     const existing = JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
     const match = existing.find((e) => e.scan_id === data.scan_id);
     if (match) return match;
-    
-    const drugs = data.drugs || [];
+
+    const drugs = data.medications || [];
 
     // Map confidence string → percentage for the UI gauge
     const confMap = { high: 100, medium: 70, low: 30 };
@@ -104,6 +104,7 @@ function savePrescriptionToLocal(data) {
       });
     }
 
+    const patient = data.patient_json || {name: data.patient_name_rx || null, age: null, gender: null};
     const doctor = {
       name: data.doctor_name || '',
       specialization: data.doctor_speciality || data.doctor_specialization || '',
@@ -149,6 +150,7 @@ function savePrescriptionToLocal(data) {
       date:        rxDate,
       savedAt:     new Date().toISOString(),
       confidence:  avgConf,
+      patient:     patient,
       doctor:      doctor,
       hospital:    hospital,
       diseases:    data.diseases,

@@ -3,10 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Clock, Upload, ShieldAlert } from 'lucide-react';
 import FileDropzone from '../components/ui/FileDropzone.jsx';
 import ReportChatbot from '../components/report/ReportChatbot.jsx';
+import Modal from '../components/ui/Modal.jsx';
 import { Select } from '../components/ui/Input.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
-import { analyzeReport, getReportHistoryLocal } from '../services/api.js';
+import {
+  analyzeReport,
+  getReportHistory,
+  saveReportScan,
+  removeReportScan,
+  deleteReportScan,
+} from '../services/api.js';
 
 const REPORT_TYPES = [
   'Complete Blood Count (CBC)',
@@ -161,7 +169,7 @@ function ReportSelector({ history, activeReport, onSelect, onNew }) {
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status, flag }) {
   const { t } = useLanguage();
-  if (!status || status === 'normal') return null;
+  if (!status) return null;
   const cls = STATUS_CLS[status] || STATUS_CLS.high;
   const label = flag || t(STATUS_KEY_MAP[status] || 'statusHigh');
   return (
@@ -172,7 +180,7 @@ function StatusBadge({ status, flag }) {
 }
 
 // ── Report result view ────────────────────────────────────────────────────────
-function ResultView({ report }) {
+function ResultView({ report, onSave, onRemove, onDelete }) {
   const { t } = useLanguage();
   return (
     <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800">
@@ -253,7 +261,7 @@ function ResultView({ report }) {
 
       {/* Sections */}
       {(report.sections || []).map((section, si) => {
-        const isTable = section.type === 'lab_results' || section.type === 'vitals';
+        // const isTable = section.type === 'lab_results' || section.type === 'vitals';
         const hasEntries = section.entries?.length > 0;
         if (!hasEntries && !section.narrative) return null;
 
@@ -263,7 +271,7 @@ function ResultView({ report }) {
               {section.title}
             </p>
 
-            {isTable && hasEntries && (
+            {hasEntries && (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[360px]">
                   <thead>
@@ -296,7 +304,7 @@ function ResultView({ report }) {
               </div>
             )}
 
-            {!isTable && section.narrative && (
+            {/* {!isTable && section.narrative && (
               <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">{section.narrative}</p>
             )}
 
@@ -313,7 +321,7 @@ function ResultView({ report }) {
                   </div>
                 ))}
               </div>
-            )}
+            )} */}
           </div>
         );
       })}
@@ -335,6 +343,26 @@ function ResultView({ report }) {
           )}
         </div>
       )}
+
+      <div className="grid grid-cols-2 gap-4 pt-4">
+        <button
+          onClick={report.patient_id != null ? onRemove : onSave}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+            report.patient_id != null
+              ? "bg-amber-500 hover:bg-amber-600 text-white"
+              : "bg-emerald-500 hover:bg-emerald-600 text-white"
+          }`}
+        >
+          {report.patient_id != null ? t('removeReportBtn') : t('saveReportBtn')}
+        </button>
+        <button
+          onClick={onDelete}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors
+            bg-red-500 hover:bg-red-600 text-white`}
+        >
+          {t('deleteReportBtn')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -343,6 +371,7 @@ function ResultView({ report }) {
 export default function Report() {
   const { t } = useLanguage();
   const { addToast } = useToast();
+  const { user } = useAuth();
 
   const [phase, setPhase]               = useState('upload');
   const [stepIdx, setStepIdx]           = useState(0);
@@ -350,14 +379,111 @@ export default function Report() {
   const [history, setHistory]           = useState([]);
   const [showUpload, setShowUpload]     = useState(false);
   const [reportType, setReportType]     = useState('Complete Blood Count (CBC)');
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+  const [pendingSaveReport, setPendingSaveReport] = useState(null);
+
+  const normalizeName = (name) => String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  const refreshReportHistory = async () => {
+    const updated = await getReportHistory();
+    setHistory(updated || []);
+    return updated || [];
+  };
+
+  const performSaveReport = async (report) => {
+    if (!report?.id) return;
+
+    try {
+      const savedReport = await saveReportScan(report.id);
+      const updatedHistory = await refreshReportHistory();
+      const refreshedReport = updatedHistory.find((item) => item.id === report.id) || {
+        ...report,
+        patient_id: savedReport?.patient_id ?? report.patient_id ?? null,
+      };
+      setActiveReport(refreshedReport);
+      addToast(t('reportSavedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not save report', 'error');
+    }
+  };
+
+  const handleSaveReport = async (report) => {
+    if (!report?.id) return;
+
+    const profileName = user?.name;
+    const patientName = report?.patient?.name;
+    if (profileName && patientName && normalizeName(profileName) !== normalizeName(patientName)) {
+      setPendingSaveReport(report);
+      setSaveConfirmOpen(true);
+      return;
+    }
+
+    await performSaveReport(report);
+  };
+
+  const confirmSaveReport = async () => {
+    const report = pendingSaveReport;
+    setSaveConfirmOpen(false);
+    setPendingSaveReport(null);
+    if (report) await performSaveReport(report);
+  };
+
+  const cancelSaveReport = () => {
+    setSaveConfirmOpen(false);
+    setPendingSaveReport(null);
+  };
+
+  const handleRemoveReport = async (report) => {
+    if (!report?.id) return;
+
+    try {
+      const removedReport = await removeReportScan(report.id);
+      const updatedHistory = await refreshReportHistory();
+      const refreshedReport = updatedHistory.find((item) => item.id === report.id) || {
+        ...report,
+        patient_id: removedReport?.patient_id ?? null,
+      };
+      setActiveReport(refreshedReport);
+      addToast(t('reportRemovedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not remove report', 'error');
+    }
+  };
+
+  const handleDeleteReport = async (report) => {
+    if (!report?.id) return;
+
+    try {
+      await deleteReportScan(report.id);
+      const updatedHistory = history.filter((item) => item.id !== report.id);
+      setHistory(updatedHistory);
+
+      if (activeReport?.id === report.id) {
+        setActiveReport(updatedHistory[0] || null);
+        setPhase(updatedHistory.length > 0 ? 'result' : 'upload');
+      }
+
+      addToast(t('reportDeletedToast'), 'success');
+    } catch (error) {
+      addToast(error.message || 'Could not delete report', 'error');
+    }
+  };
 
   useEffect(() => {
-    const h = getReportHistoryLocal();
-    setHistory(h);
-    if (h.length > 0) {
-      setActiveReport(h[0]);
-      setPhase('result');
-    }
+    (async () => {
+      try {
+        let h = await getReportHistory();
+        h = h || [];
+        setHistory(h);
+        if (h.length > 0) {
+          setActiveReport(h[0]);
+          setPhase('result');
+        }
+      } catch (err) {
+        console.log('Failed to load report history:', err);
+        setHistory([]);
+      }
+    })();
   }, []);
 
   const handleUpload = async (file) => {
@@ -375,8 +501,16 @@ export default function Report() {
       clearInterval(stepTimer);
       setActiveReport(result);
       setPhase('result');
-      const updated = getReportHistoryLocal();
-      setHistory(updated);
+      try {
+        const updated = await getReportHistory();
+        const h = updated || [];
+        setHistory(h);
+        // Find the active report in history to ensure it has all fields mapped (including id)
+        const historyMatch = h.find(item => item.id === result.id || item.id === result.report_id);
+        if (historyMatch) setActiveReport(historyMatch);
+      } catch {
+        console.log('Failed to update history after analysis');
+      }
       addToast(t('reportSavedToast'), 'success');
     } catch (err) {
       clearInterval(stepTimer);
@@ -390,6 +524,41 @@ export default function Report() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden gap-3 px-4 lg:px-8">
+      <Modal isOpen={saveConfirmOpen} onClose={cancelSaveReport} title={t('saveReportBtn') || 'Save Report'} size="md">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/15 px-4 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex-shrink-0">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">{t('saveReportBtn') || 'Save Report'}</p>
+              <p className="text-sm leading-6 text-amber-800 dark:text-amber-200 mt-1">
+                {t('saveReportWarningForName', {
+                  name: pendingSaveReport?.patient?.name || t('notSpecified'),
+                  profileName: user?.name || t('notSpecified'),
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <button
+              type="button"
+              onClick={cancelSaveReport}
+              className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {t('cancelBtn')}
+            </button>
+            <button
+              type="button"
+              onClick={confirmSaveReport}
+              className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+            >
+              {t('saveReportBtn') || 'Save Report'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center gap-3 flex-wrap">
@@ -451,7 +620,12 @@ export default function Report() {
           )}
 
           {activeReport && !isProcessing && (
-            <ResultView report={activeReport} />
+            <ResultView
+              report={activeReport}
+              onSave={() => handleSaveReport(activeReport)}
+              onRemove={() => handleRemoveReport(activeReport)}
+              onDelete={() => handleDeleteReport(activeReport)}
+            />
           )}
 
           {!isProcessing && (

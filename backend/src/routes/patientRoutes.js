@@ -76,9 +76,29 @@ patientRouter.post('/reports/analyze',
     patientController.analyzeReport
 );
 
+patientRouter.get('/reports/history',
+    authenticateToken.authenticateToken,
+    patientController.getReportHistory
+);
+
 patientRouter.post('/reports/chat',
     authenticateToken.authenticateToken,
     reportChatController.chat
+);
+
+patientRouter.patch('/reports/save/:reportId',
+    authenticateToken.authenticateToken,
+    patientController.saveReport
+);
+
+patientRouter.patch('/reports/remove/:reportId',
+    authenticateToken.authenticateToken,
+    patientController.removeReport
+);
+
+patientRouter.delete('/reports/delete/:reportId',
+    authenticateToken.authenticateToken,
+    patientController.deleteReport
 );
 
 patientRouter.get('/timeline',

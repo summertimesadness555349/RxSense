@@ -144,6 +144,12 @@ const translations = {
     colStatus:                'Status',
     uploadReportBtn:          'Upload Report',
     analyzeAnotherBtn:        'Analyze Another Report',
+    saveReportBtn:            'Save as Your Record',
+    removeReportBtn:          'Remove from Your Record',
+    reportRemovedToast:       'Report removed from your Health Record!',
+    reportDeletedToast:       'Report deleted successfully!',
+    deleteReportBtn:          'Delete Report',
+    saveReportWarningForName: 'The name on the report ({name}) does not match your profile name ({profileName}). Are you sure you want to save this report to your health record?',
 
     // ── Drugs page ────────────────────────────────────────────────────────
     drugsPageTitle:           'Drug Interaction Checker',
@@ -636,6 +642,12 @@ const translations = {
     colStatus:                'অবস্থা',
     uploadReportBtn:          'রিপোর্ট আপলোড করুন',
     analyzeAnotherBtn:        'আরেকটি রিপোর্ট বিশ্লেষণ করুন',
+    saveReportBtn:            'আপনার রেকর্ড হিসেবে সংরক্ষণ',
+    removeReportBtn:          'আপনার রেকর্ড থেকে মুছুন',
+    reportRemovedToast:       'রিপোর্ট স্বাস্থ্য রেকর্ড থেকে মুছে ফেলা হয়েছে!',
+    reportDeletedToast:       'রিপোর্ট সফলভাবে মুছে ফেলা হয়েছে!',
+    deleteReportBtn:          'রিপোর্ট মুছুন',
+    saveReportWarningForName: 'রিপোর্টের নাম ({name}) আপনার প্রোফাইলের নাম ({profileName}) এর সাথে মেলে না। আপনি কি নিশ্চিত যে এই রিপোর্টটি আপনার স্বাস্থ্য রেকর্ডে সংরক্ষণ করতে চান?',
 
     drugsPageTitle:           'ওষুধের মিথস্ক্রিয়া পরীক্ষক',
     drugsPageSubtitle:        'আপনার ওষুধগুলো একসাথে নিরাপদ কিনা পরীক্ষা করুন।',

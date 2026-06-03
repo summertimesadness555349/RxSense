@@ -118,7 +118,8 @@ class PatientController {
             }
 
             const userId    = req.user?.id || null;
-            const patientId = req.user?.patient_id || req.user?.uuid || req.body?.patientId || null;
+            // const patientId = req.user?.patient_id || req.user?.uuid || req.body?.patientId || null;
+            const { patientId }  = await this.patientModel.resolvePatientIdentity(userId);
             const reportType = req.body?.reportType || 'Other';
 
             // Normalize unsupported image formats → JPEG for Claude
@@ -180,7 +181,7 @@ class PatientController {
             console.log(`[Report] Extraction complete — type: ${extracted.report_type}, sections: ${extracted.sections?.length || 0}`);
 
             // Normalize extraction into DB-friendly raw_analysis (metrics list)
-            const dbAnalysis = this.reportAnalysisUtils.normalizeForDb(extracted, { imageUrl, typeOverride: reportType });
+            // const dbAnalysis = this.reportAnalysisUtils.normalizeForDb(extracted, { imageUrl, typeOverride: reportType });
 
             // Save to DB if we have a valid UUID patient_id
             let reportRecord = null;
@@ -190,33 +191,48 @@ class PatientController {
             if (validPatientId) {
                 try {
                     reportRecord = await this.patientModel.createMedicalReport({
-                        patientId:      validPatientId,
-                        reportType:     this.reportAnalysisUtils.getReportTypeEnum(reportType),
+                        userId:            userId,
+                        patientId:         validPatientId,
+                        reportType:        this.reportAnalysisUtils.getReportTypeEnum(reportType),
                         imageUrl,
                         imagePublicId,
-                        rawAnalysis:    extracted,
-                        reportDate:     dbAnalysis.report_date || null,
-                        facility:       dbAnalysis.facility    || null,
-                        orderingDoctor: dbAnalysis.ordering_doctor || null,
-                        patientNameRep: dbAnalysis.patient?.name  || null,
+                        rawAnalysis:       extracted ? JSON.stringify(extracted) : null,
+                        reportDate:        extracted.report_date || null,
+                        facility:          extracted.facility    || null,
+                        orderingDoctor:    extracted.ordering_doctor || null,
+                        patientNameRep:    extracted.patient?.name  || null,
+                        patientJson:       extracted.patient || null,
+                        overallImpression: extracted.overall_impression || null,
+                        diagnoses:         extracted.diagnoses ? JSON.stringify(extracted.diagnoses) : null,
+                        recommendations:   extracted.recommendations ? JSON.stringify(extracted.recommendations) : null,
+                        clinical_notes:    extracted.clinical_notes || null,
+                        follow_up:         extracted.follow_up || null,
                     });
 
                     // Save individual lab/vital metrics as report_metric rows
-                    for (const m of (dbAnalysis.metrics || [])) {
-                        const metric = await this.patientModel.addReportMetric({
-                            reportId:       reportRecord.report_id,
-                            parameterName:  m.parameterName,
-                            value:          m.value,
-                            unit:           m.unit || null,
-                            referenceRange: m.referenceRange || null,
-                            status:         m.status || null,
-                            llmFlagged:     Boolean(m.llmFlagged),
-                        }).catch(err => {
-                            console.warn('[Report] Metric save failed:', err.message);
-                            return null;
-                        });
-                        if (metric) savedMetrics.push(metric);
+                    // Save individual lab/vital entries as report_metrics and collect saved rows
+                    const sections = extracted.sections || [];
+                    for (const section of sections) {
+                        if (section.type === 'lab_results' || section.type === 'vitals') {
+                            for (const entry of (section.entries || [])) {
+                                const metric = await this.patientModel.addReportMetric({
+                                    reportId:       reportRecord.report_id,
+                                    sectionTitle:   section.title || "RESULTS",
+                                    parameterName:  entry.label,
+                                    value:          String(entry.value ?? ''),
+                                    unit:           entry.unit   || null,
+                                    referenceRange: entry.reference_range || null,
+                                    status:         this.reportAnalysisUtils.normalizeMetricStatus(entry.status, entry.flag),
+                                    llmFlagged:     (entry.status && entry.status !== 'normal') || Boolean(entry.flag),
+                                }).catch(err => {
+                                    console.warn('[Report] Metric save failed:', err.message);
+                                    return null;
+                                });
+                                if (metric) savedMetrics.push(metric);
+                            }
+                        }
                     }
+                    reportRecord.metrics = savedMetrics;
 
                     console.log(`[Report] Saved to DB — report_id: ${reportRecord.report_id}`);
                 } catch (dbErr) {
@@ -227,10 +243,91 @@ class PatientController {
             // Return the normalized dbAnalysis as `report` for the frontend
             return res.status(200).json({
                 success: true,
-                report: dbAnalysis,
+                report: reportRecord || { metrics: [] },
             });
         } catch (error) {
             console.error('[Report] Analysis error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    getReportHistory = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) return res.status(400).json({ success: false, error: 'Auth required' });
+
+            const reports = await this.patientModel.getPatientReportsByUserId(userId);
+            return res.status(200).json({
+                success: true,
+                reports: reports,
+                total: reports.length, 
+            });
+        } catch (error) {
+            console.error('[Patient] getReportHistory error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    saveReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) {
+                return res.status(400).json({ success: false, error: 'reportId is required' });
+            }
+
+            const patientId = await this.resolvePatientId(req.user?.id);
+            if (!patientId) {
+                return res.status(400).json({ success: false, error: 'Unable to resolve patient identity' });
+            }
+
+            const report = await this.patientModel.updateReportPatientId(reportId, patientId);
+            if (!report) {
+                return res.status(404).json({ success: false, error: 'Medical report not found' });
+            }
+
+            const reportWithMetrics = await this.patientModel.getReportWithMetricsById(reportId);
+            return res.status(200).json({ success: true, report: reportWithMetrics });
+        } catch (error) {
+            console.error('[PatientController] saveReport error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    removeReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) {
+                return res.status(400).json({ success: false, error: 'reportId is required' });
+            }
+
+            const report = await this.patientModel.updateReportPatientId(reportId, null);
+            if (!report) {
+                return res.status(404).json({ success: false, error: 'Medical report not found' });
+            }
+
+            const reportWithMetrics = await this.patientModel.getReportWithMetricsById(reportId);
+            return res.status(200).json({ success: true, report: reportWithMetrics });
+        } catch (error) {
+            console.error('[PatientController] removeReport error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    deleteReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) {
+                return res.status(400).json({ success: false, error: 'reportId is required' });
+            }
+
+            const report = await this.patientModel.deleteReportById(reportId);
+            if (!report) {
+                return res.status(404).json({ success: false, error: 'Medical report not found' });
+            }
+
+            return res.status(200).json({ success: true, report });
+        } catch (error) {
+            console.error('[PatientController] deleteReport error:', error);
             return res.status(500).json({ success: false, error: error.message });
         }
     };
@@ -740,8 +837,6 @@ class PatientController {
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
     };
-
-
 }
 
 module.exports = PatientController;

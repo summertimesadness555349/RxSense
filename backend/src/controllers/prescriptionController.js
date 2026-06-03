@@ -340,7 +340,7 @@ class PrescriptionController {
                         notes, follow_up, confidence, models_used, created_at
                  FROM prescription_scan
                  ${whereClause}
-                 ORDER BY created_at DESC
+                 ORDER BY created_at ASC
                  LIMIT $2 OFFSET $3`,
                 [param, limit, offset]
             );

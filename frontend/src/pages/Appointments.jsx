@@ -27,9 +27,22 @@ const tomorrowInputValue = () => {
 const pad2 = (v) => String(v).padStart(2, '0');
 
 const formatTimeRange = (totalMinutes) => {
-  const h = Math.floor((totalMinutes % 1440) / 60);
+  let h = Math.floor((totalMinutes % 1440) / 60);
   const m = (totalMinutes % 1440) % 60;
-  return `${pad2(h)}:${pad2(m)}`;
+
+  // Convert to 12-hour format with AM/PM
+  let period = 'AM';
+  if (h >= 12) {
+    period = 'PM';
+  }
+  if (h > 12) {
+    h = h - 12;
+  }
+  if (h === 0) {
+    h = 12;
+  }
+
+  return `${h}:${pad2(m)} ${period}`;
 };
 
 const computeProbableTime = (serialNumber, availabilityStartTime) => {
@@ -255,7 +268,13 @@ export default function Appointments() {
                         </p>
                         <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
                           <CalendarDays className="w-3 h-3 text-gray-400" />
-                          {appt.appointment_date}
+                          {(() => {
+                            if (!listDate) return '';
+                            const [year, month, day] = listDate.split('-');
+                            if (!year || !month || !day) return listDate;
+                            const date = new Date(Number(year), Number(month) - 1, Number(day));
+                            return isNaN(date.getTime()) ? listDate : date.toLocaleDateString();
+                          })()}
                         </p>
                         {appt.serial_number && (() => {
                           const time = computeProbableTime(appt.serial_number, appt.availability_start_time);

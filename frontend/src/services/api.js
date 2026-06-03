@@ -313,7 +313,9 @@ function metricsToSections(metrics = []) {
       status: m.status,
       reference_range: m.reference_range,
       flag: m.status === "low" ? "L" :
-            m.status === "high" ? "H" : null
+            m.status === "high" ? "H" :
+            m.status === "normal" ? "N" :
+            m.status === "borderline" ? "N" : null,
     });
   }
 

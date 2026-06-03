@@ -169,7 +169,7 @@ function ReportSelector({ history, activeReport, onSelect, onNew }) {
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status, flag }) {
   const { t } = useLanguage();
-  if (!status || status === 'normal') return null;
+  if (!status) return null;
   const cls = STATUS_CLS[status] || STATUS_CLS.high;
   const label = flag || t(STATUS_KEY_MAP[status] || 'statusHigh');
   return (

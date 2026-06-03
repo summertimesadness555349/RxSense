@@ -268,6 +268,70 @@ class PatientController {
         }
     }
 
+    saveReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) {
+                return res.status(400).json({ success: false, error: 'reportId is required' });
+            }
+
+            const patientId = await this.resolvePatientId(req.user?.id);
+            if (!patientId) {
+                return res.status(400).json({ success: false, error: 'Unable to resolve patient identity' });
+            }
+
+            const report = await this.patientModel.updateReportPatientId(reportId, patientId);
+            if (!report) {
+                return res.status(404).json({ success: false, error: 'Medical report not found' });
+            }
+
+            const reportWithMetrics = await this.patientModel.getReportWithMetricsById(reportId);
+            return res.status(200).json({ success: true, report: reportWithMetrics });
+        } catch (error) {
+            console.error('[PatientController] saveReport error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    removeReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) {
+                return res.status(400).json({ success: false, error: 'reportId is required' });
+            }
+
+            const report = await this.patientModel.updateReportPatientId(reportId, null);
+            if (!report) {
+                return res.status(404).json({ success: false, error: 'Medical report not found' });
+            }
+
+            const reportWithMetrics = await this.patientModel.getReportWithMetricsById(reportId);
+            return res.status(200).json({ success: true, report: reportWithMetrics });
+        } catch (error) {
+            console.error('[PatientController] removeReport error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    deleteReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) {
+                return res.status(400).json({ success: false, error: 'reportId is required' });
+            }
+
+            const report = await this.patientModel.deleteReportById(reportId);
+            if (!report) {
+                return res.status(404).json({ success: false, error: 'Medical report not found' });
+            }
+
+            return res.status(200).json({ success: true, report });
+        } catch (error) {
+            console.error('[PatientController] deleteReport error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
     getDocuments = async (req, res) => {
         try {
             const userId = req.user?.id;
@@ -771,70 +835,6 @@ class PatientController {
         } catch (error) {
             console.error('[Doctors] availability error:', error.message);
             return res.status(500).json({ success: false, error: 'Internal server error' });
-        }
-    };
-
-    saveReport = async (req, res) => {
-        try {
-            const { reportId } = req.params;
-            if (!reportId) {
-                return res.status(400).json({ success: false, error: 'reportId is required' });
-            }
-
-            const patientId = await this.resolvePatientId(req.user?.id);
-            if (!patientId) {
-                return res.status(400).json({ success: false, error: 'Unable to resolve patient identity' });
-            }
-
-            const report = await this.patientModel.updateReportPatientId(reportId, patientId);
-            if (!report) {
-                return res.status(404).json({ success: false, error: 'Medical report not found' });
-            }
-
-            const reportWithMetrics = await this.patientModel.getReportWithMetricsById(reportId);
-            return res.status(200).json({ success: true, report: reportWithMetrics });
-        } catch (error) {
-            console.error('[PatientController] saveReport error:', error);
-            return res.status(500).json({ success: false, error: error.message });
-        }
-    };
-
-    removeReport = async (req, res) => {
-        try {
-            const { reportId } = req.params;
-            if (!reportId) {
-                return res.status(400).json({ success: false, error: 'reportId is required' });
-            }
-
-            const report = await this.patientModel.updateReportPatientId(reportId, null);
-            if (!report) {
-                return res.status(404).json({ success: false, error: 'Medical report not found' });
-            }
-
-            const reportWithMetrics = await this.patientModel.getReportWithMetricsById(reportId);
-            return res.status(200).json({ success: true, report: reportWithMetrics });
-        } catch (error) {
-            console.error('[PatientController] removeReport error:', error);
-            return res.status(500).json({ success: false, error: error.message });
-        }
-    };
-
-    deleteReport = async (req, res) => {
-        try {
-            const { reportId } = req.params;
-            if (!reportId) {
-                return res.status(400).json({ success: false, error: 'reportId is required' });
-            }
-
-            const report = await this.patientModel.deleteReportById(reportId);
-            if (!report) {
-                return res.status(404).json({ success: false, error: 'Medical report not found' });
-            }
-
-            return res.status(200).json({ success: true, report });
-        } catch (error) {
-            console.error('[PatientController] deleteReport error:', error);
-            return res.status(500).json({ success: false, error: error.message });
         }
     };
 }

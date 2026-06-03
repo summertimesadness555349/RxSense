@@ -180,7 +180,7 @@ class ReportAnalysisUtils {
         }
         if (s.includes('high') || flag === 'H')    return 'high';
         if (s.includes('low')  || flag === 'L')    return 'low';
-        if (s.includes('borderline'))              return 'high';
+        if (s.includes('borderline'))              return 'borderline';
         return 'normal';
     }
 

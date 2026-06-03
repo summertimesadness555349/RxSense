@@ -824,11 +824,11 @@ export const getDoctorProfile = async (doctorId) => {
   return data.doctor || null;
 };
 
-export const updateDoctorProfile = async (doctorId, profileData) => {
+export const updateDoctorProfile = async (doctorId, profileData, currentPassword) => {
   const data = await request(`/doctor/update-profile/${doctorId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(profileData),
+    body: JSON.stringify({ ...profileData, currentPassword }),
   });
   return data.doctor || null;
 };

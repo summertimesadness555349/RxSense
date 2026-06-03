@@ -66,6 +66,12 @@ export default function DoctorSettings() {
     username: user?.username || '',
     email: user?.email || ''
   });
+  const [originalEmail, setOriginalEmail] = useState(user?.email || '');
+  const [originalUsername, setOriginalUsername] = useState(user?.username || '');
+  const [profilePassword, setProfilePassword] = useState('');
+  const[originalGender, setOriginalGender] = useState(user?.gender || '');
+  const[originalFullName, setOriginalFullName] = useState(user?.name || '');
+  const[originalSpecialty, setOriginalSpecialty] = useState(Array.isArray(user?.specialty) ? user.specialty : (user?.specialty ? [user.specialty] : []));
   const [profileLoading, setProfileLoading] = useState(false);
 
   const [passwordForm, setPasswordForm] = useState({
@@ -102,13 +108,27 @@ export default function DoctorSettings() {
     if (!profileForm.specialty?.length) {
       addToast('At least one specialty is required', 'warning'); return;
     }
+
+    const emailOrUsernameOrGenderChanged = profileForm.email !== originalEmail || profileForm.username !== originalUsername || profileForm.gender !== originalGender || profileForm.name !== originalFullName || profileForm.specialty !== originalSpecialty;
+    if (emailOrUsernameOrGenderChanged && !profilePassword) {
+      addToast('Please enter your current password to confirm email or username or gender change', 'warning');
+      return;
+    }
+
     setProfileLoading(true);
     try {
-      const updated = await updateDoctorProfile(user.id, profileForm);
+      const updated = await updateDoctorProfile(user.id, profileForm,profilePassword);
       // login helper in AuthContext merges/updates stored user object; token preserved via context
       login({ ...user, ...updated });
+      setOriginalEmail(updated.email || '');
+      setOriginalUsername(updated.username || '');
+      setOriginalGender(updated.gender || '');
+      setOriginalFullName(updated.name || '');
+      setOriginalSpecialty(Array.isArray(updated.specialty) ? updated.specialty : (updated.specialty ? [updated.specialty] : []));
+      setProfilePassword('');
       addToast('Profile updated successfully!', 'success');
     } catch (err) {
+      setProfilePassword('');
       addToast(err.message || 'Failed to update profile', 'error');
     } finally {
       setProfileLoading(false);
@@ -316,6 +336,16 @@ export default function DoctorSettings() {
                   <option value="other">Other</option>
                   <option value="prefer_not_to_say">Prefer not to say</option>
                 </Select>
+                { (profileForm.email !== originalEmail || profileForm.username !== originalUsername || profileForm.gender !== originalGender || profileForm.name !== originalFullName || profileForm.specialty !== originalSpecialty) && (
+                  <div className="relative">
+                    <Input label="Current Password" id="profilePassword"
+                      type="password"
+                      value={profilePassword}
+                      onChange={(e) => setProfilePassword(e.target.value)}
+                      placeholder="Enter your current password to confirm"
+                      required />
+                  </div>
+                )}
                 <div className="flex justify-end pt-2">
                   <Button type="submit" loading={profileLoading}>
                     <Save className="w-4 h-4" /> Save Changes

@@ -167,49 +167,76 @@ class DoctorController {
             console.error('Get doctor profile error:', error);
             return res.status(500).json({ success: false, error: 'Internal server error' });
         }
-    };
+    };     
 
     updateProfile = async (req, res) => {
-        try {
-            const { name, specialty, gender, username, email } = req.body || {};
-            const doctorId = req.doctor.doctor_id;
+    try {
+        const { email,specialty, gender, username, currentPassword } = req.body || {};
+        const doctorId = req.doctor.doctor_id;
 
-            const updates = {};
-            if (name !== undefined) updates.name = name;
-            if (specialty !== undefined) updates.specialty = specialty;
-            if (gender !== undefined) updates.gender = gender;
-
-            if (username !== undefined && username !== req.doctor.username) {
-                const existing = await this.doctorModel.getDoctorByUsername(username);
-                if (existing && existing.doctor_id !== doctorId) {
-                    return res.status(409).json({ success: false, error: 'Username already taken' });
-                }
-                updates.username = username;
-            }
-
-            if (email !== undefined && email !== req.doctor.email) {
-                const existing = await this.doctorModel.getDoctorByEmail(email);
-                if (existing && existing.doctor_id !== doctorId) {
-                    return res.status(409).json({ success: false, error: 'Email already in use' });
-                }
-                updates.email = email;
-            }
-
-            if (Object.keys(updates).length === 0) {
-                return res.status(400).json({ success: false, error: 'No valid updates provided' });
-            }
-
-            const updatedDoctor = await this.doctorModel.updateDoctor(doctorId, updates);
-            return res.status(200).json({
-                success: true,
-                message: 'Profile updated successfully',
-                doctor: updatedDoctor
-            });
-        } catch (error) {
-            console.error('Update doctor profile error:', error);
-            return res.status(500).json({ success: false, error: 'Internal server error' });
+        // 1. Password Verification Guard Clause
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, error: 'Current password is required to make identifier changes' });
         }
-    };
+
+        // Fetch doctor record to get the saved password hash
+        const doctor = await this.doctorModel.getDoctorByUsername(req.doctor.username);
+        if (!doctor) {
+            return res.status(404).json({ success: false, error: 'Doctor profile not found' });
+        }
+
+
+        // Verify the password
+        const isPasswordValid = await bcrypt.compare(currentPassword, doctor.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ success: false, error: 'Invalid current password' });
+        }
+
+        const updates = {};
+        updates.specialty = specialty !== undefined ? specialty : doctor.specialty;
+        updates.name = req.body.name !== undefined ? req.body.name : doctor.name;
+
+        // 2. Process Gender Update
+        if (gender !== undefined) {
+            updates.gender = gender;
+        }
+
+        // 3. Process Username Update
+        if (username !== undefined && username !== req.doctor.username) {
+            const existingByUsername = await this.doctorModel.getDoctorByUsername(username);
+            if (existingByUsername && existingByUsername.doctor_id !== doctorId) {
+                return res.status(409).json({ success: false, error: 'Username already taken' });
+            }
+            updates.username = username;
+        }
+
+        // 4. Process Email Update
+        if (email !== undefined && email !== req.doctor.email) {
+            const existingByEmail = await this.doctorModel.getDoctorByEmail(email);
+            if (existingByEmail && existingByEmail.doctor_id !== doctorId) {
+                return res.status(409).json({ success: false, error: 'Email already in use' });
+            }
+            updates.email = email;
+        }
+
+        // 5. Guard clause if fields were passed but values didn't actually change
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ success: false, error: 'No changes provided' });
+        }
+
+        // 6. Save updates to database
+        const updatedDoctor = await this.doctorModel.updateDoctor(doctorId, updates);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Profile identifiers updated successfully',
+            doctor: updatedDoctor
+        });
+    } catch (error) {
+        console.error('Change identifier error:', error);
+        return res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+};
 
     changePassword = async (req, res) => {
         try {

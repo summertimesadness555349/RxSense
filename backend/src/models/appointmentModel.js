@@ -125,31 +125,38 @@ class AppointmentModel {
     };
 
     getPatientAppointments = async (patientId, appointmentDate = null) => {
-        const where = ['a.patient_id = $1'];
-        const params = [patientId];
-        let idx = 2;
+    const where = ['a.patient_id = $1'];
+    const params = [patientId];
+    let idx = 2;
 
-        if (appointmentDate) {
-            where.push(`a.appointment_date = $${idx++}`);
-            params.push(appointmentDate);
-        }
+    if (appointmentDate) {
+        where.push(`a.appointment_date = $${idx++}`);
+        params.push(appointmentDate);
+    }
 
-        const query = `
-            SELECT
-                a.*,
-                d.doctor_id,
-                d.name AS doctor_name,
-                d.specialty,
-                da.start_time AS availability_start_time
-            FROM appointment a
-            JOIN doctor d ON a.doctor_id = d.doctor_id
-            LEFT JOIN doctor_availability da ON da.doctor_id = a.doctor_id AND da.availability_date = a.appointment_date
-            WHERE ${where.join(' AND ')}
-            ORDER BY a.appointment_date DESC, a.serial_number ASC;
-        `;
-        const result = await this.db_connection.query_executor(query, params);
-        return result.rows || [];
-    };
+    const query = `
+        SELECT
+            a.*,
+            d.doctor_id,
+            d.name AS doctor_name,
+            d.specialty,
+            -- Subquery to find the most recent availability start time
+            (
+                SELECT da.start_time 
+                FROM doctor_availability da 
+                WHERE da.doctor_id = a.doctor_id 
+                  AND da.availability_date <= a.appointment_date
+                ORDER BY da.availability_date DESC
+                LIMIT 1
+            ) AS availability_start_time
+        FROM appointment a
+        JOIN doctor d ON a.doctor_id = d.doctor_id
+        WHERE ${where.join(' AND ')}
+        ORDER BY a.appointment_date DESC, a.serial_number ASC;
+    `;
+    const result = await this.db_connection.query_executor(query, params);
+    return result.rows || [];
+};
 
     patientMarkArrived = async (appointmentId, patientId) => {
         const query = `

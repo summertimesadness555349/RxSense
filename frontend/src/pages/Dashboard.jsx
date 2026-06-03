@@ -13,6 +13,7 @@ import {
   getHealthSummary,
   getPrescriptionHistory,
   getPrescriptionHistoryLocal,
+  getReportHistory,
   getReportHistoryLocal,
   getPatientSummary,
 } from '../services/api.js';
@@ -156,7 +157,7 @@ export default function Dashboard() {
     const rxHistory  = getPrescriptionHistoryLocal();
     const rptHistory = getReportHistoryLocal();
     let freshRx    = rxHistory[0]  ?? null;
-    const freshRpt   = rptHistory[0] ?? null;
+    let freshRpt   = rptHistory[0] ?? null;
 
     const stale = !cached
       || freshRx?.savedAt  !== cached.latestRxSavedAt
@@ -175,7 +176,9 @@ export default function Dashboard() {
       try {
         const { profile: p, metrics: raw } = await getHealthSummary();
         const rxHistoryNew  = await getPrescriptionHistory();
+        const rptHistoryNew = await getReportHistory();
         freshRx = rxHistoryNew[0] ?? null;
+        freshRpt = rptHistoryNew[0] ?? null;
         const comp = computeCompleteness(p, raw);
         setProfile(p);
         setCompleteness(comp);

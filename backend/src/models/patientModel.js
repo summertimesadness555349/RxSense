@@ -201,29 +201,39 @@ class PatientModel {
     }
 
     createMedicalReport = async ({
+        userId,
         patientId,
         reportType,
-        imageUrl        = null,
-        imagePublicId   = null,
-        rawAnalysis     = null,
-        reportDate      = null,
-        facility        = null,
-        orderingDoctor  = null,
-        patientNameRep  = null,
+        imageUrl          = null,
+        imagePublicId     = null,
+        rawAnalysis       = null,
+        reportDate        = null,
+        facility          = null,
+        orderingDoctor    = null,
+        patientNameRep    = null,
+        patientJson       = null,
+        overallImpression = null,
+        diagnoses         = null,
+        recommendations   = null,
+        clinical_notes    = null,
+        follow_up         = null,
     }) => {
         const query = `
             INSERT INTO medical_report
-                (patient_id, report_type,
+                (user_id, patient_id, report_type,
                  image_url, image_public_id, raw_analysis,
-                 report_date, facility, ordering_doctor, patient_name_rep)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                 report_date, facility, ordering_doctor,
+                 patient_name_rep, patient_json, overall_impression,
+                 diagnoses, recommendations, clinical_notes, follow_up)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING *;
         `;
         const params = [
-            patientId, reportType,
-            imageUrl, imagePublicId,
-            rawAnalysis ? JSON.stringify(rawAnalysis) : null,
-            reportDate, facility, orderingDoctor, patientNameRep,
+            userId, patientId, reportType,
+            imageUrl, imagePublicId, rawAnalysis,
+            reportDate, facility, orderingDoctor,
+            patientNameRep, patientJson, overallImpression,
+            diagnoses, recommendations, clinical_notes, follow_up
         ];
         const result = await this.db_connection.query_executor(query, params);
         return result.rows[0] || null;
@@ -254,13 +264,14 @@ class PatientModel {
         }
     };
 
-    addReportMetric = async ({ reportId, parameterName, value, unit, referenceRange, status, llmFlagged }) => {
+    addReportMetric = async ({ reportId, sectionTitle, parameterName, value, unit, referenceRange, status, llmFlagged }) => {
         const query = `
-            INSERT INTO report_metric (report_id, parameter_name, value, unit, reference_range, status, llm_flagged)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO report_metric (report_id, section_title, parameter_name,
+                                    value, unit, reference_range, status, llm_flagged)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *;
         `;
-        const params = [reportId, parameterName, value, unit, referenceRange, status, llmFlagged];
+        const params = [reportId, sectionTitle, parameterName, value, unit, referenceRange, status, llmFlagged];
         const result = await this.db_connection.query_executor(query, params);
         return result.rows[0] || null;
     };
@@ -285,6 +296,27 @@ class PatientModel {
         `;
         const result = await this.db_connection.query_executor(query, [reportId]);
         return result.rows;
+    };
+
+    getPatientReportsByUserId = async (userId) => {
+        const query = `
+            SELECT
+                r.*,
+                COALESCE(
+                    json_agg(to_jsonb(rm))
+                        FILTER (WHERE rm.metric_id IS NOT NULL),
+                    '[]'::json
+                ) AS metrics
+            FROM medical_report r
+            LEFT JOIN report_metric rm
+                ON rm.report_id = r.report_id
+            WHERE r.user_id = $1
+            GROUP BY r.report_id
+            ORDER BY r.uploaded_at ASC;
+        `;
+        const result = await this.db_connection.query_executor(query, [userId]);
+
+        return result.rows || [];
     };
 
     // Returns the most-recent value for every unique parameter name across all reports for a patient.

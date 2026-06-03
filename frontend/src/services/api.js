@@ -169,7 +169,7 @@ function savePrescriptionToLocal(data) {
   }
 }
 
-function saveAllPrescriptionToLocal(scans) {
+function saveAllPrescriptionsToLocal(scans) {
   try {
     for (const scan of scans) {
       savePrescriptionToLocal(scan);
@@ -207,7 +207,7 @@ export const getPrescriptionHistory = async ({ limit = 50, offset = 0 } = {}) =>
   const data = await request(`/prescription/history?limit=${limit}&offset=${offset}`);
   const scans = data.scans || [];
   // persist fetched scans to localStorage
-  try { saveAllPrescriptionToLocal(scans); } catch {}
+  try { saveAllPrescriptionsToLocal(scans); } catch {}
   return JSON.parse(localStorage.getItem(PRESCRIPTION_HISTORY_KEY) || '[]');
 };
 
@@ -288,27 +288,74 @@ export const chatWithPrescription = async ({ messages, prescription, question })
 const REPORT_HISTORY_KEY = 'rxsense_report_history';
 const MAX_LOCAL_REPORTS  = 20;
 
+function metricsToSections(metrics = []) {
+  console.log('Converting metrics to sections:', metrics);
+  const sectionMap = new Map();
+
+  for (const m of metrics) {
+    const sectionTitle = m.section_title || "RESULTS";
+
+    // create section if not exists
+    if (!sectionMap.has(sectionTitle)) {
+      sectionMap.set(sectionTitle, {
+        title: sectionTitle,
+        entries: [],
+        narrative: null
+      });
+    }
+
+    const section = sectionMap.get(sectionTitle);
+
+    // convert metric → entry format
+    section.entries.push({
+      label: m.parameter_name,
+      value: m.value,
+      unit: m.unit,
+      status: m.status,
+      reference_range: m.reference_range,
+      flag: m.status === "low" ? "L" :
+            m.status === "high" ? "H" : null
+    });
+  }
+  console.log('Constructed section map from metrics:', sectionMap);
+
+  return Array.from(sectionMap.values());
+}
+
 function saveReportToLocal(report) {
   try {
+    console.log('Saving report to local history:', report);
     const existing = JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
+    console.log('Existing local report history:', existing);
     const entry = {
-      id:                 report.id,
+      id:                 report.report_id,
       image_url:          report.image_url,
-      type:               report.type,
-      date:               report.date,
+      type:               report.report_type,
+      date:               report.report_date,
       savedAt:            new Date().toISOString(),
       facility:           report.facility,
       ordering_doctor:    report.ordering_doctor,
-      patient:            report.patient,
-      sections:           report.sections,
+      patient:            report.patient_json,
+      sections:           metricsToSections(report.metrics),
       overall_impression: report.overall_impression,
-      diagnoses:          report.diagnoses,
-      recommendations:    report.recommendations,
+      diagnoses:          report.diagnoses || [],
+      recommendations:    report.recommendations || [],
       clinical_notes:     report.clinical_notes,
       follow_up:          report.follow_up,
     };
+    console.log('Constructed report entry for local history:', entry);
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_REPORTS);
     localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+function saveAllReportsToLocal(reports) {
+  try {
+    for (const report of reports) {
+      saveReportToLocal(report);
+    }
   } catch {
     // localStorage unavailable — silently ignore
   }
@@ -328,88 +375,38 @@ export const analyzeReport = async (file, reportType) => {
   formData.append('report', file);
   formData.append('reportType', reportType);
 
-  try {
-    const storedUser = JSON.parse(localStorage.getItem('rxsense_user') || '{}');
-    const patientId = storedUser.patient_id || storedUser.uuid;
-    if (patientId) formData.append('patientId', patientId);
-  } catch {
-    // Optional — backend analyzes without saving if no patientId
-  }
-
   const data = await request('/patient/reports/analyze', {
     method: 'POST',
     body: formData,
   });
 
-  const dbReport = data.report || {};
+  const report = data.report || {};
 
-  const mapDbReportToUi = (db) => {
-    if (!db) return null;
-    const fmtDate = (raw) => {
-      if (!raw) return null;
-      try {
-        const d = new Date(raw);
-        return isNaN(d) ? String(raw) : d.toLocaleDateString('en-BD', { year: 'numeric', month: 'long', day: 'numeric' });
-      } catch {
-        return String(raw);
-      }
-    };
-
-    const type = db.type || db.report_type || null;
-    const date = fmtDate(db.report_date || db.date);
-    const image_url = db.image_url || db.imageUrl || null;
-
-    const sections = (Array.isArray(db.sections) && db.sections.length > 0)
-      ? db.sections.map((s) => ({
-          title: s.title || s.name || '',
-          type: s.type || 'other',
-          narrative: s.narrative || null,
-          entries: (s.entries || []).map((e) => ({
-            label: e.label || e.parameterName || e.parameter_name || e.name || '',
-            value: e.value ?? null,
-            unit: e.unit || null,
-            reference_range: e.reference_range || e.referenceRange || null,
-            flag: e.flag || null,
-            status: e.status || null,
-            note: e.note || null,
-          })),
-        }))
-      : (Array.isArray(db.metrics) && db.metrics.length > 0)
-        ? [{
-            title: 'Results',
-            type: 'lab_results',
-            narrative: null,
-            entries: db.metrics.map((m) => ({
-              label: m.parameterName || m.parameter_name || '',
-              value: m.value ?? null,
-              unit: m.unit || null,
-              reference_range: m.referenceRange || m.reference_range || null,
-              flag: null,
-              status: m.status || null,
-            })),
-          }]
-        : [];
-
-    return {
-      id: db.report_id || db.id || null,
-      image_url,
-      type,
-      date,
-      facility: db.facility || null,
-      ordering_doctor: db.ordering_doctor || db.orderingDoctor || null,
-      patient: db.patient || {},
-      sections,
-      overall_impression: db.overall_impression || db.impression || null,
-      diagnoses: Array.isArray(db.diagnoses) ? db.diagnoses : (db.diagnoses ? [db.diagnoses] : []),
-      recommendations: Array.isArray(db.recommendations) ? db.recommendations : (db.recommendations ? [db.recommendations] : []),
-      clinical_notes: db.clinical_notes || db.clinicalNotes || null,
-      follow_up: db.follow_up || db.followUp || null,
-    };
-  };
-
-  const report = mapDbReportToUi(dbReport);
   saveReportToLocal(report);
   return report;
+};
+
+export const getReportHistory = async ({ limit = 50, offset = 0 } = {}) => {
+  // If local cache exists, return it instead of fetching
+  try {
+    const raw = localStorage.getItem(REPORT_HISTORY_KEY);
+    if (raw !== null) {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+  } catch {
+    // ignore and fall through to fetch
+  }
+
+  const data = await request(`/patient/reports/history?limit=${limit}&offset=${offset}`);
+  const reports = data.reports || [];
+  // persist fetched reports to localStorage
+  try { saveAllReportsToLocal(reports); } catch {}
+  return JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
 };
 
 // POST /api/patient/reports/chat

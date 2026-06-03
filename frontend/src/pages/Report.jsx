@@ -6,7 +6,7 @@ import ReportChatbot from '../components/report/ReportChatbot.jsx';
 import { Select } from '../components/ui/Input.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
-import { analyzeReport, getReportHistoryLocal } from '../services/api.js';
+import { analyzeReport, getReportHistory } from '../services/api.js';
 
 const REPORT_TYPES = [
   'Complete Blood Count (CBC)',
@@ -253,7 +253,7 @@ function ResultView({ report }) {
 
       {/* Sections */}
       {(report.sections || []).map((section, si) => {
-        const isTable = section.type === 'lab_results' || section.type === 'vitals';
+        // const isTable = section.type === 'lab_results' || section.type === 'vitals';
         const hasEntries = section.entries?.length > 0;
         if (!hasEntries && !section.narrative) return null;
 
@@ -263,7 +263,7 @@ function ResultView({ report }) {
               {section.title}
             </p>
 
-            {isTable && hasEntries && (
+            {hasEntries && (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[360px]">
                   <thead>
@@ -296,7 +296,7 @@ function ResultView({ report }) {
               </div>
             )}
 
-            {!isTable && section.narrative && (
+            {/* {!isTable && section.narrative && (
               <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">{section.narrative}</p>
             )}
 
@@ -313,7 +313,7 @@ function ResultView({ report }) {
                   </div>
                 ))}
               </div>
-            )}
+            )} */}
           </div>
         );
       })}
@@ -352,12 +352,20 @@ export default function Report() {
   const [reportType, setReportType]     = useState('Complete Blood Count (CBC)');
 
   useEffect(() => {
-    const h = getReportHistoryLocal();
-    setHistory(h);
-    if (h.length > 0) {
-      setActiveReport(h[0]);
-      setPhase('result');
-    }
+    (async () => {
+      try {
+        let h = await getReportHistory();
+        h = h || [];
+        setHistory(h);
+        if (h.length > 0) {
+          setActiveReport(h[0]);
+          setPhase('result');
+        }
+      } catch (err) {
+        console.log('Failed to load report history:', err);
+        setHistory([]);
+      }
+    })();
   }, []);
 
   const handleUpload = async (file) => {
@@ -375,8 +383,13 @@ export default function Report() {
       clearInterval(stepTimer);
       setActiveReport(result);
       setPhase('result');
-      const updated = getReportHistoryLocal();
-      setHistory(updated);
+      try {
+        const updated = await getReportHistory();
+        const h = updated || [];
+        setHistory(h);
+      } catch {
+        console.log('Failed to update history after analysis');
+      }
       addToast(t('reportSavedToast'), 'success');
     } catch (err) {
       clearInterval(stepTimer);

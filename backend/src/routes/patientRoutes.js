@@ -76,6 +76,11 @@ patientRouter.post('/reports/analyze',
     patientController.analyzeReport
 );
 
+patientRouter.get('/reports/history',
+    authenticateToken.authenticateToken,
+    patientController.getReportHistory
+);
+
 patientRouter.post('/reports/chat',
     authenticateToken.authenticateToken,
     reportChatController.chat

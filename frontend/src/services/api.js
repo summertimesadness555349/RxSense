@@ -289,7 +289,6 @@ const REPORT_HISTORY_KEY = 'rxsense_report_history';
 const MAX_LOCAL_REPORTS  = 20;
 
 function metricsToSections(metrics = []) {
-  console.log('Converting metrics to sections:', metrics);
   const sectionMap = new Map();
 
   for (const m of metrics) {
@@ -317,18 +316,16 @@ function metricsToSections(metrics = []) {
             m.status === "high" ? "H" : null
     });
   }
-  console.log('Constructed section map from metrics:', sectionMap);
 
   return Array.from(sectionMap.values());
 }
 
 function saveReportToLocal(report) {
   try {
-    console.log('Saving report to local history:', report);
     const existing = JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
-    console.log('Existing local report history:', existing);
     const entry = {
       id:                 report.report_id,
+      patient_id:         report.patient_id || null,
       image_url:          report.image_url,
       type:               report.report_type,
       date:               report.report_date,
@@ -343,9 +340,9 @@ function saveReportToLocal(report) {
       clinical_notes:     report.clinical_notes,
       follow_up:          report.follow_up,
     };
-    console.log('Constructed report entry for local history:', entry);
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_REPORTS);
     localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));
+    return entry;
   } catch {
     // localStorage unavailable — silently ignore
   }
@@ -369,6 +366,31 @@ export const getReportHistoryLocal = () => {
   }
 };
 
+function updateReportHistoryLocal(reportId, updater) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
+    const updated = existing.map((entry) => {
+      if (entry.id !== reportId) return entry;
+      return updater(entry);
+    });
+    localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+function deleteReportHistoryLocal(reportId) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
+    const updated = existing.filter((entry) => entry.id !== reportId);
+    localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
 // POST /api/patient/reports/analyze
 export const analyzeReport = async (file, reportType) => {
   const formData = new FormData();
@@ -382,8 +404,8 @@ export const analyzeReport = async (file, reportType) => {
 
   const report = data.report || {};
 
-  saveReportToLocal(report);
-  return report;
+  const entry = saveReportToLocal(report);
+  return entry || report;
 };
 
 export const getReportHistory = async ({ limit = 50, offset = 0 } = {}) => {
@@ -404,9 +426,49 @@ export const getReportHistory = async ({ limit = 50, offset = 0 } = {}) => {
 
   const data = await request(`/patient/reports/history?limit=${limit}&offset=${offset}`);
   const reports = data.reports || [];
-  // persist fetched reports to localStorage
-  try { saveAllReportsToLocal(reports); } catch {}
+  // clear cache and persist fetched reports to localStorage to ensure clean sync of patient_id
+  try {
+    localStorage.removeItem(REPORT_HISTORY_KEY);
+    saveAllReportsToLocal(reports);
+  } catch {}
   return JSON.parse(localStorage.getItem(REPORT_HISTORY_KEY) || '[]');
+};
+
+export const saveReportScan = async (reportId) => {
+  const data = await request(`/patient/reports/save/${reportId}`, {
+    method: 'PATCH',
+  });
+
+  const patientId = data.report?.patient_id ?? null;
+  updateReportHistoryLocal(reportId, (entry) => ({
+    ...entry,
+    patient_id: patientId,
+  }));
+
+  return data.report || null;
+};
+
+export const removeReportScan = async (reportId) => {
+  const data = await request(`/patient/reports/remove/${reportId}`, {
+    method: 'PATCH',
+  });
+
+  updateReportHistoryLocal(reportId, (entry) => ({
+    ...entry,
+    patient_id: null,
+  }));
+
+  return data.report || null;
+};
+
+export const deleteReportScan = async (reportId) => {
+  const data = await request(`/patient/reports/delete/${reportId}`, {
+    method: 'DELETE',
+  });
+
+  deleteReportHistoryLocal(reportId);
+
+  return data.report || null;
 };
 
 // POST /api/patient/reports/chat

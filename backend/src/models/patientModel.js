@@ -642,6 +642,46 @@ class PatientModel {
         const result = await this.db_connection.query_executor(query, [patientId, limit]);
         return result.rows || [];
     };
+
+    updateReportPatientId = async (reportId, patientId) => {
+        const query = `
+            UPDATE medical_report
+            SET patient_id = $2
+            WHERE report_id = $1
+            RETURNING *;
+        `;
+        const result = await this.db_connection.query_executor(query, [reportId, patientId]);
+        return result.rows[0] || null;
+    };
+
+    deleteReportById = async (reportId) => {
+        const query = `
+            DELETE FROM medical_report
+            WHERE report_id = $1
+            RETURNING *;
+        `;
+        const result = await this.db_connection.query_executor(query, [reportId]);
+        return result.rows[0] || null;
+    };
+
+    getReportWithMetricsById = async (reportId) => {
+        const query = `
+            SELECT
+                r.*,
+                COALESCE(
+                    json_agg(to_jsonb(rm))
+                        FILTER (WHERE rm.metric_id IS NOT NULL),
+                    '[]'::json
+                ) AS metrics
+            FROM medical_report r
+            LEFT JOIN report_metric rm
+                ON rm.report_id = r.report_id
+            WHERE r.report_id = $1
+            GROUP BY r.report_id;
+        `;
+        const result = await this.db_connection.query_executor(query, [reportId]);
+        return result.rows[0] || null;
+    };
 }
 
 module.exports = PatientModel;

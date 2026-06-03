@@ -35,5 +35,5 @@ doctorRouter.post('/patients/:patientId/vaccinations', doctorController.addPatie
 doctorRouter.post('/patients/:patientId/surgeries', doctorController.addPatientSurgery);
 doctorRouter.patch('/patients/:patientId/prescription-items/:itemId', doctorController.modifyPrescriptionItem);
 doctorRouter.get('/drugs/search', doctorController.searchDrugs);
-
+doctorRouter.get('/patients/:patientId/paused-medications', doctorController.getPausedOrStoppedMedicine);
 module.exports = { doctorRouter };

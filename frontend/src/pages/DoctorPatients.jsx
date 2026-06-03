@@ -17,6 +17,7 @@ import {
   XCircle,
   AlertCircle,
   Check,
+  History,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -30,6 +31,7 @@ import {
   addPatientAllergy,
   addPatientVaccination,
   addPatientSurgery,
+  getPausedMedication,
   markAppointmentLate,
   markAppointmentArrived,
   startAppointment,
@@ -40,7 +42,6 @@ import Input from "../components/ui/Input.jsx";
 import { useNavigate } from "react-router-dom";
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
-
 
 const formatChartDate = (value) => {
   if (!value) return "N/A";
@@ -70,7 +71,7 @@ const getPrescriptionMedicationItems = (data) =>
       prescription_id: rx.prescription_id,
       doctor_name: rx.doctor_name,
       issued_at: rx.issued_at,
-    })),
+    }))
   );
 
 const createEmptyPrescriptionDraft = () => ({
@@ -94,7 +95,7 @@ const createPrescriptionDraftFromChart = (data) => {
     (item) => {
       const status = String(item.status || "active").toLowerCase();
       return status === "active";
-    },
+    }
   );
 
   const bp =
@@ -111,7 +112,7 @@ const createPrescriptionDraftFromChart = (data) => {
         patient.weight ? `Weight: ${patient.weight} kg` : null,
         patient.bloodGroup ? `Blood group: ${patient.bloodGroup}` : null,
       ],
-      "",
+      ""
     ),
     diagnosis: joinLines(
       (chart.conditions || []).map((condition) =>
@@ -121,18 +122,20 @@ const createPrescriptionDraftFromChart = (data) => {
           condition.status ? `Status: ${condition.status}` : null,
         ]
           .filter(Boolean)
-          .join(" - "),
+          .join(" - ")
       ),
-      "",
+      ""
     ),
     investigations: joinLines(
       (chart.reports || [])
         .slice(0, 4)
         .map(
           (report) =>
-            `${report.report_type || "Lab"} report - ${formatChartDate(report.uploaded_at)}`,
+            `${report.report_type || "Lab"} report - ${formatChartDate(
+              report.uploaded_at
+            )}`
         ),
-      "",
+      ""
     ),
     allergies: joinLines(
       (chart.allergies || []).map((allergy) =>
@@ -145,9 +148,9 @@ const createPrescriptionDraftFromChart = (data) => {
           allergy.severity ? `Severity: ${allergy.severity}` : null,
         ]
           .filter(Boolean)
-          .join(" - "),
+          .join(" - ")
       ),
-      "No known drug allergies recorded.",
+      "No known drug allergies recorded."
     ),
     currentMedications: joinLines(
       activeMedicines.map((item) =>
@@ -158,9 +161,9 @@ const createPrescriptionDraftFromChart = (data) => {
           item.duration_days ? `${item.duration_days} days` : null,
         ]
           .filter(Boolean)
-          .join(" - "),
+          .join(" - ")
       ),
-      "No current medicines recorded as still taken.",
+      "No current medicines recorded as still taken."
     ),
     surgeries: joinLines(
       (chart.surgeries || [])
@@ -172,9 +175,9 @@ const createPrescriptionDraftFromChart = (data) => {
             surgery.outcome ? `Outcome: ${surgery.outcome}` : null,
           ]
             .filter(Boolean)
-            .join(" - "),
+            .join(" - ")
         ),
-      "No surgical history recorded.",
+      "No surgical history recorded."
     ),
     vaccinations: joinLines(
       (chart.vaccinations || [])
@@ -183,7 +186,9 @@ const createPrescriptionDraftFromChart = (data) => {
           [
             vaccination.vaccine_name || "Vaccine",
             vaccination.dose_number
-              ? `Dose ${vaccination.dose_number}/${vaccination.total_doses || 1}`
+              ? `Dose ${vaccination.dose_number}/${
+                  vaccination.total_doses || 1
+                }`
               : null,
             formatChartDate(vaccination.administered_at),
             vaccination.next_due_date
@@ -191,9 +196,9 @@ const createPrescriptionDraftFromChart = (data) => {
               : null,
           ]
             .filter(Boolean)
-            .join(" - "),
+            .join(" - ")
         ),
-      "No vaccination record noted for this visit.",
+      "No vaccination record noted for this visit."
     ),
   };
 };
@@ -212,7 +217,9 @@ function PrescriptionTextarea({
       ? "border-rose-200 bg-rose-50/40 focus:border-rose-400"
       : "border-gray-200 bg-white focus:border-emerald-500";
 
-  const readOnlyClass = readOnly ? "cursor-not-allowed bg-gray-50 text-gray-600" : "";
+  const readOnlyClass = readOnly
+    ? "cursor-not-allowed bg-gray-50 text-gray-600"
+    : "";
 
   return (
     <label className="block">
@@ -257,6 +264,11 @@ export default function DoctorPatients() {
   const [loadingChart, setLoadingChart] = useState(false);
   const [activeTab, setActiveTab] = useState("conditions");
 
+  // Paused Medications Database retrieval states
+  const [pausedMedicationsHistory, setPausedMedicationsHistory] = useState([]);
+  const [loadingPausedHistory, setLoadingPausedHistory] = useState(false);
+  const [showPausedHistory, setShowPausedHistory] = useState(false);
+
   // Prescription builder state
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [drugSearch, setDrugSearch] = useState("");
@@ -268,7 +280,7 @@ export default function DoctorPatients() {
   const [instructions, setInstructions] = useState("");
   const [visitDate, setVisitDate] = useState(todayInputValue());
   const [prescriptionDraft, setPrescriptionDraft] = useState(
-    createEmptyPrescriptionDraft,
+    createEmptyPrescriptionDraft
   );
 
   const [safetyReport, setSafetyReport] = useState(null);
@@ -278,7 +290,6 @@ export default function DoctorPatients() {
   const [medicationActionNotes, setMedicationActionNotes] = useState("");
   const [pauseDurationDays, setPauseDurationDays] = useState("3");
   const [updatingMedicationId, setUpdatingMedicationId] = useState(null);
-  const [updatingAppointmentId, setUpdatingAppointmentId] = useState(null);
 
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = useState(false);
@@ -295,7 +306,9 @@ export default function DoctorPatients() {
   const [selectedAllergyDrug, setSelectedAllergyDrug] = useState(null);
   const [reactionType, setReactionType] = useState("");
   const [allergySeverity, setAllergySeverity] = useState("moderate");
-  const [allergyConfirmedAt, setAllergyConfirmedAt] = useState(todayInputValue());
+  const [allergyConfirmedAt, setAllergyConfirmedAt] = useState(
+    todayInputValue()
+  );
   const [submittingAllergy, setSubmittingAllergy] = useState(false);
 
   // Vaccination Form state
@@ -303,7 +316,9 @@ export default function DoctorPatients() {
   const [vaccineCvxCode, setVaccineCvxCode] = useState("");
   const [vaccineDoseNumber, setVaccineDoseNumber] = useState("");
   const [vaccineTotalDoses, setVaccineTotalDoses] = useState("");
-  const [vaccineAdministeredAt, setVaccineAdministeredAt] = useState(todayInputValue());
+  const [vaccineAdministeredAt, setVaccineAdministeredAt] = useState(
+    todayInputValue()
+  );
   const [vaccineBatchNumber, setVaccineBatchNumber] = useState("");
   const [vaccineSite, setVaccineSite] = useState("");
   const [vaccineNextDueDate, setVaccineNextDueDate] = useState("");
@@ -313,7 +328,9 @@ export default function DoctorPatients() {
   // Surgery Form state
   const [surgeryProcedureName, setSurgeryProcedureName] = useState("");
   const [surgeryIcd10Pcs, setSurgeryIcd10Pcs] = useState("");
-  const [surgeryPerformedAt, setSurgeryPerformedAt] = useState(todayInputValue());
+  const [surgeryPerformedAt, setSurgeryPerformedAt] = useState(
+    todayInputValue()
+  );
   const [surgeryOutcome, setSurgeryOutcome] = useState("successful");
   const [surgeryComplications, setSurgeryComplications] = useState("");
   const [surgeryAnaesthesiaType, setSurgeryAnaesthesiaType] = useState("");
@@ -329,7 +346,8 @@ export default function DoctorPatients() {
       setPatients(data);
       setFilteredPatients(data);
       if (selectedPatientId) {
-        const refreshed = data.find((p) => p.patient_id === selectedPatientId) || null;
+        const refreshed =
+          data.find((p) => p.patient_id === selectedPatientId) || null;
         setSelectedPatient(refreshed);
       }
     } catch (err) {
@@ -342,10 +360,10 @@ export default function DoctorPatients() {
   }, [user?.id, appointmentDate]);
 
   useEffect(() => {
-      if(chartData) {
-        setPrescriptionDraft(createPrescriptionDraftFromChart(chartData));
-      }
-  },[chartData]);
+    if (chartData) {
+      setPrescriptionDraft(createPrescriptionDraftFromChart(chartData));
+    }
+  }, [chartData]);
 
   useEffect(() => {
     const term = searchTerm.toLowerCase().trim();
@@ -357,8 +375,8 @@ export default function DoctorPatients() {
           (p) =>
             p.name.toLowerCase().includes(term) ||
             (p.phone && p.phone.includes(term)) ||
-            (p.email && p.email.toLowerCase().includes(term)),
-        ),
+            (p.email && p.email.toLowerCase().includes(term))
+        )
       );
     }
   }, [searchTerm, patients]);
@@ -372,6 +390,8 @@ export default function DoctorPatients() {
     setSafetyReport(null);
     setVisitDate(todayInputValue());
     setPrescriptionDraft(createEmptyPrescriptionDraft());
+    setShowPausedHistory(false);
+    setPausedMedicationsHistory([]);
     try {
       const data = await getDoctorPatientChart(patient.patient_id);
       console.log("frontend getDoctorPatientChart data:", data);
@@ -381,6 +401,32 @@ export default function DoctorPatients() {
       addToast(err.message || "Failed to load patient chart", "error");
     } finally {
       setLoadingChart(false);
+    }
+  };
+
+  // Triggers API database lookup for historically paused or stopped items
+  const fetchPausedMedicationsHistory = async () => {
+    if (!selectedPatientId) return;
+    setLoadingPausedHistory(true);
+    try {
+      const historyData = await getPausedMedication(selectedPatientId);
+      setPausedMedicationsHistory(historyData || []);
+      // console.log("Paused/Stopped medication history data:", historyData);
+    } catch (err) {
+      addToast(
+        err.message || "Failed to load historical database entries",
+        "error"
+      );
+    } finally {
+      setLoadingPausedHistory(false);
+    }
+  };
+
+  const togglePausedHistoryPanel = () => {
+    const nextState = !showPausedHistory;
+    setShowPausedHistory(nextState);
+    if (nextState) {
+      fetchPausedMedicationsHistory();
     }
   };
 
@@ -428,7 +474,7 @@ export default function DoctorPatients() {
       };
       await addPatientAllergy(selectedPatientId, payload);
       addToast("Allergy added successfully!", "success");
-      
+
       // Reset form
       setAllergyDrugSearch("");
       setAllergyDrugResults([]);
@@ -561,7 +607,7 @@ export default function DoctorPatients() {
     if (!selectedDrug) {
       addToast(
         "Please select a drug from the autocomplete suggestions",
-        "warning",
+        "warning"
       );
       return;
     }
@@ -599,11 +645,15 @@ export default function DoctorPatients() {
     setSafetyReport(null);
   };
 
+  const handleRemoveHistoricalPausedItem = (itemId) => {
+    setPausedMedicationsHistory((prev) =>
+      prev.filter((med) => med.item_id !== itemId)
+    );
+  };
+
   const handleUpdateDrugItem = (index, field, value) => {
     setPrescriptionItems((items) =>
-      items.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item,
-      ),
+      items.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
     setSafetyReport(null);
   };
@@ -646,13 +696,11 @@ export default function DoctorPatients() {
       return;
     }
 
-    // Prevent multiple submissions
     if (submittingRx || checkingSafety) {
       addToast("Please wait for the current operation to complete", "warning");
       return;
     }
 
-    // Run safety check in background
     setCheckingSafety(true);
     let safetyResult = null;
     try {
@@ -669,27 +717,29 @@ export default function DoctorPatients() {
       setCheckingSafety(false);
     }
 
-    // If safety check found conflicts, show confirmation modal
     if (safetyResult && safetyResult.has_conflict) {
-      // Build a detailed warning message from the safety report
-      let warningMessage = "The system has detected potential safety issues with this prescription:\n\n";
+      let warningMessage =
+        "The system has detected potential safety issues with this prescription:\n\n";
       if (safetyResult.warnings && safetyResult.warnings.length > 0) {
         warningMessage += safetyResult.warnings
           .map(
             (w, idx) =>
-              `${idx + 1}. ${w.severity?.toUpperCase() || "WARNING"}: ${w.description}`
+              `${idx + 1}. ${w.severity?.toUpperCase() || "WARNING"}: ${
+                w.description
+              }`
           )
           .join("\n");
       } else {
-        warningMessage += "Potential drug interactions or allergy conflicts detected.";
+        warningMessage +=
+          "Potential drug interactions or allergy conflicts detected.";
       }
-      warningMessage += "\n\nAre you sure you want to continue and submit this prescription?";
+      warningMessage +=
+        "\n\nAre you sure you want to continue and submit this prescription?";
       setConfirmMessage(warningMessage);
       setShowConfirm(true);
       return;
     }
 
-    // Proceed with submission
     handleConfirmSubmit();
   };
 
@@ -708,7 +758,7 @@ export default function DoctorPatients() {
     setMedicationAction({ item, status });
     setMedicationActionNotes(item.modification_notes || "");
     setPauseDurationDays(
-      item.pause_duration_days ? String(item.pause_duration_days) : "",
+      item.pause_duration_days ? String(item.pause_duration_days) : "3"
     );
   };
 
@@ -733,8 +783,17 @@ export default function DoctorPatients() {
         ...prescriptionDraft,
         items,
       });
-      addToast("Prescription finalized and submitted successfully!", "success");
 
+      // Mark the active appointment as finished/complete
+      const targetAppointmentId = selectedPatient?.appointment_id;
+      if (targetAppointmentId) {
+        await completeAppointment(targetAppointmentId);
+      }
+
+      addToast(
+        "Prescription finalized and appointment marked complete!",
+        "success"
+      );
 
       // Reload chart
       const data = await getDoctorPatientChart(selectedPatientId);
@@ -743,12 +802,16 @@ export default function DoctorPatients() {
       setPrescriptionItems([]);
       setSafetyReport(null);
 
+      // Reload registry to reflect updated patient list status
+      loadPatients();
+
       // Navigate to print page
       navigate(`/prescription/print/${selectedPatientId}`);
     } catch (err) {
-      addToast(err.message || "Failed to submit prescription", "error");
+      addToast(err.message || "Failed to submit prescription copy", "error");
     } finally {
       setSubmittingRx(false);
+      setShowConfirm(false);
     }
   };
 
@@ -761,12 +824,21 @@ export default function DoctorPatients() {
           status === "paused" ? options.pauseDurationDays : null,
         modification_notes: options.notes || null,
       });
+
       const data = await getDoctorPatientChart(selectedPatientId);
       setChartData(data);
-      addToast(`Medication marked as ${status}`, "success");
+      addToast(`Medication structural list updated to ${status}`, "success");
       closeMedicationAction();
+
+      // If viewing the database trace list panel, sync updates
+      if (showPausedHistory) {
+        fetchPausedMedicationsHistory();
+      }
     } catch (err) {
-      addToast(err.message || "Failed to update medication", "error");
+      addToast(
+        err.message || "Failed to update medication status configuration",
+        "error"
+      );
     } finally {
       setUpdatingMedicationId(null);
     }
@@ -789,7 +861,7 @@ export default function DoctorPatients() {
       {
         pauseDurationDays: durationDays,
         notes: medicationActionNotes.trim(),
-      },
+      }
     );
   };
 
@@ -866,9 +938,8 @@ export default function DoctorPatients() {
                   </p>
                   <p className="text-xs text-gray-400 truncate">
                     {p.gender} · {calculateAge(p.date_of_birth)}
-
                   </p>
-                  <p className="text-[10px] text-gray-400 truncate">
+                  <p className="text-[10px] text-gray-400 truncate font-semibold">
                     {String(p.status || "booked")}
                     {p.priority_flag ? " · priority" : ""}
                     {p.arrival_time ? " · ✓ Arrived" : ""}
@@ -927,7 +998,7 @@ export default function DoctorPatients() {
                       {calculateAge(chartData.patient?.date_of_birth)} (
                       {chartData.patient?.date_of_birth
                         ? new Date(
-                            chartData.patient.date_of_birth,
+                            chartData.patient.date_of_birth
                           ).toLocaleDateString()
                         : "N/A"}
                       )
@@ -1012,7 +1083,11 @@ export default function DoctorPatients() {
                     >
                       {tab.label}
                       <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === tab.id ? "bg-white/20 text-white" : "bg-gray-100 dark:bg-gray-850 text-gray-600 dark:text-gray-400"}`}
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          activeTab === tab.id
+                            ? "bg-white/20 text-white"
+                            : "bg-gray-100 dark:bg-gray-850 text-gray-600 dark:text-gray-400"
+                        }`}
                       >
                         {tab.count || 0}
                       </span>
@@ -1106,7 +1181,10 @@ export default function DoctorPatients() {
                             <PlusCircle className="w-4 h-4" /> Add Allergy
                           </button>
                         ) : (
-                          <form onSubmit={handleAddAllergy} className="bg-rose-500/5 rounded-2xl border border-rose-200/20 p-4 space-y-4">
+                          <form
+                            onSubmit={handleAddAllergy}
+                            className="bg-rose-500/5 rounded-2xl border border-rose-200/20 p-4 space-y-4"
+                          >
                             <div className="flex justify-between items-center">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
                                 Add Allergy
@@ -1119,9 +1197,8 @@ export default function DoctorPatients() {
                                 Cancel
                               </button>
                             </div>
-                            
+
                             <div className="grid gap-4 md:grid-cols-2">
-                              {/* Drug Autocomplete */}
                               <div className="relative md:col-span-2">
                                 <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
                                   Drug Allergen
@@ -1148,7 +1225,7 @@ export default function DoctorPatients() {
                                           setAllergyDrugSearch(
                                             drug.brand_name
                                               ? `${drug.brand_name} (${drug.generic_name})`
-                                              : drug.generic_name,
+                                              : drug.generic_name
                                           );
                                           setAllergyDrugResults([]);
                                         }}
@@ -1178,7 +1255,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={reactionType}
-                                  onChange={(e) => setReactionType(e.target.value)}
+                                  onChange={(e) =>
+                                    setReactionType(e.target.value)
+                                  }
                                   placeholder="e.g. Skin Rash, Anaphylaxis"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                   required
@@ -1191,7 +1270,9 @@ export default function DoctorPatients() {
                                 </label>
                                 <select
                                   value={allergySeverity}
-                                  onChange={(e) => setAllergySeverity(e.target.value)}
+                                  onChange={(e) =>
+                                    setAllergySeverity(e.target.value)
+                                  }
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
                                 >
                                   <option value="mild">Mild</option>
@@ -1208,13 +1289,19 @@ export default function DoctorPatients() {
                                 <input
                                   type="date"
                                   value={allergyConfirmedAt}
-                                  onChange={(e) => setAllergyConfirmedAt(e.target.value)}
+                                  onChange={(e) =>
+                                    setAllergyConfirmedAt(e.target.value)
+                                  }
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
                             </div>
 
-                            <Button type="submit" loading={submittingAllergy} className="w-full bg-rose-500 hover:bg-rose-600 text-white">
+                            <Button
+                              type="submit"
+                              loading={submittingAllergy}
+                              className="w-full bg-rose-500 hover:bg-rose-600 text-white"
+                            >
                               Add Allergy
                             </Button>
                           </form>
@@ -1224,123 +1311,219 @@ export default function DoctorPatients() {
                   )}
 
                   {activeTab === "medications" && (
-                    <div className="space-y-3">
-                      {activeMedications.length > 0 ? (
-                        activeMedications.map((item) => {
-                          const medStatus = item.status || "active";
-                          const isUpdating =
-                            updatingMedicationId === item.item_id;
-                          return (
-                            <motion.div
-                              key={item.item_id}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="p-4 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-200 dark:border-gray-800"
-                            >
-                              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-                                      {item.brand_name ||
-                                        item.generic_name ||
-                                        "Medication"}
-                                    </h4>
-                                    {item.generic_name && item.brand_name && (
-                                      <span className="text-xs text-gray-400">
-                                        ({item.generic_name})
-                                      </span>
-                                    )}
-                                    <span
-                                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold capitalize ${statusStyle(medStatus)}`}
-                                    >
-                                      {medStatus}
-                                      {medStatus === "paused" &&
-                                      item.pause_duration_days
-                                        ? ` - ${item.pause_duration_days}d`
-                                        : ""}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {[
-                                      item.dosage,
-                                      item.frequency,
-                                      item.duration_days
-                                        ? `${item.duration_days} days`
-                                        : null,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" · ")}
-                                  </p>
-                                  {item.instructions && (
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      Instructions: {item.instructions}
-                                    </p>
-                                  )}
-                                  <p className="text-[11px] text-gray-400 mt-2">
-                                    Dr. {item.doctor_name || "System"} ·{" "}
-                                    {item.issued_at
-                                      ? new Date(
-                                          item.issued_at,
-                                        ).toLocaleDateString()
-                                      : "No issue date"}
-                                  </p>
-                                  {item.modification_notes && (
-                                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/60 rounded-xl px-3 py-2">
-                                      Note: {item.modification_notes}
-                                    </p>
-                                  )}
-                                </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2">
+                        <p className="text-xs text-gray-400 font-medium">
+                          Currently Administered Drugs
+                        </p>
+                        <button
+                          type="button"
+                          onClick={togglePausedHistoryPanel}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 text-gray-600 dark:text-gray-300 font-semibold transition"
+                        >
+                          <History className="w-3.5 h-3.5 text-amber-500" />
+                          {showPausedHistory
+                            ? "Hide Paused/Stopped History"
+                            : "View Database Paused History"}
+                        </button>
+                      </div>
 
-                                <div className="flex flex-wrap gap-2 lg:justify-end">
-                                  {medStatus !== "active" && (
+                      {/* DATABASE TRACE: Paused / Stopped Entries section fetched via getPausedMedication */}
+                      <AnimatePresence border>
+                        {showPausedHistory && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="bg-amber-500/5 border border-dashed border-amber-500/20 rounded-2xl p-3 space-y-2.5 overflow-hidden"
+                          >
+                            <p className="text-[11px] font-bold tracking-wider text-amber-600 uppercase">
+                              Database Trace: Paused & Stopped Log
+                            </p>
+
+                            {loadingPausedHistory ? (
+                              <div className="text-center py-4 text-xs text-gray-400 animate-pulse">
+                                Loading historical logs...
+                              </div>
+                            ) : pausedMedicationsHistory?.pausedMedications
+                                ?.length > 0 ? (
+                              pausedMedicationsHistory.pausedMedications.map(
+                                (histItem) => (
+                                  <div
+                                    key={histItem.item_id}
+                                    className="p-2.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 rounded-xl flex justify-between items-start text-xs"
+                                  >
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-gray-900 dark:text-white">
+                                          {histItem.brand_name ||
+                                            histItem.generic_name ||
+                                            "Unknown Drug"}
+                                        </span>
+                                        <span
+                                          className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${statusStyle(
+                                            histItem.status || "paused"
+                                          )}`}
+                                        >
+                                          {histItem.status || "Paused"}
+                                        </span>
+                                      </div>
+                                      <p className="text-gray-500 mt-0.5">
+                                        {histItem.dosage || "N/A"} ·{" "}
+                                        {histItem.frequency || "N/A"}
+                                      </p>
+                                      {histItem.modification_notes && (
+                                        <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 italic">
+                                          Reason: "{histItem.modification_notes}
+                                          "
+                                        </p>
+                                      )}
+                                    </div>
                                     <button
                                       type="button"
-                                      disabled={isUpdating}
                                       onClick={() =>
                                         handleMedicationStatusChange(
-                                          item,
-                                          "active",
+                                          histItem,
+                                          "active"
                                         )
                                       }
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold disabled:opacity-60"
+                                      className="px-2 py-1 rounded bg-emerald-500 text-white font-semibold text-[10px] hover:bg-emerald-600 transition"
                                     >
-                                      <Play className="w-3.5 h-3.5" /> Resume
+                                      Re-activate
                                     </button>
-                                  )}
-                                  {medStatus !== "paused" && (
-                                    <button
-                                      type="button"
-                                      disabled={isUpdating}
-                                      onClick={() =>
-                                        openMedicationAction(item, "paused")
-                                      }
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold disabled:opacity-60"
-                                    >
-                                      <Pause className="w-3.5 h-3.5" /> Pause
-                                    </button>
-                                  )}
-                                  {medStatus !== "stopped" && (
-                                    <button
-                                      type="button"
-                                      disabled={isUpdating}
-                                      onClick={() =>
-                                        openMedicationAction(item, "stopped")
-                                      }
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs font-semibold disabled:opacity-60"
-                                    >
-                                      <XCircle className="w-3.5 h-3.5" /> Stop
-                                    </button>
-                                  )}
+                                  </div>
+                                )
+                              )
+                            ) : (
+                              <p className="text-xs text-gray-400 text-center py-2">
+                                No historical stopped or paused records found in
+                                database.
+                              </p>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <div className="space-y-3">
+                        {activeMedications.length > 0 ? (
+                          activeMedications.map((item) => {
+                            const medStatus = item.status || "active";
+                            const isUpdating =
+                              updatingMedicationId === item.item_id;
+                            return (
+                              <motion.div
+                                key={item.item_id}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-4 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-200 dark:border-gray-800"
+                              >
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <h4 className="font-bold text-sm text-gray-900 dark:text-white">
+                                        {item.brand_name ||
+                                          item.generic_name ||
+                                          "Medication"}
+                                      </h4>
+                                      {item.generic_name && item.brand_name && (
+                                        <span className="text-xs text-gray-400">
+                                          ({item.generic_name})
+                                        </span>
+                                      )}
+                                      <span
+                                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold capitalize ${statusStyle(
+                                          medStatus
+                                        )}`}
+                                      >
+                                        {medStatus}
+                                        {medStatus === "paused" &&
+                                        item.pause_duration_days
+                                          ? ` - ${item.pause_duration_days}d`
+                                          : ""}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      {[
+                                        item.dosage,
+                                        item.frequency,
+                                        item.duration_days
+                                          ? `${item.duration_days} days`
+                                          : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </p>
+                                    {item.instructions && (
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Instructions: {item.instructions}
+                                      </p>
+                                    )}
+                                    <p className="text-[11px] text-gray-400 mt-2">
+                                      Dr. {item.doctor_name || "System"} ·{" "}
+                                      {item.issued_at
+                                        ? new Date(
+                                            item.issued_at
+                                          ).toLocaleDateString()
+                                        : "No issue date"}
+                                    </p>
+                                    {item.modification_notes && (
+                                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/60 rounded-xl px-3 py-2">
+                                        Note: {item.modification_notes}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                                    {medStatus !== "active" && (
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        onClick={() =>
+                                          handleMedicationStatusChange(
+                                            item,
+                                            "active"
+                                          )
+                                        }
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold disabled:opacity-60"
+                                      >
+                                        <Play className="w-3.5 h-3.5" /> Resume
+                                      </button>
+                                    )}
+                                    {medStatus !== "paused" && (
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        onClick={() =>
+                                          openMedicationAction(item, "paused")
+                                        }
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold disabled:opacity-60"
+                                      >
+                                        <Pause className="w-3.5 h-3.5" /> Pause
+                                      </button>
+                                    )}
+                                    {medStatus !== "stopped" && (
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        onClick={() =>
+                                          openMedicationAction(item, "stopped")
+                                        }
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs font-semibold disabled:opacity-60"
+                                      >
+                                        <XCircle className="w-3.5 h-3.5" /> Stop
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </motion.div>
-                          );
-                        })
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-6">
-                          No active medications found.
-                        </p>
-                      )}
+                              </motion.div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-gray-400 text-center py-6">
+                            No active medications found.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1436,7 +1619,10 @@ export default function DoctorPatients() {
                             <PlusCircle className="w-4 h-4" /> Record Surgery
                           </button>
                         ) : (
-                          <form onSubmit={handleAddSurgery} className="bg-emerald-500/5 rounded-2xl border border-emerald-200/20 p-4 space-y-4">
+                          <form
+                            onSubmit={handleAddSurgery}
+                            className="bg-emerald-500/5 rounded-2xl border border-emerald-200/20 p-4 space-y-4"
+                          >
                             <div className="flex justify-between items-center">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                                 Record Surgery
@@ -1458,7 +1644,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={surgeryProcedureName}
-                                  onChange={(e) => setSurgeryProcedureName(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryProcedureName(e.target.value)
+                                  }
                                   placeholder="e.g. Appendectomy, Coronary Bypass"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                   required
@@ -1472,7 +1660,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={surgeryIcd10Pcs}
-                                  onChange={(e) => setSurgeryIcd10Pcs(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryIcd10Pcs(e.target.value)
+                                  }
                                   placeholder="e.g. 0DB94ZZ"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1485,7 +1675,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="date"
                                   value={surgeryPerformedAt}
-                                  onChange={(e) => setSurgeryPerformedAt(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryPerformedAt(e.target.value)
+                                  }
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
@@ -1496,11 +1688,15 @@ export default function DoctorPatients() {
                                 </label>
                                 <select
                                   value={surgeryOutcome}
-                                  onChange={(e) => setSurgeryOutcome(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryOutcome(e.target.value)
+                                  }
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
                                 >
                                   <option value="successful">Successful</option>
-                                  <option value="complicated">Complicated</option>
+                                  <option value="complicated">
+                                    Complicated
+                                  </option>
                                   <option value="failed">Failed</option>
                                   <option value="ongoing">Ongoing</option>
                                 </select>
@@ -1513,7 +1709,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={surgeryAnaesthesiaType}
-                                  onChange={(e) => setSurgeryAnaesthesiaType(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryAnaesthesiaType(e.target.value)
+                                  }
                                   placeholder="e.g. General, Local, Epidural"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1526,7 +1724,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={surgeryComplications}
-                                  onChange={(e) => setSurgeryComplications(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryComplications(e.target.value)
+                                  }
                                   placeholder="e.g. Mild post-op bleeding, none"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1539,14 +1739,20 @@ export default function DoctorPatients() {
                                 <textarea
                                   rows={2}
                                   value={surgeryNotes}
-                                  onChange={(e) => setSurgeryNotes(e.target.value)}
+                                  onChange={(e) =>
+                                    setSurgeryNotes(e.target.value)
+                                  }
                                   placeholder="Any additional details or recommendations..."
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 resize-none"
                                 />
                               </div>
                             </div>
 
-                            <Button type="submit" loading={submittingSurgery} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white">
+                            <Button
+                              type="submit"
+                              loading={submittingSurgery}
+                              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                            >
                               Record Surgery
                             </Button>
                           </form>
@@ -1592,10 +1798,14 @@ export default function DoctorPatients() {
                             onClick={() => setShowAddVaccinationForm(true)}
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 transition-all"
                           >
-                            <PlusCircle className="w-4 h-4" /> Record Vaccination
+                            <PlusCircle className="w-4 h-4" /> Record
+                            Vaccination
                           </button>
                         ) : (
-                          <form onSubmit={handleAddVaccination} className="bg-teal-500/5 rounded-2xl border border-teal-200/20 p-4 space-y-4">
+                          <form
+                            onSubmit={handleAddVaccination}
+                            className="bg-teal-500/5 rounded-2xl border border-teal-200/20 p-4 space-y-4"
+                          >
                             <div className="flex justify-between items-center">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
                                 Record Vaccination
@@ -1617,7 +1827,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={vaccineName}
-                                  onChange={(e) => setVaccineName(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineName(e.target.value)
+                                  }
                                   placeholder="e.g. COVID-19 mRNA, Influenza"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                   required
@@ -1631,7 +1843,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={vaccineCvxCode}
-                                  onChange={(e) => setVaccineCvxCode(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineCvxCode(e.target.value)
+                                  }
                                   placeholder="e.g. 207"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1644,7 +1858,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="date"
                                   value={vaccineAdministeredAt}
-                                  onChange={(e) => setVaccineAdministeredAt(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineAdministeredAt(e.target.value)
+                                  }
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
@@ -1657,7 +1873,9 @@ export default function DoctorPatients() {
                                   type="number"
                                   min="1"
                                   value={vaccineDoseNumber}
-                                  onChange={(e) => setVaccineDoseNumber(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineDoseNumber(e.target.value)
+                                  }
                                   placeholder="e.g. 1, 2"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1671,7 +1889,9 @@ export default function DoctorPatients() {
                                   type="number"
                                   min="1"
                                   value={vaccineTotalDoses}
-                                  onChange={(e) => setVaccineTotalDoses(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineTotalDoses(e.target.value)
+                                  }
                                   placeholder="e.g. 2, 3"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1684,7 +1904,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={vaccineBatchNumber}
-                                  onChange={(e) => setVaccineBatchNumber(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineBatchNumber(e.target.value)
+                                  }
                                   placeholder="e.g. EN9582"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1697,7 +1919,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="text"
                                   value={vaccineSite}
-                                  onChange={(e) => setVaccineSite(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineSite(e.target.value)
+                                  }
                                   placeholder="e.g. Left Deltoid"
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                                 />
@@ -1710,7 +1934,9 @@ export default function DoctorPatients() {
                                 <input
                                   type="date"
                                   value={vaccineNextDueDate}
-                                  onChange={(e) => setVaccineNextDueDate(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineNextDueDate(e.target.value)
+                                  }
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
@@ -1722,14 +1948,20 @@ export default function DoctorPatients() {
                                 <textarea
                                   rows={2}
                                   value={vaccineNotes}
-                                  onChange={(e) => setVaccineNotes(e.target.value)}
+                                  onChange={(e) =>
+                                    setVaccineNotes(e.target.value)
+                                  }
                                   placeholder="Any additional details or observations..."
                                   className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-950 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 resize-none"
                                 />
                               </div>
                             </div>
 
-                            <Button type="submit" loading={submittingVaccination} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
+                            <Button
+                              type="submit"
+                              loading={submittingVaccination}
+                              className="w-full bg-teal-500 hover:bg-teal-600 text-white"
+                            >
                               Record Vaccination
                             </Button>
                           </form>
@@ -1978,7 +2210,7 @@ export default function DoctorPatients() {
                         onChange={(value) =>
                           updatePrescriptionDraft("currentMedications", value)
                         }
-                        readOnly = {true}
+                        readOnly={true}
                       />
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
                         <PrescriptionTextarea
@@ -2010,7 +2242,6 @@ export default function DoctorPatients() {
                         </p>
                       </div>
 
-                      {/* ── Medicine list — appears ABOVE the add-form, styled like a real Rx ── */}
                       <div className="space-y-1 mb-4">
                         {prescriptionItems.length === 0 ? (
                           <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm font-medium text-gray-400">
@@ -2022,7 +2253,6 @@ export default function DoctorPatients() {
                               key={`${item.drug_id}-${index}`}
                               className="group relative pl-1 py-2.5 border-b border-gray-100 last:border-0"
                             >
-                              {/* Number + drug name row */}
                               <div className="flex items-start gap-2">
                                 <span className="mt-0.5 text-sm font-bold text-gray-700 w-5 flex-shrink-0">
                                   {index + 1}.
@@ -2034,12 +2264,11 @@ export default function DoctorPatients() {
                                       handleUpdateDrugItem(
                                         index,
                                         "name",
-                                        e.target.value,
+                                        e.target.value
                                       )
                                     }
                                     className="w-full bg-transparent border-0 border-b border-dotted border-gray-300 focus:border-emerald-500 focus:outline-none text-[15px] font-bold text-gray-950 leading-tight pb-0.5 pr-8"
                                   />
-                                  {/* Dosage schedule row — mimics 0+0+1 style */}
                                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
                                     <input
                                       value={item.dosage}
@@ -2047,7 +2276,7 @@ export default function DoctorPatients() {
                                         handleUpdateDrugItem(
                                           index,
                                           "dosage",
-                                          e.target.value,
+                                          e.target.value
                                         )
                                       }
                                       placeholder="0+0+1"
@@ -2059,7 +2288,7 @@ export default function DoctorPatients() {
                                         handleUpdateDrugItem(
                                           index,
                                           "frequency",
-                                          e.target.value,
+                                          e.target.value
                                         )
                                       }
                                       placeholder="After meals"
@@ -2074,7 +2303,7 @@ export default function DoctorPatients() {
                                           handleUpdateDrugItem(
                                             index,
                                             "duration_days",
-                                            e.target.value,
+                                            e.target.value
                                           )
                                         }
                                         placeholder="7"
@@ -2090,7 +2319,7 @@ export default function DoctorPatients() {
                                         handleUpdateDrugItem(
                                           index,
                                           "instructions",
-                                          e.target.value,
+                                          e.target.value
                                         )
                                       }
                                       placeholder="Instructions"
@@ -2098,7 +2327,6 @@ export default function DoctorPatients() {
                                     />
                                   </div>
                                 </div>
-                                {/* Remove button — only visible on hover */}
                                 <button
                                   type="button"
                                   title="Remove medication"
@@ -2114,7 +2342,6 @@ export default function DoctorPatients() {
                         )}
                       </div>
 
-                      {/* ── Add Medicine form — BELOW the list ── */}
                       <div className="space-y-3 border border-dashed border-gray-200 rounded-xl bg-gray-50/60 px-4 py-4">
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
                           + Add Medicine
@@ -2127,7 +2354,16 @@ export default function DoctorPatients() {
                               className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-950 placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
                               placeholder="Search drug by generic or brand"
                               value={drugSearch}
-                              onChange={handleDrugSearchChange}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setDrugSearch(value); // This allows you to actually type!
+
+                                if (value.trim()) {
+                                  handleDrugSearchChange(e);
+                                } else {
+                                  setDrugResults([]);
+                                }
+                              }}
                             />
 
                             {drugResults.length > 0 && (
@@ -2141,7 +2377,7 @@ export default function DoctorPatients() {
                                       setDrugSearch(
                                         drug.brand_name
                                           ? `${drug.brand_name} (${drug.generic_name})`
-                                          : drug.generic_name,
+                                          : drug.generic_name
                                       );
                                       setDrugResults([]);
                                     }}
@@ -2242,76 +2478,82 @@ export default function DoctorPatients() {
         )}
       </div>
 
-     {showConfirm && (
-  <motion.div
-    initial={{ opacity: 0, y: 5 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-  >
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96, y: 10 }}
-      className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xl"
-    >
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 rounded-xl p-2 bg-rose-100 text-rose-600 dark:bg-rose-900/30">
-          <AlertCircle className="w-5 h-5" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-gray-900 dark:text-white text-lg">
-            Confirm Submission
-          </h3>
-          
-          <div className="mt-2 text-sm">
-            {/* 1. Intro Question (Main text color) */}
-            {confirmMessage.includes("Are you sure you want to continue and submit this prescription?") && (
-              <p className="text-gray-600 dark:text-gray-300 font-medium mb-3">
-                Are you sure you want to continue and submit this prescription?
-              </p>
-            )}
+      {showConfirm && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xl"
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-xl p-2 bg-rose-100 text-rose-600 dark:bg-rose-900/30">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                  Confirm Submission
+                </h3>
 
-            {/* 2. Vertically Stacked Caution Points (Amber warning color) */}
-            <div className="space-y-2 text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
-              {confirmMessage
-                .replace("Are you sure you want to continue and submit this prescription?", "")
-                .split(/(?=\d+\.\s)/)
-                .map((point, index) => {
-                  const trimmed = point.trim();
-                  if (!trimmed) return null; // Skip empty strings if any
-                  return (
-                    <p key={index} className="leading-relaxed flex items-start gap-1">
-                      {trimmed}
+                <div className="mt-2 text-sm">
+                  {confirmMessage.includes(
+                    "Are you sure you want to continue and submit this prescription?"
+                  ) && (
+                    <p className="text-gray-600 dark:text-gray-300 font-medium mb-3">
+                      Are you sure you want to continue and submit this
+                      prescription?
                     </p>
-                  );
-                })}
+                  )}
+
+                  <div className="space-y-2 text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    {confirmMessage
+                      .replace(
+                        "Are you sure you want to continue and submit this prescription?",
+                        ""
+                      )
+                      .split(/(?=\d+\.\s)/)
+                      .map((point, index) => {
+                        const trimmed = point.trim();
+                        if (!trimmed) return null;
+                        return (
+                          <p
+                            key={index}
+                            className="leading-relaxed flex items-start gap-1"
+                          >
+                            {trimmed}
+                          </p>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          
-        </div>
-      </div>
-      <div className="mt-6 flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            setShowConfirm(false);
-          }}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          onClick={handleConfirmSubmit}
-          loading={submittingRx}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white structural-sub-btn"
-        >
-          OK
-        </Button>
-      </div>
-    </motion.div>
-  </motion.div>
-)}
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowConfirm(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmSubmit}
+                loading={submittingRx}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white structural-sub-btn"
+              >
+                OK
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <AnimatePresence>
         {medicationAction && (
@@ -2329,7 +2571,11 @@ export default function DoctorPatients() {
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`mt-0.5 rounded-xl p-2 ${medicationAction.status === "paused" ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30" : "bg-rose-100 text-rose-600 dark:bg-rose-900/30"}`}
+                  className={`mt-0.5 rounded-xl p-2 ${
+                    medicationAction.status === "paused"
+                      ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30"
+                      : "bg-rose-100 text-rose-600 dark:bg-rose-900/30"
+                  }`}
                 >
                   {medicationAction.status === "paused" ? (
                     <Pause className="w-5 h-5" />

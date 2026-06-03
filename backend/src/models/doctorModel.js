@@ -510,7 +510,7 @@ class DoctorModel {
                 LEFT JOIN doctor_availability da ON da.doctor_id = a.doctor_id AND da.availability_date = a.appointment_date
                 WHERE a.doctor_id = $1
                   AND a.appointment_date = $2
-                  AND a.status IN ('booked', 'late', 'in_progress', 'completed')
+                  AND a.status IN ('booked', 'late', 'in_progress')
                 ORDER BY a.priority_flag DESC,
                          a.serial_number ASC;
             `;
@@ -811,10 +811,15 @@ class DoctorModel {
                        p.investigations AS "investigations",
                        p.advice AS "advice",
                        p.follow_up AS "followUp",
+                       pi.dosage,
+                       pi.frequency,
+                       pi.duration_days AS "durationDays",
+                       pi.instructions,
                        d.name as doctor_name
                 FROM prescription p
                 LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
-                WHERE p.patient_id = $1 AND p.status = 'active'
+                LEFT JOIN prescription_item pi ON p.prescription_id = pi.prescription_id
+                WHERE p.patient_id = $1 AND p.status = 'active' AND pi.prescription_id IS NOT NULL AND pi.status = 'active'
                 ORDER BY p.issued_at DESC;
             `;
       const prescriptionsResult = await this.db_connection.query_executor(
@@ -1096,6 +1101,24 @@ class DoctorModel {
       throw error;
     }
   };
+  
+  getPausedMedicineByPatientId = async (patientId) => {
+    try {
+      const query = `
+                SELECT pi.*, p.prescription_id, p.doctor_id, p.issued_at, p.status as prescription_status,
+                       d.name as doctor_name
+                FROM prescription_item pi
+                JOIN prescription p ON pi.prescription_id = p.prescription_id
+                JOIN doctor d ON p.doctor_id = d.doctor_id
+                WHERE p.patient_id = $1 AND (pi.status = 'paused' or pi.status = 'stopped');
+            `;
+      const result = await this.db_connection.query_executor(query, [patientId]);
+      return result.rows || [];
+    } catch (error) {
+      console.error(`Failed to get paused medicines: ${error.message}`);
+      throw error;
+    }
+  }
 
   getAllHospitals = async () => {
     try {

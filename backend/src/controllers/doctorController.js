@@ -802,7 +802,7 @@ class DoctorController {
         try {
             const { patientId } = req.params;
             const doctorId = req.doctor.doctor_id;
-            const { items } = req.body; // Array of { drug_id, dosage, frequency, duration_days, instructions }
+            const { items, ...draftData } = req.body; // Extract items and the rest as draftData
 
             if (!items || !Array.isArray(items) || items.length === 0) {
                 return res.status(400).json({ success: false, error: 'Prescription items array is required' });
@@ -822,8 +822,8 @@ class DoctorController {
                 proposedMedications
             );
 
-            // 2. Create the prescription record in DB
-            const prescription = await this.doctorModel.createPrescription(patientId, doctorId);
+            // 2. Create the prescription record in DB with clinical notes
+            const prescription = await this.doctorModel.createPrescription(patientId, doctorId, draftData);
 
             // 3. Add items to the prescription
             const createdItems = [];
@@ -849,8 +849,8 @@ class DoctorController {
 
             return res.status(201).json({
                 success: true,
-                message: safetyReport.has_conflict 
-                    ? 'Prescription created with safety warnings. Please check safety logs.' 
+                message: safetyReport.has_conflict
+                    ? 'Prescription created with safety warnings. Please check safety logs.'
                     : 'Prescription created successfully.',
                 prescription: {
                     ...updatedPrescription,

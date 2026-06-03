@@ -37,6 +37,7 @@ import {
 } from "../services/api.js";
 import Button from "../components/ui/Button.jsx";
 import Input from "../components/ui/Input.jsx";
+import { useNavigate } from "react-router-dom";
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
@@ -278,6 +279,10 @@ export default function DoctorPatients() {
   const [pauseDurationDays, setPauseDurationDays] = useState("3");
   const [updatingMedicationId, setUpdatingMedicationId] = useState(null);
   const [updatingAppointmentId, setUpdatingAppointmentId] = useState(null);
+
+  const navigate = useNavigate();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
 
   // New forms show/hide toggles
   const [showAddAllergyForm, setShowAddAllergyForm] = useState(false);
@@ -641,29 +646,51 @@ export default function DoctorPatients() {
       return;
     }
 
-    setSubmittingRx(true);
+    // Prevent multiple submissions
+    if (submittingRx || checkingSafety) {
+      addToast("Please wait for the current operation to complete", "warning");
+      return;
+    }
+
+    // Run safety check in background
+    setCheckingSafety(true);
+    let safetyResult = null;
     try {
       const items = prescriptionItems.map((pi) => ({
         drug_id: pi.drug_id,
         dosage: pi.dosage,
         frequency: pi.frequency,
-        duration_days: parseInt(pi.duration_days, 10) || 7,
-        instructions: pi.instructions,
       }));
-      await createPrescription(selectedPatientId, items);
-      addToast("Prescription finalized and submitted successfully!", "success");
-
-      // Reload chart
-      const data = await getDoctorPatientChart(selectedPatientId);
-      setChartData(data);
-      setPrescriptionDraft(createPrescriptionDraftFromChart(data));
-      setPrescriptionItems([]);
-      setSafetyReport(null);
+      safetyResult = await checkPrescriptionSafety(selectedPatientId, items);
+      setSafetyReport(safetyResult);
     } catch (err) {
-      addToast(err.message || "Failed to submit prescription", "error");
+      addToast(err.message || "AI safety check request failed", "error");
     } finally {
-      setSubmittingRx(false);
+      setCheckingSafety(false);
     }
+
+    // If safety check found conflicts, show confirmation modal
+    if (safetyResult && safetyResult.has_conflict) {
+      // Build a detailed warning message from the safety report
+      let warningMessage = "The system has detected potential safety issues with this prescription:\n\n";
+      if (safetyResult.warnings && safetyResult.warnings.length > 0) {
+        warningMessage += safetyResult.warnings
+          .map(
+            (w, idx) =>
+              `${idx + 1}. ${w.severity?.toUpperCase() || "WARNING"}: ${w.description}`
+          )
+          .join("\n");
+      } else {
+        warningMessage += "Potential drug interactions or allergy conflicts detected.";
+      }
+      warningMessage += "\n\nAre you sure you want to continue and submit this prescription?";
+      setConfirmMessage(warningMessage);
+      setShowConfirm(true);
+      return;
+    }
+
+    // Proceed with submission
+    handleConfirmSubmit();
   };
 
   const activeMedications = getPrescriptionMedicationItems(chartData);
@@ -689,6 +716,40 @@ export default function DoctorPatients() {
     setMedicationAction(null);
     setMedicationActionNotes("");
     setPauseDurationDays("");
+  };
+
+  const handleConfirmSubmit = async () => {
+    setSubmittingRx(true);
+    try {
+      const items = prescriptionItems.map((pi) => ({
+        drug_id: pi.drug_id,
+        dosage: pi.dosage,
+        frequency: pi.frequency,
+        duration_days: parseInt(pi.duration_days, 10) || 7,
+        instructions: pi.instructions,
+      }));
+
+      await createPrescription(selectedPatientId, {
+        ...prescriptionDraft,
+        items,
+      });
+      addToast("Prescription finalized and submitted successfully!", "success");
+
+
+      // Reload chart
+      const data = await getDoctorPatientChart(selectedPatientId);
+      setChartData(data);
+      setPrescriptionDraft(createPrescriptionDraftFromChart(data));
+      setPrescriptionItems([]);
+      setSafetyReport(null);
+
+      // Navigate to print page
+      navigate(`/prescription/print/${selectedPatientId}`);
+    } catch (err) {
+      addToast(err.message || "Failed to submit prescription", "error");
+    } finally {
+      setSubmittingRx(false);
+    }
   };
 
   const handleMedicationStatusChange = async (item, status, options = {}) => {
@@ -1745,6 +1806,50 @@ export default function DoctorPatients() {
                     </Button>
                   </div>
                 </div>
+                {safetyReport && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-4 rounded-2xl border flex flex-col md:flex-row gap-3 ${
+                      safetyReport.has_conflict
+                        ? "bg-rose-50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900/60"
+                        : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-900/60"
+                    }`}
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      {safetyReport.has_conflict ? (
+                        <ShieldAlert className="w-6 h-6 text-rose-500" />
+                      ) : (
+                        <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2 text-xs">
+                      <p className="font-bold text-sm text-gray-900 dark:text-white">
+                        {safetyReport.has_conflict
+                          ? "Safety Conflict Flagged"
+                          : "Prescription Verified Safe"}
+                      </p>
+                      {safetyReport.warnings &&
+                      safetyReport.warnings.length > 0 ? (
+                        <ul className="list-disc pl-4 space-y-1 text-gray-700 dark:text-gray-300">
+                          {safetyReport.warnings.map((w, idx) => (
+                            <li key={idx}>
+                              <strong>
+                                {w.severity?.toUpperCase() || "WARNING"}:
+                              </strong>{" "}
+                              {w.description}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-600 dark:text-gray-400">
+                          No drug interactions or allergy conflicts detected
+                          between the proposed items and the patient's record.
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="overflow-hidden rounded-2xl border border-gray-300 bg-white text-gray-950 shadow-sm">
                   <div className="grid gap-4 border-b border-gray-300 px-5 py-5 lg:grid-cols-[1fr_auto_1fr]">
@@ -2131,56 +2236,82 @@ export default function DoctorPatients() {
                     physician.
                   </div>
                 </div>
-
-                {safetyReport && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`p-4 rounded-2xl border flex flex-col md:flex-row gap-3 ${
-                      safetyReport.has_conflict
-                        ? "bg-rose-50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900/60"
-                        : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-900/60"
-                    }`}
-                  >
-                    <div className="flex-shrink-0 mt-0.5">
-                      {safetyReport.has_conflict ? (
-                        <ShieldAlert className="w-6 h-6 text-rose-500" />
-                      ) : (
-                        <ShieldCheck className="w-6 h-6 text-emerald-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2 text-xs">
-                      <p className="font-bold text-sm text-gray-900 dark:text-white">
-                        {safetyReport.has_conflict
-                          ? "Safety Conflict Flagged"
-                          : "Prescription Verified Safe"}
-                      </p>
-                      {safetyReport.warnings &&
-                      safetyReport.warnings.length > 0 ? (
-                        <ul className="list-disc pl-4 space-y-1 text-gray-700 dark:text-gray-300">
-                          {safetyReport.warnings.map((w, idx) => (
-                            <li key={idx}>
-                              <strong>
-                                {w.severity?.toUpperCase() || "WARNING"}:
-                              </strong>{" "}
-                              {w.description}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-gray-600 dark:text-gray-400">
-                          No drug interactions or allergy conflicts detected
-                          between the proposed items and the patient's record.
-                        </p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
               </div>
             </div>
           )
         )}
       </div>
+
+     {showConfirm && (
+  <motion.div
+    initial={{ opacity: 0, y: 5 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+  >
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: 10 }}
+      className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xl"
+    >
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-xl p-2 bg-rose-100 text-rose-600 dark:bg-rose-900/30">
+          <AlertCircle className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+            Confirm Submission
+          </h3>
+          
+          <div className="mt-2 text-sm">
+            {/* 1. Intro Question (Main text color) */}
+            {confirmMessage.includes("Are you sure you want to continue and submit this prescription?") && (
+              <p className="text-gray-600 dark:text-gray-300 font-medium mb-3">
+                Are you sure you want to continue and submit this prescription?
+              </p>
+            )}
+
+            {/* 2. Vertically Stacked Caution Points (Amber warning color) */}
+            <div className="space-y-2 text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
+              {confirmMessage
+                .replace("Are you sure you want to continue and submit this prescription?", "")
+                .split(/(?=\d+\.\s)/)
+                .map((point, index) => {
+                  const trimmed = point.trim();
+                  if (!trimmed) return null; // Skip empty strings if any
+                  return (
+                    <p key={index} className="leading-relaxed flex items-start gap-1">
+                      {trimmed}
+                    </p>
+                  );
+                })}
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      <div className="mt-6 flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setShowConfirm(false);
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={handleConfirmSubmit}
+          loading={submittingRx}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white structural-sub-btn"
+        >
+          OK
+        </Button>
+      </div>
+    </motion.div>
+  </motion.div>
+)}
 
       <AnimatePresence>
         {medicationAction && (

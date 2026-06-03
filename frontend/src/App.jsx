@@ -26,6 +26,7 @@ import Settings from './pages/Settings.jsx';
 import DoctorDashboard from './pages/DoctorDashboard.jsx';
 import DoctorPatients from './pages/DoctorPatients.jsx';
 import DoctorSettings from './pages/DoctorSettings.jsx';
+import PrintPrescription from './pages/PrintPrescription.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Docs from './pages/Docs.jsx';
 
@@ -52,6 +53,7 @@ export default function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
                   <Route path="/doctor/patients" element={<DoctorPatients />} />
+                  <Route path="/prescription/print/:patientId" element={<PrintPrescription />} />
                   <Route path="/doctor/settings" element={<DoctorSettings />} />
                   <Route path="/prescription" element={<Prescription />} />
                   <Route path="/report" element={<Report />} />

@@ -981,11 +981,11 @@ export const checkPrescriptionSafety = async (patientId, items) => {
   return data.safetyReport || null;
 };
 
-export const createPrescription = async (patientId, items) => {
+export const createPrescription = async (patientId, payload) => {
   const data = await request(`/doctor/patients/${patientId}/prescriptions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify(payload),
   });
   return data;
 };

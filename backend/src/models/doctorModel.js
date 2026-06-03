@@ -802,7 +802,16 @@ class DoctorModel {
   getPatientActivePrescriptions = async (patientId) => {
     try {
       const query = `
-                SELECT p.*, d.name as doctor_name
+                SELECT p.prescription_id, p.patient_id, p.doctor_id, p.issued_at, p.status,
+                       p.llm_interaction_checked, p.interaction_alert, p.created_at, p.updated_at,
+                       p.referred_by AS "referredBy",
+                       p.chief_complaint AS "chiefComplaint",
+                       p.examination AS "examination",
+                       p.diagnosis AS "diagnosis",
+                       p.investigations AS "investigations",
+                       p.advice AS "advice",
+                       p.follow_up AS "followUp",
+                       d.name as doctor_name
                 FROM prescription p
                 LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
                 WHERE p.patient_id = $1 AND p.status = 'active'
@@ -854,17 +863,37 @@ class DoctorModel {
   };
 
   // Prescription Writing
-  createPrescription = async (patientId, doctorId) => {
+  createPrescription = async (patientId, doctorId, draftData = {}) => {
     try {
       const query = `
-                INSERT INTO prescription (patient_id, doctor_id, status, llm_interaction_checked)
-                VALUES ($1, $2, 'active', FALSE)
+                INSERT INTO prescription (
+                    patient_id,
+                    doctor_id,
+                    status,
+                    llm_interaction_checked,
+                    referred_by,
+                    chief_complaint,
+                    examination,
+                    diagnosis,
+                    investigations,
+                    advice,
+                    follow_up
+                )
+                VALUES ($1, $2, 'active', FALSE, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING *;
             `;
-      const result = await this.db_connection.query_executor(query, [
+      const params = [
         patientId,
         doctorId,
-      ]);
+        draftData.referredBy || null,
+        draftData.chiefComplaint || null,
+        draftData.examination || null,
+        draftData.diagnosis || null,
+        draftData.investigations || null,
+        draftData.advice || null,
+        draftData.followUp || null,
+      ];
+      const result = await this.db_connection.query_executor(query, params);
       return result.rows[0];
     } catch (error) {
       console.error(`Failed to create prescription record: ${error.message}`);

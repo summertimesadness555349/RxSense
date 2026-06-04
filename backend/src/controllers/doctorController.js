@@ -730,6 +730,8 @@ class DoctorController {
     gatherSafetyDetails = async (patientId, proposedDrugItems) => {
         const allergies = await this.doctorModel.getPatientAllergies(patientId);
         const activePrescriptions = await this.doctorModel.getPatientActivePrescriptions(patientId);
+        const surgeries = await this.doctorModel.getPatientSurgeries(patientId);
+        const vaccinations = await this.doctorModel.getPatientVaccinations(patientId);
 
         // Flatten active prescription items
         const currentMedications = [];
@@ -752,7 +754,7 @@ class DoctorController {
             }
         }
 
-        return { allergies, currentMedications, proposedMedications };
+        return { allergies, currentMedications, proposedMedications, surgeries, vaccinations };
     }
 
 
@@ -779,13 +781,15 @@ class DoctorController {
                 return res.status(404).json({ success: false, error: 'Patient not found' });
             }
 
-            const { allergies, currentMedications, proposedMedications } = await this.gatherSafetyDetails(patientId, items);
+            const { allergies, currentMedications, proposedMedications, surgeries, vaccinations } = await this.gatherSafetyDetails(patientId, items);
 
             const safetyReport = await this.llmUtils.checkPrescriptionSafety(
                 patientId,
                 allergies,
                 currentMedications,
-                proposedMedications
+                proposedMedications,
+                surgeries,
+                vaccinations
             );
 
             return res.status(200).json({
@@ -814,12 +818,14 @@ class DoctorController {
             }
 
             // 1. Gather patient details and run the safety check
-            const { allergies, currentMedications, proposedMedications } = await this.gatherSafetyDetails(patientId, items);
+            const { allergies, currentMedications, proposedMedications, surgeries, vaccinations } = await this.gatherSafetyDetails(patientId, items);
             const safetyReport = await this.llmUtils.checkPrescriptionSafety(
                 patientId,
                 allergies,
                 currentMedications,
-                proposedMedications
+                proposedMedications,
+                surgeries,
+                vaccinations
             );
 
             // 2. Create the prescription record in DB with clinical notes

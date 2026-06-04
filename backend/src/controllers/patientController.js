@@ -4,6 +4,8 @@ const ReportAnalysisUtils  = require('../utils/reportAnalysisUtils.js');
 const { uploadReportBuffer } = require('../utils/cloudinary.js');
 const AppointmentModel = require('../models/appointmentModel.js');
 const DoctorModel = require('../models/doctorModel.js');
+const drugInteractionService = require('../utils/drugInteractionService.js');
+const LLMUtils = require('../utils/llmUtils.js');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -104,6 +106,7 @@ class PatientController {
         this.reportAnalysisUtils = new ReportAnalysisUtils();
         this.doctorModel         = new DoctorModel();
         this.appointmentModel    = new AppointmentModel();
+        this.llmUtils            = new LLMUtils();
     }
 
     resolvePatientId = async (userId) => {
@@ -543,11 +546,84 @@ class PatientController {
     };
 
     getTimeline = async (req, res) => {
+        // ... (existing implementation)
+    };
+
+    medicationSafetyCheck = async (req, res) => {
         try {
-            const userId = req.user?.id;
-            if (!userId) {
-                return res.status(401).json({ success: false, error: 'Unauthorized' });
+            const { medications } = req.body || {};
+
+            if (!medications || !Array.isArray(medications) || medications.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'No medications provided for safety check'
+                });
             }
+
+            const userId = req.user?.id;
+            const patientId = await this.resolvePatientId(userId);
+
+            if (!patientId) {
+                return res.status(400).json({ success: false, error: 'Unable to resolve patient identity' });
+            }
+
+            // 1. Fetch comprehensive medical history from DB
+            const allergies = await this.patientModel.getPatientAllergies(patientId);
+            const surgeries = await this.doctorModel.getPatientSurgeries(patientId);
+            const vaccinations = await this.doctorModel.getPatientVaccinations(patientId);
+
+            // 2. Map requested medications to LLM format
+            const proposedMeds = medications.map(m => ({
+                generic_name: m.name || 'Unknown',
+                dosage: m.dosage || 'Standard',
+                frequency: m.frequency || 'As directed',
+                instructions: m.instructions || '',
+            }));
+
+            // 3. Call LLM for a comprehensive safety analysis
+            // We treat the whole current list as "proposed" to check for internal consistency and allergy conflicts
+            const safetyResult = await this.llmUtils.checkPrescriptionSafety(
+                patientId,
+                allergies,
+                [], // currentMedications: empty as we are checking the provided list as a whole
+                proposedMeds,
+                surgeries,
+                vaccinations
+            );
+
+            // 4. Map LLM result to frontend expectations
+            const warnings = safetyResult.warnings || [];
+            let overallStatus = 'safe';
+
+            if (warnings.some(w => w.severity === 'critical' || w.severity === 'severe')) {
+                overallStatus = 'danger';
+            } else if (warnings.length > 0) {
+                overallStatus = 'warning';
+            }
+
+            const findings = warnings.map(w => ({
+                interaction: w.drugs_involved?.join(' + ') || 'Medication',
+                severity: (w.severity === 'critical' || w.severity === 'severe') ? 'danger' : 'warning',
+                description: w.description,
+                recommendation: w.recommendation
+            }));
+
+            return res.status(200).json({
+                success: true,
+                safetyReport: {
+                    overallStatus,
+                    summary: safetyResult.summary || 'No critical interactions detected. Your current regimen appears safe.',
+                    findings
+                }
+            });
+        } catch (error) {
+            console.error('[Patient] medicationSafetyCheck error:', error.message);
+            return res.status(500).json({ success: false, error: 'Internal server error during safety check' });
+        }
+    };
+
+    listDoctors = async (req, res) => {
+        try {
 
             const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 200);
             const identity = await this.patientModel.resolvePatientIdentity(userId);

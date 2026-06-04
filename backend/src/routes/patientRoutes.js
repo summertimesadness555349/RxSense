@@ -10,6 +10,11 @@ const patientController    = new PatientController();
 const reportChatController = new ReportChatController();
 const authenticateToken    = new AuthenticateToken();
 
+patientRouter.post('/me/medication-safety',
+    authenticateToken.authenticateToken,
+    patientController.medicationSafetyCheck
+);
+
 patientRouter.get('/me',
     authenticateToken.authenticateToken,
     patientController.getProfile

@@ -802,6 +802,22 @@ class DoctorModel {
   getPatientActivePrescriptions = async (patientId) => {
     try {
       const query = `
+                WITH latest_items AS (
+                    SELECT DISTINCT ON (pi.drug_id)
+                        pi.item_id,
+                        pi.prescription_id,
+                        p.issued_at
+                    FROM prescription_item pi
+                    JOIN prescription p ON pi.prescription_id = p.prescription_id
+                    WHERE p.patient_id = $1
+                      AND p.status = 'active'
+                      AND (
+                        (pi.status = 'active' AND (pi.duration_days IS NULL OR pi.created_at + (pi.duration_days || ' days')::interval > NOW()))
+                        OR
+                        (pi.status = 'paused' AND pi.paused_at + (pi.pause_duration_days || ' days')::interval <= NOW())
+                      )
+                    ORDER BY pi.drug_id, p.issued_at DESC
+                )
                 SELECT p.prescription_id, p.patient_id, p.doctor_id, p.issued_at, p.status,
                        p.llm_interaction_checked, p.interaction_alert, p.created_at, p.updated_at,
                        p.referred_by AS "referredBy",
@@ -811,38 +827,65 @@ class DoctorModel {
                        p.investigations AS "investigations",
                        p.advice AS "advice",
                        p.follow_up AS "followUp",
+                       pi.item_id,
                        pi.dosage,
                        pi.frequency,
                        pi.duration_days AS "durationDays",
                        pi.instructions,
                        d.name as doctor_name
-                FROM prescription p
+                FROM latest_items li
+                JOIN prescription p ON li.prescription_id = p.prescription_id
+                JOIN prescription_item pi ON li.item_id = pi.item_id
                 LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
-                LEFT JOIN prescription_item pi ON p.prescription_id = pi.prescription_id
-                WHERE p.patient_id = $1 AND p.status = 'active' AND pi.prescription_id IS NOT NULL AND pi.status = 'active'
                 ORDER BY p.issued_at DESC;
             `;
-      const prescriptionsResult = await this.db_connection.query_executor(
+      const result = await this.db_connection.query_executor(
         query,
         [patientId]
       );
-      const prescriptions = prescriptionsResult.rows;
 
-      for (const rx of prescriptions) {
-        const itemsQuery = `
+      const rows = result.rows;
+      const prescriptionsMap = new Map();
+
+      for (const row of rows) {
+        const pId = row.prescription_id;
+        if (!prescriptionsMap.has(pId)) {
+          prescriptionsMap.set(pId, {
+            prescription_id: row.prescription_id,
+            patient_id: row.patient_id,
+            doctor_id: row.doctor_id,
+            issued_at: row.issued_at,
+            status: row.status,
+            llm_interaction_checked: row.llm_interaction_checked,
+            interaction_alert: row.interaction_alert,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            referredBy: row.referredBy,
+            chiefComplaint: row.chiefComplaint,
+            examination: row.examination,
+            diagnosis: row.diagnosis,
+            investigations: row.investigations,
+            advice: row.advice,
+            followUp: row.followUp,
+            doctor_name: row.doctor_name,
+            items: []
+          });
+        }
+
+        // Fetch drug details for the item
+        const drugQuery = `
                     SELECT pi.*, dr.generic_name, dr.brand_name, dr.drug_class
                     FROM prescription_item pi
                     JOIN drug dr ON pi.drug_id = dr.drug_id
-                    WHERE pi.prescription_id = $1;
+                    WHERE pi.item_id = $1;
                 `;
-        const itemsResult = await this.db_connection.query_executor(
-          itemsQuery,
-          [rx.prescription_id]
-        );
-        rx.items = itemsResult.rows;
+        const drugResult = await this.db_connection.query_executor(drugQuery, [row.item_id]);
+        if (drugResult.rows[0]) {
+          prescriptionsMap.get(pId).items.push(drugResult.rows[0]);
+        }
       }
 
-      return prescriptions;
+      return Array.from(prescriptionsMap.values());
     } catch (error) {
       console.error(`Failed to get active prescriptions: ${error.message}`);
       throw error;
@@ -1105,12 +1148,19 @@ class DoctorModel {
   getPausedMedicineByPatientId = async (patientId) => {
     try {
       const query = `
-                SELECT pi.*, p.prescription_id, p.doctor_id, p.issued_at, p.status as prescription_status,
+                SELECT DISTINCT ON (pi.drug_id)
+                       pi.*, dr.*, p.prescription_id, p.doctor_id, p.issued_at, p.status as prescription_status,
                        d.name as doctor_name
                 FROM prescription_item pi
                 JOIN prescription p ON pi.prescription_id = p.prescription_id
                 JOIN doctor d ON p.doctor_id = d.doctor_id
-                WHERE p.patient_id = $1 AND (pi.status = 'paused' or pi.status = 'stopped');
+                JOIN drug dr ON pi.drug_id = dr.drug_id
+                WHERE p.patient_id = $1
+                  AND (
+                    pi.status = 'stopped'
+                    OR (pi.status = 'paused' AND pi.paused_at + (pi.pause_duration_days || ' days')::interval > NOW())
+                  )
+                ORDER BY pi.drug_id, pi.paused_at DESC NULLS LAST;
             `;
       const result = await this.db_connection.query_executor(query, [patientId]);
       return result.rows || [];

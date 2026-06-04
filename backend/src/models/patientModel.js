@@ -398,6 +398,7 @@ class PatientModel {
     getActiveMedications = async (patientId) => {
         const query = `
             SELECT
+               distinct ON (pi.drug_id)
                 pi.item_id AS id,
                 pi.item_id,
                 pi.prescription_id,
@@ -420,8 +421,13 @@ class PatientModel {
             JOIN drug dr ON dr.drug_id = pi.drug_id
             LEFT JOIN doctor d ON d.doctor_id = p.doctor_id
             WHERE p.patient_id = $1
-              AND p.status = 'active'
-            ORDER BY p.issued_at DESC, dr.brand_name ASC NULLS LAST, dr.generic_name ASC;
+              AND pi.status = 'active'
+              AND (
+                        (pi.status = 'active' AND (pi.duration_days IS NULL OR pi.created_at + (pi.duration_days || ' days')::interval > NOW()))
+                        OR
+                        (pi.status = 'paused' AND pi.paused_at + (pi.pause_duration_days || ' days')::interval <= NOW())
+                      )
+            ORDER BY  pi.drug_id,p.issued_at DESC, dr.brand_name ASC NULLS LAST, dr.generic_name ASC, p.issued_at DESC;
         `;
         const result = await this.db_connection.query_executor(query, [patientId]);
         return result.rows || [];

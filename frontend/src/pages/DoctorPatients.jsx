@@ -46,18 +46,36 @@ const todayInputValue = () => new Date().toISOString().slice(0, 10);
 const formatChartDate = (value) => {
   if (!value) return "N/A";
   try {
-    return new Date(value).toLocaleDateString("en-GB", {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   } catch {
-    return "N/A";
+    return String(value);
   }
 };
 
 const medicineLabel = (item) =>
   item?.brand_name || item?.generic_name || item?.name || "Medication";
+
+const scannedRxDateValue = (item) =>
+  item?.rx_date ||
+  item?.rxDate ||
+  item?.prescription_date ||
+  item?.date ||
+  item?.effective_rx_date ||
+  null;
+
+const scannedRxDateLabel = (item) => {
+  if (item?.rx_date) return String(item.rx_date);
+  const value = scannedRxDateValue(item);
+  if (!value) return "Not recorded";
+  if (item?.rx_date_was_missing) return formatChartDate(value);
+  return String(value);
+};
 
 const joinLines = (rows, fallback) => {
   const cleanRows = rows.filter(Boolean);
@@ -71,6 +89,9 @@ const getPrescriptionMedicationItems = (data) =>
       prescription_id: rx.prescription_id,
       doctor_name: rx.doctor_name,
       issued_at: rx.issued_at,
+      rx_date: scannedRxDateValue(item) || rx.rx_date,
+      effective_rx_date: item.effective_rx_date || rx.effective_rx_date,
+      rx_date_was_missing: item.rx_date_was_missing ?? rx.rx_date_was_missing,
     }))
   );
 
@@ -743,7 +764,9 @@ export default function DoctorPatients() {
     handleConfirmSubmit();
   };
 
-  const activeMedications = getPrescriptionMedicationItems(chartData);
+  const activeMedications = getPrescriptionMedicationItems(chartData).filter(
+    (item) => String(item.status || "active").toLowerCase() === "active"
+  );
 
   const statusStyle = (status = "active") => {
     const normalized = String(status || "active").toLowerCase();
@@ -1348,51 +1371,76 @@ export default function DoctorPatients() {
                             ) : pausedMedicationsHistory?.pausedMedications
                                 ?.length > 0 ? (
                               pausedMedicationsHistory.pausedMedications.map(
-                                (histItem) => (
-                                  <div
-                                    key={histItem.item_id}
-                                    className="p-2.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 rounded-xl flex justify-between items-start text-xs"
-                                  >
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-bold text-gray-900 dark:text-white">
-                                          {histItem.brand_name ||
-                                            histItem.generic_name ||
-                                            "Unknown Drug"}
-                                        </span>
-                                        <span
-                                          className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${statusStyle(
-                                            histItem.status || "paused"
-                                          )}`}
-                                        >
-                                          {histItem.status || "Paused"}
-                                        </span>
-                                      </div>
-                                      <p className="text-gray-500 mt-0.5">
-                                        {histItem.dosage || "N/A"} ·{" "}
-                                        {histItem.frequency || "N/A"}
-                                      </p>
-                                      {histItem.modification_notes && (
-                                        <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 italic">
-                                          Reason: "{histItem.modification_notes}
-                                          "
+                                (histItem) => {
+                                  const isScannedMedication =
+                                    histItem.source === "prescription_scan";
+                                  return (
+                                    <div
+                                      key={histItem.item_id}
+                                      className="p-2.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 rounded-xl flex justify-between items-start text-xs"
+                                    >
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-gray-900 dark:text-white">
+                                            {histItem.brand_name ||
+                                              histItem.generic_name ||
+                                              "Unknown Drug"}
+                                          </span>
+                                          <span
+                                            className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${statusStyle(
+                                              histItem.status || "paused"
+                                            )}`}
+                                          >
+                                            {histItem.status || "Paused"}
+                                          </span>
+                                        </div>
+                                        <p className="text-gray-500 mt-0.5">
+                                          {histItem.dosage || "N/A"} ·{" "}
+                                          {histItem.frequency || "N/A"}
                                         </p>
+                                        {isScannedMedication && (
+                                          <p className="text-[11px] text-gray-400 mt-1">
+                                            Scanned prescription
+                                            {histItem.expires_at
+                                              ? ` · ended ${new Date(
+                                                  histItem.expires_at
+                                                ).toLocaleDateString()}`
+                                              : ""}
+                                          </p>
+                                        )}
+                                        {isScannedMedication && (
+                                          <p className="text-[11px] text-emerald-600 dark:text-emerald-300 mt-1 font-semibold">
+                                            Rx date: {scannedRxDateLabel(histItem)}
+                                          </p>
+                                        )}
+                                        {histItem.modification_notes && (
+                                          <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 italic">
+                                            Reason: "{histItem.modification_notes}
+                                            "
+                                          </p>
+                                        )}
+                                      </div>
+                                      {isScannedMedication ? (
+                                        <span className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 font-semibold text-[10px]">
+                                          Scan record
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleMedicationStatusChange(
+                                              histItem,
+                                              "active"
+                                            )
+                                          }
+                                          className="px-2 py-1 rounded bg-emerald-500 text-white font-semibold text-[10px] hover:bg-emerald-600 transition"
+                                        >
+                                          Re-activate
+                                        </button>
                                       )}
                                     </div>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleMedicationStatusChange(
-                                          histItem,
-                                          "active"
-                                        )
-                                      }
-                                      className="px-2 py-1 rounded bg-emerald-500 text-white font-semibold text-[10px] hover:bg-emerald-600 transition"
-                                    >
-                                      Re-activate
-                                    </button>
-                                  </div>
-                                )
+                                  );
+                                }
                               )
                             ) : (
                               <p className="text-xs text-gray-400 text-center py-2">
@@ -1410,6 +1458,8 @@ export default function DoctorPatients() {
                             const medStatus = item.status || "active";
                             const isUpdating =
                               updatingMedicationId === item.item_id;
+                            const isScannedMedication =
+                              item.source === "prescription_scan";
                             return (
                               <motion.div
                                 key={item.item_id}
@@ -1459,13 +1509,18 @@ export default function DoctorPatients() {
                                       </p>
                                     )}
                                     <p className="text-[11px] text-gray-400 mt-2">
-                                      Dr. {item.doctor_name || "System"} ·{" "}
+                                      {isScannedMedication ? "" : "Dr. "}
+                                      {item.doctor_name || (isScannedMedication ? "Scanned prescription" : "System")} ·{" "}
                                       {item.issued_at
-                                        ? new Date(
-                                            item.issued_at
-                                          ).toLocaleDateString()
+                                        ? formatChartDate(item.issued_at)
                                         : "No issue date"}
+                                      {isScannedMedication ? " · Uploaded scan" : ""}
                                     </p>
+                                    {isScannedMedication && (
+                                      <p className="text-[11px] text-emerald-600 dark:text-emerald-300 mt-1 font-semibold">
+                                        Rx date: {scannedRxDateLabel(item)}
+                                      </p>
+                                    )}
                                     {item.modification_notes && (
                                       <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/60 rounded-xl px-3 py-2">
                                         Note: {item.modification_notes}
@@ -1474,7 +1529,12 @@ export default function DoctorPatients() {
                                   </div>
 
                                   <div className="flex flex-wrap gap-2 lg:justify-end">
-                                    {medStatus !== "active" && (
+                                    {isScannedMedication && (
+                                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gray-200/70 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold">
+                                        Scan record
+                                      </span>
+                                    )}
+                                    {!isScannedMedication && medStatus !== "active" && (
                                       <button
                                         type="button"
                                         disabled={isUpdating}
@@ -1489,7 +1549,7 @@ export default function DoctorPatients() {
                                         <Play className="w-3.5 h-3.5" /> Resume
                                       </button>
                                     )}
-                                    {medStatus !== "paused" && (
+                                    {!isScannedMedication && medStatus !== "paused" && (
                                       <button
                                         type="button"
                                         disabled={isUpdating}
@@ -1501,7 +1561,7 @@ export default function DoctorPatients() {
                                         <Pause className="w-3.5 h-3.5" /> Pause
                                       </button>
                                     )}
-                                    {medStatus !== "stopped" && (
+                                    {!isScannedMedication && medStatus !== "stopped" && (
                                       <button
                                         type="button"
                                         disabled={isUpdating}
@@ -1538,12 +1598,21 @@ export default function DoctorPatients() {
                             <div className="flex justify-between items-start border-b border-gray-150 dark:border-gray-800 pb-2 mb-2">
                               <div>
                                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                  Prescribed by Dr. {rx.doctor_name || "System"}
+                                  {rx.source === "prescription_scan"
+                                    ? `Scanned prescription${rx.doctor_name ? ` · ${rx.doctor_name}` : ""}`
+                                    : `Prescribed by Dr. ${rx.doctor_name || "System"}`}
                                 </p>
                                 <p className="text-[10px] text-gray-400">
                                   Issued:{" "}
-                                  {new Date(rx.issued_at).toLocaleDateString()}
+                                  {rx.issued_at
+                                    ? formatChartDate(rx.issued_at)
+                                    : "No prescription date"}
                                 </p>
+                                {rx.source === "prescription_scan" && scannedRxDateValue(rx) && (
+                                  <p className="text-[10px] text-emerald-600 dark:text-emerald-300 font-semibold">
+                                    Rx date: {scannedRxDateLabel(rx)}
+                                  </p>
+                                )}
                               </div>
                               <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded-full capitalize">
                                 {rx.status}

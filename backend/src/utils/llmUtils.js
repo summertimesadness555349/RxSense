@@ -52,15 +52,19 @@ class LLMUtils {
     checkPrescriptionSafety = async (patientId, allergies, currentMedications, proposedMedications, surgeries = [], vaccinations = []) => {
         // Compress patient context with dosages/frequencies included for accurate clinical checks
         const allergyStr = allergies.map(a => `${a.generic_name || a.brand_name || a.drug_class} (severity: ${a.severity || 'moderate'})`).join('; ') || 'None';
-        const currentStr = currentMedications.map(m => `${m.generic_name}${m.dosage ? ` ${m.dosage}` : ''}${m.frequency ? ` ${m.frequency}` : ''}`).join('; ') || 'None';
-        const proposedStr = proposedMedications.map(p => `${p.generic_name}${p.dosage ? ` ${p.dosage}` : ''}${p.frequency ? ` ${p.frequency}` : ''}`).join('; ');
+        const medName = (m) => m.generic_name || m.generic || m.brand_name || m.name || m.extracted_name || 'Unknown medication';
+        const isActiveMedication = (m) => String(m?.status || 'active').toLowerCase() === 'active';
+        const activeCurrentMedications = (currentMedications || []).filter(isActiveMedication);
+        const activeProposedMedications = (proposedMedications || []).filter(isActiveMedication);
+        const currentStr = activeCurrentMedications.map(m => `${medName(m)}${m.dosage ? ` ${m.dosage}` : ''}${m.frequency ? ` ${m.frequency}` : ''}`).join('; ') || 'None';
+        const proposedStr = activeProposedMedications.map(p => `${medName(p)}${p.dosage ? ` ${p.dosage}` : ''}${p.frequency ? ` ${p.frequency}` : ''}`).join('; ');
         const surgeriesStr = surgeries.map(s => `${s.surgery_name || s.name} (${new Date(s.date || s.performed_at || s.created_at).toLocaleDateString()})`).join('; ') || 'None';
         const vaccinationsStr = vaccinations.map(v => `${v.vaccine_name} (${new Date(v.date || v.administered_at).toLocaleDateString()})`).join('; ') || 'None';
 
       // Claude Prompt 1 — Drug-drug interactions and dosage analysis
 const interactionPrompt = `You are a clinical pharmacologist AI.
 Check for drug-drug interactions and dosage issues between active and proposed medications. For dose-dependent conflicts, suggest the minimum safe dose/day. Skip allergy checks.
-Active Medications: ${currentStr},Proposed Medications: ${proposedStr}, Surgeries history: ${surgeriesStr}, vaccination history: ${vaccinationsStr}
+Active Medications: ${currentStr},Proposed Medications: ${proposedStr}, Surgeries history: ${surgeriesStr}, vaccination history: ${vaccinationsStr}, let me know the medicine "Brand" names that are involved in the interaction and the severity of the interaction. Also, provide a brief description of the interaction and a recommendation for how to proceed (e.g., "Monitor patient closely", "Consider alternative medication", "Contraindicated - do not prescribe together").
 
 IMPORTANT: Analyze the Surgeries and Vaccination history provided below. Consider the dates of these events to determine if they still have a clinically significant impact on the patient's body (e.g., recent surgeries may have specific drug contraindications, or vaccines may have interaction windows).
 Respond in strict JSON only:
@@ -79,8 +83,8 @@ Respond in strict JSON only:
 
 // Claude Prompt 2 — Allergies and duplicate therapies
 const allergyPrompt = `You are a clinical pharmacologist AI.
-Check proposed medications against patient allergies: generic/brand names, drug class matches, and cross-sensitivities. Skip drug-drug interactions.
-Allergies: ${allergyStr},Proposed Medications: ${proposedStr}
+Check active and proposed medications against patient allergies: generic/brand names, drug class matches, and cross-sensitivities. Skip drug-drug interactions.
+Allergies: ${allergyStr}, Active Medications: ${currentStr}, Proposed Medications: ${proposedStr}, let me know the medicine name that are involved here.
 Respond in strict JSON only:
 {
   "has_conflict": boolean,
@@ -97,8 +101,8 @@ Respond in strict JSON only:
 
         const inputContextForLogging = {
             allergies: allergies.map(a => ({ generic_name: a.generic_name, reaction_type: a.reaction_type, severity: a.severity })),
-            currentMedications: currentMedications.map(m => ({ generic_name: m.generic_name, dosage: m.dosage, frequency: m.frequency })),
-            proposedMedications: proposedMedications.map(p => ({ generic_name: p.generic_name, dosage: p.dosage || 'Standard', frequency: p.frequency || 'As directed' }))
+            currentMedications: activeCurrentMedications.map(m => ({ generic_name: medName(m), dosage: m.dosage, frequency: m.frequency })),
+            proposedMedications: activeProposedMedications.map(p => ({ generic_name: medName(p), dosage: p.dosage || 'Standard', frequency: p.frequency || 'As directed' }))
         };
 
         /**
@@ -282,6 +286,7 @@ Respond in strict JSON only:
      */
     performLocalSafetyCheck = (context) => {
         const warnings = [];
+        const medName = (m) => m.generic_name || m.generic || m.brand_name || m.name || m.extracted_name || 'Unknown medication';
 
         const dangerousPairs = [
             {
@@ -312,12 +317,14 @@ Respond in strict JSON only:
 
         // Check proposed drugs against allergies
         for (const proposed of context.proposedMedications) {
-            const pGeneric = proposed.generic_name.toLowerCase();
+            const proposedName = medName(proposed);
+            const pGeneric = proposedName.toLowerCase();
             const pBrand = proposed.brand_name ? proposed.brand_name.toLowerCase() : '';
             const pClass = proposed.drug_class ? proposed.drug_class.toLowerCase() : '';
 
             for (const allergy of context.allergies) {
-                const aGeneric = allergy.generic_name.toLowerCase();
+                const allergyName = medName(allergy);
+                const aGeneric = allergyName.toLowerCase();
                 const aBrand = allergy.brand_name ? allergy.brand_name.toLowerCase() : '';
                 const aClass = allergy.drug_class ? allergy.drug_class.toLowerCase() : '';
 
@@ -342,9 +349,9 @@ Respond in strict JSON only:
                     warnings.push({
                         type: 'allergy_conflict',
                         severity: allergy.severity || 'severe',
-                        drugs_involved: [proposed.generic_name],
-                        description: `Safety Alert: Patient is allergic to ${allergy.generic_name || allergy.drug_class} (Reaction: ${allergy.reaction_type || 'unspecified'}). Proposed drug ${proposed.generic_name} ${reason}.`,
-                        recommendation: `Discontinue proposed ${proposed.generic_name} and prescribe a medication from a different drug class.`
+                        drugs_involved: [proposedName],
+                        description: `Safety Alert: Patient is allergic to ${allergy.generic_name || allergy.drug_class} (Reaction: ${allergy.reaction_type || 'unspecified'}). Proposed drug ${proposedName} ${reason}.`,
+                        recommendation: `Discontinue proposed ${proposedName} and prescribe a medication from a different drug class.`
                     });
                 }
             }
@@ -355,8 +362,8 @@ Respond in strict JSON only:
             for (let i = 0; i < listA.length; i++) {
                 const startIdx = isSelfCheck ? i + 1 : 0;
                 for (let j = startIdx; j < listB.length; j++) {
-                    const drug1 = listA[i].generic_name.toLowerCase();
-                    const drug2 = listB[j].generic_name.toLowerCase();
+                    const drug1 = medName(listA[i]).toLowerCase();
+                    const drug2 = medName(listB[j]).toLowerCase();
 
                     if (drug1 === drug2) continue;
 
@@ -369,7 +376,7 @@ Respond in strict JSON only:
                         warnings.push({
                             type: 'drug_interaction',
                             severity: match.severity,
-                            drugs_involved: [listA[i].generic_name, listB[j].generic_name],
+                            drugs_involved: [medName(listA[i]), medName(listB[j])],
                             description: match.description,
                             recommendation: match.recommendation
                         });

@@ -26,6 +26,18 @@ function isMedActive(med, rxSavedAt) {
   return new Date() <= expiry;
 }
 
+function isStatusActive(med) {
+  return String(med?.status || 'active').toLowerCase() === 'active';
+}
+
+function medicationSource(med) {
+  return med?.source || 'prescription_item';
+}
+
+function isPrescriptionMedication(med) {
+  return ['prescription_item', 'prescription_scan'].includes(medicationSource(med));
+}
+
 // ─── Schedule parser ──────────────────────────────────────────────────────────
 // Handles both "X-X-X" (morning-afternoon-night) notation AND English frequency text.
 function parseSchedule(frequency = '', instructions = '') {
@@ -190,51 +202,38 @@ export default function HistoryMedications() {
       });
   }, [addToast]);
 
-  // Only show prescriptions that have at least one still-active medication
-  const activePrescriptions = allRx.filter((rx) =>
-    (rx.medications || []).some((m) => isMedActive(m, rx.savedAt))
-  );
+  // Keep local history only for the past-prescriptions accordion.
   const pastPrescriptions = allRx.filter((rx) =>
     !(rx.medications || []).some((m) => isMedActive(m, rx.savedAt))
   );
 
   // ─── Unified Active Medications ──────────────────────────────────────────────────
-  const unifiedActiveMeds = [
-    // 1. Medications from scanned active prescriptions
-    ...activePrescriptions.flatMap((rx) =>
-      (rx.medications || [])
-        .filter((m) => isMedActive(m, rx.savedAt))
-        .map((m) => ({
-          ...m,
-          id: `${rx.scan_id}_${m.id}`,
-          prescribedBy: rx.doctor?.name || 'Unknown Doctor',
-          date: rx.date,
-          hospital: rx.hospital?.name,
-          diseases: rx.diseases || [],
-          source: 'scanned'
-        }))
-    ),
-    // 2. Medications from doctor portal
-    ...doctorMedications
-      .filter((m) => m.status === 'active')
-      .map((m) => ({
+  const unifiedActiveMeds = doctorMedications
+    .filter((m) => isStatusActive(m) && isPrescriptionMedication(m))
+    .map((m) => {
+      const source = medicationSource(m);
+      const isScan = source === 'prescription_scan';
+      return {
         id: m.item_id || m.id,
-        name: m.brand_name || m.generic_name,
+        name: m.brand_name || m.generic_name || m.extracted_name,
         generic: m.generic_name,
         dosage: m.dosage,
         frequency: m.frequency,
-        duration: m.duration_days ? `${m.duration_days} days` : null,
+        duration: m.duration_days ? `${m.duration_days} days` : m.duration,
         instructions: m.instructions,
-        prescribedBy: m.doctor_name ? `Dr. ${m.doctor_name}` : 'Doctor-issued',
+        prescribedBy: isScan
+          ? (m.doctor_name || 'Scanned prescription')
+          : (m.doctor_name ? `Dr. ${m.doctor_name}` : 'Doctor-issued'),
         date: m.issued_at,
-        hospital: null,
-        diseases: [],
+        hospital: m.hospital_name || null,
+        diseases: m.diseases || [],
         status: m.status,
-        source: 'portal'
-      })),
-  ];
+        source,
+      };
+    });
 
-  const hasDoctorMedications = doctorMedications.length > 0;
+  const activeDoctorMedications = doctorMedications.filter((m) => isStatusActive(m) && isPrescriptionMedication(m));
+  const hasDoctorMedications = activeDoctorMedications.length > 0;
 
   const statusMeta = (status = 'active') => {
     const normalized = String(status || 'active').toLowerCase();
@@ -254,21 +253,7 @@ export default function HistoryMedications() {
     try {
       const { profile } = await getHealthSummary();
 
-      const activeLocalMeds = activePrescriptions.flatMap(rx =>
-        (rx.medications || []).filter(m => isMedActive(m, rx.savedAt))
-      );
-
-      const allActiveMeds = [
-        ...activeLocalMeds,
-        ...doctorMedications
-          .filter(m => m.status === 'active')
-          .map(m => ({
-            name: m.brand_name || m.generic_name,
-            dosage: m.dosage,
-            frequency: m.frequency,
-            duration: m.duration_days ? `${m.duration_days} days` : null
-          }))
-      ].map(m => ({
+      const allActiveMeds = unifiedActiveMeds.map(m => ({
         name: m.name,
         dosage: m.dosage,
         frequency: m.frequency,
@@ -305,11 +290,11 @@ export default function HistoryMedications() {
       {hasDoctorMedications && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-            <p className="text-sm font-bold text-gray-900 dark:text-white">Doctor-issued active medication list</p>
-            <p className="text-xs text-gray-400 mt-0.5">Pause, stop, and resume recommendations from your doctor appear here.</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Database medication list</p>
+            <p className="text-xs text-gray-400 mt-0.5">Doctor-issued updates and uploaded prescription scan medicines appear here.</p>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {doctorMedications.map((med) => {
+            {activeDoctorMedications.map((med) => {
               const meta = statusMeta(med.status);
               const Icon = meta.Icon;
               return (
@@ -333,6 +318,11 @@ export default function HistoryMedications() {
                     </p>
                     {med.instructions && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{med.instructions}</p>
+                    )}
+                    {med.source === 'prescription_scan' && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Uploaded prescription scan · expires {med.expires_at ? new Date(med.expires_at).toLocaleDateString() : 'after the recorded duration'}
+                      </p>
                     )}
                     {med.modification_notes && (
                       <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/60 rounded-xl px-3 py-2">
@@ -374,8 +364,8 @@ export default function HistoryMedications() {
       {/* Consolidated Medication Chart */}
       {unifiedActiveMeds.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-base font-medium">{allRx.length > 0 ? t('noMedicationsFound') : t('noPrescriptionsYet')}</p>
-          <p className="text-sm mt-1">{allRx.length > 0 ? t('scanPrescriptionPrompt') : t('goScanPrescription')}</p>
+          <p className="text-base font-medium">{t('noMedicationsFound')}</p>
+          <p className="text-sm mt-1">{t('scanPrescriptionPrompt')}</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">

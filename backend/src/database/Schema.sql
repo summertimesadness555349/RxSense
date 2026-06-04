@@ -385,6 +385,37 @@ COMMENT ON COLUMN prescription.interaction_alert       IS 'LLM-generated plain-l
 
 
 -- ============================================================
+--  TABLE 7B: PRESCRIPTION_SCAN
+--  OCR/LLM extracted prescription scans uploaded by patients.
+-- ============================================================
+
+CREATE TABLE prescription_scan (
+  scan_id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id              INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  patient_id           UUID REFERENCES patient(patient_id) ON DELETE SET NULL,
+  image_url            TEXT NOT NULL,
+  image_public_id      TEXT,
+  doctor_name          VARCHAR(200),
+  doctor_specialty     VARCHAR(200),
+  hospital_name        VARCHAR(200),
+  patient_name_rx      VARCHAR(200),
+  rx_date              TEXT,
+  diseases             JSONB NOT NULL DEFAULT '[]',
+  tests                JSONB NOT NULL DEFAULT '[]',
+  medications          JSONB NOT NULL DEFAULT '[]',
+  notes                TEXT,
+  follow_up            TEXT,
+  confidence           INTEGER,
+  models_used          JSONB NOT NULL DEFAULT '[]',
+  created_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  doctor_qualification TEXT,
+  patient_json         JSONB
+);
+
+COMMENT ON TABLE prescription_scan IS 'Uploaded prescription scans and extracted medication JSON';
+
+
+-- ============================================================
 --  TABLE 8: PRESCRIPTION_ITEM
 --  Individual drug line-items within a prescription.
 --  Cascade delete: removing a prescription removes its items.
@@ -555,6 +586,11 @@ CREATE INDEX idx_rx_doctor   ON prescription (doctor_id);
 CREATE INDEX idx_rx_status   ON prescription (status);
 CREATE INDEX idx_rx_unchecked ON prescription (llm_interaction_checked)
   WHERE llm_interaction_checked = FALSE;   -- fast queue for LLM checker job
+
+-- Prescription scan lookups
+CREATE INDEX idx_ps_user_id    ON prescription_scan (user_id);
+CREATE INDEX idx_ps_patient_id ON prescription_scan (patient_id);
+CREATE INDEX idx_ps_created_at ON prescription_scan (created_at DESC);
 
 -- Prescription items
 CREATE INDEX idx_rxi_prescription ON prescription_item (prescription_id);

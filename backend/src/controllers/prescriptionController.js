@@ -206,9 +206,9 @@ class PrescriptionController {
 
                 return res.status(200).json({
                     success: true,
-                    scans:   scanRow?.rows || [],
+                    scans:   scanRow || [],
                     // vlm_available: true,
-                    total:   result.rowCount,
+                    total:   scanRow ? 1 : 0,
                     message: 'No medications detected',
                 });
 
@@ -288,9 +288,9 @@ class PrescriptionController {
 
             return res.status(200).json({
                 success: true,
-                scans:   scanRow?.rows || [],
+                scans:   scanRow || [],
                 vlm_available: true,
-                total:   result.rowCount,
+                total:   scanRow ? 1 : 0,
             });
             
             // return res.status(200).json({

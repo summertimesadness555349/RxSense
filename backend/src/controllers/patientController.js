@@ -571,21 +571,34 @@ class PatientController {
             const allergies = await this.patientModel.getPatientAllergies(patientId);
             const surgeries = await this.doctorModel.getPatientSurgeries(patientId);
             const vaccinations = await this.doctorModel.getPatientVaccinations(patientId);
+            const currentMedications = (await this.patientModel.getActiveMedications(patientId))
+                .filter((m) => String(m.status || 'active').toLowerCase() === 'active')
+                .map((m) => ({
+                    generic_name: m.generic_name || m.generic || m.brand_name || m.name || 'Unknown',
+                    brand_name: m.brand_name || m.matched_brand || null,
+                    drug_class: m.drug_class || null,
+                    dosage: m.dosage || m.strength || 'Standard',
+                    frequency: m.frequency || 'As directed',
+                    instructions: m.instructions || '',
+                }));
 
             // 2. Map requested medications to LLM format
-            const proposedMeds = medications.map(m => ({
-                generic_name: m.name || 'Unknown',
-                dosage: m.dosage || 'Standard',
-                frequency: m.frequency || 'As directed',
-                instructions: m.instructions || '',
-            }));
+            const proposedMeds = medications
+                .filter((m) => String(m.status || 'active').toLowerCase() === 'active')
+                .map(m => ({
+                    generic_name: m.name || 'Unknown',
+                    dosage: m.dosage || 'Standard',
+                    frequency: m.frequency || 'As directed',
+                    instructions: m.instructions || '',
+                    status: 'active',
+                }));
 
             // 3. Call LLM for a comprehensive safety analysis
             // We treat the whole current list as "proposed" to check for internal consistency and allergy conflicts
             const safetyResult = await this.llmUtils.checkPrescriptionSafety(
                 patientId,
                 allergies,
-                [], // currentMedications: empty as we are checking the provided list as a whole
+                currentMedications,
                 proposedMeds,
                 surgeries,
                 vaccinations

@@ -1,5 +1,6 @@
 const DB_Connection = require('../database/db.js');
 const AppointmentModel = require('./appointmentModel.js');
+const { normalizeScanRows } = require('../utils/prescriptionScanMedicationUtils.js');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -430,7 +431,27 @@ class PatientModel {
             ORDER BY  pi.drug_id,p.issued_at DESC, dr.brand_name ASC NULLS LAST, dr.generic_name ASC, p.issued_at DESC;
         `;
         const result = await this.db_connection.query_executor(query, [patientId]);
-        return result.rows || [];
+        const portalMedications = result.rows || [];
+        const scanMedications = await this.getPrescriptionScanMedications(patientId, { activeOnly: true });
+        return [...portalMedications, ...scanMedications];
+    };
+
+    getPrescriptionScanMedications = async (patientId, { activeOnly = false } = {}) => {
+        const query = `
+            SELECT scan_id, user_id, patient_id, doctor_name, doctor_specialty, hospital_name,
+                   patient_name_rx, rx_date, diseases, medications, created_at
+            FROM prescription_scan
+            WHERE patient_id = $1
+            ORDER BY COALESCE(created_at, NOW()) DESC;
+        `;
+
+        try {
+            const result = await this.db_connection.query_executor(query, [patientId]);
+            return normalizeScanRows(result.rows || [], { activeOnly });
+        } catch (err) {
+            console.warn('[PatientModel] getPrescriptionScanMedications failed:', err.message);
+            return [];
+        }
     };
 
     updatePatientVitals = async (patientId, {

@@ -1078,11 +1078,9 @@ export const addPatientVaccination = async (patientId, payload) => {
   return data.vaccination || null;
 };
 
-export const getPausedMedication = async (patientId, payload) => {
+export const getPausedMedication = async (patientId) => {
   const data = await request(`/doctor/patients/${patientId}/paused-medications`, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
   });
   return data || null;
 };

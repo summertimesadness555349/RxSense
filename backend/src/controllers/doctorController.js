@@ -737,19 +737,22 @@ class DoctorController {
         const currentMedications = [];
         for (const rx of activePrescriptions) {
             if (rx.items && rx.items.length > 0) {
-                currentMedications.push(...rx.items);
+                currentMedications.push(
+                    ...rx.items.filter((item) => String(item.status || 'active').toLowerCase() === 'active')
+                );
             }
         }
 
         // Fetch full drug profiles for proposed items
         const proposedMedications = [];
-        for (const item of proposedDrugItems) {
+        for (const item of proposedDrugItems.filter((item) => String(item.status || 'active').toLowerCase() === 'active')) {
             const drug = await this.doctorModel.getDrugById(item.drug_id);
             if (drug) {
                 proposedMedications.push({
                     ...drug,
                     dosage: item.dosage,
-                    frequency: item.frequency
+                    frequency: item.frequency,
+                    status: 'active'
                 });
             }
         }

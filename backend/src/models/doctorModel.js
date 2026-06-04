@@ -1,4 +1,5 @@
 const DB_Connection = require("../database/db.js");
+const { normalizeScanRows } = require("../utils/prescriptionScanMedicationUtils.js");
 
 class DoctorModel {
   constructor() {
@@ -811,11 +812,8 @@ class DoctorModel {
                     JOIN prescription p ON pi.prescription_id = p.prescription_id
                     WHERE p.patient_id = $1
                       AND p.status = 'active'
-                      AND (
-                        (pi.status = 'active' AND (pi.duration_days IS NULL OR pi.created_at + (pi.duration_days || ' days')::interval > NOW()))
-                        OR
-                        (pi.status = 'paused' AND pi.paused_at + (pi.pause_duration_days || ' days')::interval <= NOW())
-                      )
+                      AND pi.status = 'active'
+                      AND (pi.duration_days IS NULL OR pi.created_at + (pi.duration_days || ' days')::interval > NOW())
                     ORDER BY pi.drug_id, p.issued_at DESC
                 )
                 SELECT p.prescription_id, p.patient_id, p.doctor_id, p.issued_at, p.status,
@@ -885,10 +883,56 @@ class DoctorModel {
         }
       }
 
-      return Array.from(prescriptionsMap.values());
+      const prescriptions = Array.from(prescriptionsMap.values());
+      const scanMedications = await this.getPrescriptionScanMedications(patientId, { activeOnly: true });
+      const scanGroups = new Map();
+
+      for (const med of scanMedications) {
+        if (!scanGroups.has(med.scan_id)) {
+          scanGroups.set(med.scan_id, {
+            prescription_id: med.scan_id,
+            patient_id: patientId,
+            doctor_id: null,
+            issued_at: med.issued_at,
+            status: med.status === 'active' ? 'active' : 'completed',
+            llm_interaction_checked: false,
+            interaction_alert: null,
+            created_at: med.created_at,
+            updated_at: med.created_at,
+            doctor_name: med.doctor_name || 'Scanned prescription',
+            hospital_name: med.hospital_name,
+            rx_date: med.rx_date,
+            effective_rx_date: med.effective_rx_date,
+            rx_date_was_missing: med.rx_date_was_missing,
+            source: 'prescription_scan',
+            items: [],
+          });
+        }
+        scanGroups.get(med.scan_id).items.push(med);
+      }
+
+      return [...prescriptions, ...Array.from(scanGroups.values())]
+        .sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at));
     } catch (error) {
       console.error(`Failed to get active prescriptions: ${error.message}`);
       throw error;
+    }
+  };
+
+  getPrescriptionScanMedications = async (patientId, { activeOnly = false } = {}) => {
+    try {
+      const query = `
+                SELECT scan_id, user_id, patient_id, doctor_name, doctor_specialty, hospital_name,
+                       patient_name_rx, rx_date, diseases, medications, created_at
+                FROM prescription_scan
+                WHERE patient_id = $1
+                ORDER BY COALESCE(created_at, NOW()) DESC;
+            `;
+      const result = await this.db_connection.query_executor(query, [patientId]);
+      return normalizeScanRows(result.rows || [], { activeOnly });
+    } catch (error) {
+      console.warn(`Failed to get scan medications: ${error.message}`);
+      return [];
     }
   };
 
@@ -1163,7 +1207,25 @@ class DoctorModel {
                 ORDER BY pi.drug_id, pi.paused_at DESC NULLS LAST;
             `;
       const result = await this.db_connection.query_executor(query, [patientId]);
-      return result.rows || [];
+      const prescriptionItems = (result.rows || []).map((item) => ({
+        ...item,
+        source: item.source || "prescription_item",
+      }));
+
+      const stoppedScanMedications = (await this.getPrescriptionScanMedications(patientId))
+        .filter((med) => String(med.status || "").toLowerCase() === "stopped")
+        .map((med) => ({
+          ...med,
+          modification_notes:
+            med.modification_notes ||
+            `Scanned prescription course ended after ${med.duration_days || med.durationDays || "recorded"} days`,
+        }));
+
+      return [...prescriptionItems, ...stoppedScanMedications].sort(
+        (a, b) =>
+          new Date(b.paused_at || b.expires_at || b.issued_at || b.created_at || 0) -
+          new Date(a.paused_at || a.expires_at || a.issued_at || a.created_at || 0)
+      );
     } catch (error) {
       console.error(`Failed to get paused medicines: ${error.message}`);
       throw error;

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon, PlayCircle } from 'lucide-react';
+import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon, PlayCircle, PauseCircle, StopCircle, ShieldCheck, Loader2 } from 'lucide-react';
 import Modal from '../components/ui/Modal.jsx';
-import { getPatientActiveMedications, getPrescriptionHistoryLocal } from '../services/api.js';
+import { getPatientActiveMedications, getPrescriptionHistoryLocal, getHealthSummary, checkPatientMedicationSafety } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import InteractionCheckModal from '../components/ui/InteractionCheckModal.jsx';
 
 // ─── Duration parsing ─────────────────────────────────────────────────────────
 function parseDurationDays(duration) {
@@ -39,7 +40,7 @@ function parseSchedule(frequency = '', instructions = '') {
   const emptyStomach = has('empty stomach', 'খালি পেটে', 'before breakfast') && !has('before lunch', 'before dinner');
 
   // ── X-X-X notation (e.g. "1-0-0", "0-0-1", "1-1-1") ──────────────────────
-  const xPattern = freq.match(/^([01+½¾])\s*[-–]\s*([01+½¾])\s*[-–]\s*([01+½¾])$/);
+  const xPattern = freq.match(/^([01+½¾])\s*[-–+]\s*([01+½¾])\s*[-–+]\s*([01+½¾])$/);
   if (xPattern) {
     const toActive = (v) => v !== '0' && v !== '' && v != null;
     const mActive  = toActive(xPattern[1]);
@@ -108,7 +109,7 @@ function Tick({ active }) {
 }
 
 // ─── Medication detail modal ──────────────────────────────────────────────────
-function MedModal({ med, rx, onClose }) {
+function MedModal({ med, onClose }) {
   const { t } = useLanguage();
   const sched = med ? parseSchedule(med.frequency, med.instructions) : {};
 
@@ -139,10 +140,10 @@ function MedModal({ med, rx, onClose }) {
               { label: t('frequencyLabel'),    value: med.frequency    },
               { label: t('durationLabel'),     value: med.duration     },
               { label: t('instructionsLabel'), value: med.instructions },
-              { label: t('prescribedBy'),      value: rx?.doctor?.name || (typeof rx?.doctor === 'string' ? rx?.doctor : null) },
-              { label: 'Date',                 value: rx?.date         },
-              { label: t('hospitalLabel'),     value: rx?.hospital?.name || (typeof rx?.hospital === 'string' ? rx?.hospital : null) },
-              { label: t('conditionsLabel'),   value: (rx?.diseases || []).join(', ') || null },
+              { label: t('prescribedBy'),      value: med.prescribedBy },
+              { label: 'Date',                 value: med.date         },
+              { label: t('hospitalLabel'),     value: med.hospital },
+              { label: t('conditionsLabel'),   value: (med.diseases || []).join(', ') || null },
             ].filter((r) => r.value).map(({ label, value }) => (
               <div key={label} className="flex gap-3 text-sm">
                 <span className="text-gray-400 dark:text-gray-500 w-28 flex-shrink-0">{label}</span>
@@ -175,9 +176,10 @@ export default function HistoryMedications() {
 
   const [allRx,       setAllRx]       = useState([]);
   const [doctorMedications, setDoctorMedications] = useState([]);
-  const [activeRxIdx, setActiveRxIdx] = useState(0);
   const [selectedMed, setSelectedMed] = useState(null);
   const [pastOpen,    setPastOpen]    = useState(false);
+  const [isCheckingSafety, setIsCheckingSafety] = useState(false);
+  const [safetyResult,    setSafetyResult]    = useState(null);
 
   useEffect(() => {
     setAllRx(getPrescriptionHistoryLocal());
@@ -196,10 +198,42 @@ export default function HistoryMedications() {
     !(rx.medications || []).some((m) => isMedActive(m, rx.savedAt))
   );
 
-  // Clamp activeRxIdx if needed
-  const clampedIdx  = Math.min(activeRxIdx, Math.max(0, activePrescriptions.length - 1));
-  const activeRx    = activePrescriptions[clampedIdx] || null;
-  const medications = (activeRx?.medications || []).filter((m) => isMedActive(m, activeRx?.savedAt));
+  // ─── Unified Active Medications ──────────────────────────────────────────────────
+  const unifiedActiveMeds = [
+    // 1. Medications from scanned active prescriptions
+    ...activePrescriptions.flatMap((rx) =>
+      (rx.medications || [])
+        .filter((m) => isMedActive(m, rx.savedAt))
+        .map((m) => ({
+          ...m,
+          id: `${rx.scan_id}_${m.id}`,
+          prescribedBy: rx.doctor?.name || 'Unknown Doctor',
+          date: rx.date,
+          hospital: rx.hospital?.name,
+          diseases: rx.diseases || [],
+          source: 'scanned'
+        }))
+    ),
+    // 2. Medications from doctor portal
+    ...doctorMedications
+      .filter((m) => m.status === 'active')
+      .map((m) => ({
+        id: m.item_id || m.id,
+        name: m.brand_name || m.generic_name,
+        generic: m.generic_name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        duration: m.duration_days ? `${m.duration_days} days` : null,
+        instructions: m.instructions,
+        prescribedBy: m.doctor_name ? `Dr. ${m.doctor_name}` : 'Doctor-issued',
+        date: m.issued_at,
+        hospital: null,
+        diseases: [],
+        status: m.status,
+        source: 'portal'
+      })),
+  ];
+
   const hasDoctorMedications = doctorMedications.length > 0;
 
   const statusMeta = (status = 'active') => {
@@ -211,6 +245,58 @@ export default function HistoryMedications() {
       return { Icon: StopCircle, label: 'Stopped', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
     }
     return { Icon: PlayCircle, label: 'Active', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' };
+  };
+
+  const handleSafetyCheck = async () => {
+    setIsCheckingSafety(true);
+    setSafetyResult(null);
+
+    try {
+      const { profile } = await getHealthSummary();
+
+      const activeLocalMeds = activePrescriptions.flatMap(rx =>
+        (rx.medications || []).filter(m => isMedActive(m, rx.savedAt))
+      );
+
+      const allActiveMeds = [
+        ...activeLocalMeds,
+        ...doctorMedications
+          .filter(m => m.status === 'active')
+          .map(m => ({
+            name: m.brand_name || m.generic_name,
+            dosage: m.dosage,
+            frequency: m.frequency,
+            duration: m.duration_days ? `${m.duration_days} days` : null
+          }))
+      ].map(m => ({
+        name: m.name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        duration: m.duration
+      }));
+
+      if (allActiveMeds.length === 0) {
+        addToast('No active medications found to analyze.', 'info');
+        setIsCheckingSafety(false);
+        return;
+      }
+
+      const payload = {
+        medications: allActiveMeds,
+        allergies: profile?.allergies || [],
+        surgeries: profile?.surgeries || [],
+        vaccinations: profile?.vaccinations || []
+      };
+
+      const result = await checkPatientMedicationSafety(payload);
+      setSafetyResult(result);
+      addToast('Safety check complete.', 'success');
+    } catch (err) {
+      console.error('Safety check failed:', err);
+      addToast(err.message || 'Failed to run safety check.', 'error');
+    } finally {
+      setIsCheckingSafety(false);
+    }
   };
 
   return (
@@ -266,51 +352,36 @@ export default function HistoryMedications() {
         </div>
       )}
 
-      {/* Active prescription selector */}
-      {activePrescriptions.length > 1 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {activePrescriptions.map((rx, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveRxIdx(i)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
-                  clampedIdx === i
-                    ? 'bg-emerald-500 text-white border-emerald-500'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-emerald-400'
-                }`}
-              >
-                {rx.doctor?.name ? `Dr. ${rx.doctor.name.split(' ').slice(-1)[0]}` : `Rx ${i + 1}`}
-                <span className="ml-1.5 text-xs opacity-70">{String(rx.date || '').slice(0, 6)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Safety Check Trigger */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-emerald-500" />
+          Active Medications
+        </h2>
+        <button
+          onClick={handleSafetyCheck}
+          disabled={isCheckingSafety}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-sm shadow-emerald-500/20"
+        >
+          {isCheckingSafety ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Checking Safety...</>
+          ) : (
+            <><ShieldCheck className="w-4 h-4" /> Run Safety Check</>
+          )}
+        </button>
+      </div>
 
-      {/* Table */}
-      {activePrescriptions.length === 0 ? (
+      {/* Consolidated Medication Chart */}
+      {unifiedActiveMeds.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <p className="text-base font-medium">{allRx.length > 0 ? t('noMedicationsFound') : t('noPrescriptionsYet')}</p>
           <p className="text-sm mt-1">{allRx.length > 0 ? t('scanPrescriptionPrompt') : t('goScanPrescription')}</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
-
-          {/* Prescription context bar */}
-          {activeRx && (
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
-              {activeRx.doctor?.name && <span className="font-semibold text-gray-900 dark:text-white">{activeRx.doctor.name}</span>}
-              {activeRx.hospital?.name && <><span>·</span><span>{activeRx.hospital.name}</span></>}
-              {activeRx.date && <><span>·</span><span>{activeRx.date}</span></>}
-            </div>
-          )}
-
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-sm border-collapse">
               <thead>
-                {/* Group row */}
                 <tr className="bg-gray-50 dark:bg-gray-800/70">
                   <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700" rowSpan={2}>
                     {t('filterMedication')}
@@ -328,7 +399,6 @@ export default function HistoryMedications() {
                     {t('timeSOS')}
                   </th>
                 </tr>
-                {/* Sub-header row */}
                 <tr className="bg-gray-50 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-700">
                   <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">{t('timingBefore')}</th>
                   <th className="text-center px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('timingAfter')}</th>
@@ -340,7 +410,7 @@ export default function HistoryMedications() {
               </thead>
 
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {medications.map((med, i) => {
+                {unifiedActiveMeds.map((med, i) => {
                   const s = parseSchedule(med.frequency, med.instructions);
                   return (
                     <tr key={med.id || i} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
@@ -353,11 +423,16 @@ export default function HistoryMedications() {
                           <p className="text-sm font-semibold text-emerald-500 dark:text-emerald-400 hover:underline">
                             {med.name}
                           </p>
-                          {(med.generic || med.dosage) && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                              {[med.generic, med.dosage].filter(Boolean).join(' · ')}
+                          <div className="flex flex-col gap-0.5">
+                            {(med.generic || med.dosage) && (
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                {[med.generic, med.dosage].filter(Boolean).join(' · ')}
+                              </p>
+                            )}
+                            <p className="text-[10px] text-gray-400 dark:text-gray-600 italic">
+                              Prescribed by: {med.prescribedBy}
                             </p>
-                          )}
+                          </div>
                         </button>
                       </td>
                       <td className="text-center px-4 py-3 border-l border-gray-100 dark:border-gray-800"><Tick active={s.morningBefore} /></td>
@@ -410,8 +485,13 @@ export default function HistoryMedications() {
       {/* Medication detail modal — always mounted, controlled via isOpen */}
       <MedModal
         med={selectedMed}
-        rx={activeRx}
         onClose={() => setSelectedMed(null)}
+      />
+
+      <InteractionCheckModal
+        isOpen={!!safetyResult}
+        onClose={() => setSafetyResult(null)}
+        report={safetyResult}
       />
     </div>
   );

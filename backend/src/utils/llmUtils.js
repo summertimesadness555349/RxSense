@@ -46,17 +46,23 @@ class LLMUtils {
      * @param {Array} allergies - Patient's allergies from patient_allergy table
      * @param {Array} currentMedications - Active prescriptions from prescription_item joined with drug
      * @param {Array} proposedMedications - Array of { drug_id, generic_name, brand_name, drug_class }
+     * @param {Array} surgeries - Patient's surgery history from patient_surgery table
+     * @param {Array} vaccinations - Patient's vaccination history from patient_vaccination table
      */
-    checkPrescriptionSafety = async (patientId, allergies, currentMedications, proposedMedications) => {
+    checkPrescriptionSafety = async (patientId, allergies, currentMedications, proposedMedications, surgeries = [], vaccinations = []) => {
         // Compress patient context with dosages/frequencies included for accurate clinical checks
         const allergyStr = allergies.map(a => `${a.generic_name || a.brand_name || a.drug_class} (severity: ${a.severity || 'moderate'})`).join('; ') || 'None';
         const currentStr = currentMedications.map(m => `${m.generic_name}${m.dosage ? ` ${m.dosage}` : ''}${m.frequency ? ` ${m.frequency}` : ''}`).join('; ') || 'None';
         const proposedStr = proposedMedications.map(p => `${p.generic_name}${p.dosage ? ` ${p.dosage}` : ''}${p.frequency ? ` ${p.frequency}` : ''}`).join('; ');
+        const surgeriesStr = surgeries.map(s => `${s.surgery_name || s.name} (${new Date(s.date || s.performed_at || s.created_at).toLocaleDateString()})`).join('; ') || 'None';
+        const vaccinationsStr = vaccinations.map(v => `${v.vaccine_name} (${new Date(v.date || v.administered_at).toLocaleDateString()})`).join('; ') || 'None';
 
       // Claude Prompt 1 — Drug-drug interactions and dosage analysis
 const interactionPrompt = `You are a clinical pharmacologist AI.
 Check for drug-drug interactions and dosage issues between active and proposed medications. For dose-dependent conflicts, suggest the minimum safe dose/day. Skip allergy checks.
-Active Medications: ${currentStr},Proposed Medications: ${proposedStr}
+Active Medications: ${currentStr},Proposed Medications: ${proposedStr}, Surgeries history: ${surgeriesStr}, vaccination history: ${vaccinationsStr}
+
+IMPORTANT: Analyze the Surgeries and Vaccination history provided below. Consider the dates of these events to determine if they still have a clinically significant impact on the patient's body (e.g., recent surgeries may have specific drug contraindications, or vaccines may have interaction windows).
 Respond in strict JSON only:
 {
   "has_conflict": boolean,

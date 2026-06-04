@@ -583,6 +583,15 @@ export const getTimeline = async (userId, filters = {}) => {
   return entries;
 };
 
+export const checkPatientMedicationSafety = async (patientData) => {
+  const data = await request('/patient/me/medication-safety', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patientData),
+  });
+  return data.safetyReport || null;
+};
+
 // POST /api/timeline/:userId/entry
 export const addTimelineEntry = async (userId, entry) => {
   await delay(800);

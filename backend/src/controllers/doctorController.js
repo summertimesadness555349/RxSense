@@ -891,8 +891,6 @@ class DoctorController {
         try {
             const { patientId, itemId } = req.params;
             const { status, pause_duration_days, modification_notes } = req.body;
-            console.log(req.body);
-
             if (!status || !["active", "paused", "stopped"].includes(status)) {
                 return res.status(400).json({ success: false, error: 'Status must be active, paused, or stopped' });
             }
@@ -905,19 +903,19 @@ class DoctorController {
             if(status === "paused" && !pause_duration_days && isNaN(parseInt(pause_duration_days))) {
                 return res.status(400).json({ success: false, error: 'Pause duration days is required when status is paused' });
             }
+            let activeItem = null;
             if(status === "stopped" || status === "paused") {
                 const activePrescriptions = await this.doctorModel.getPatientActivePrescriptions(patientId);
-                let itemFound = false;
                 for(const rx of activePrescriptions){
                     if(rx.items && rx.items.length > 0){
                         const found = rx.items.find(i => String(i.item_id) === String(itemId));
                         if(found){
-                            itemFound = true;
+                            activeItem = found;
                             break;
                         }
                     }
                 }
-                if(!itemFound){
+                if(!activeItem){
                     return res.status(404).json({ success: false, error: 'Active prescription item not found for stopping or pausing' });
                 }
             }
@@ -925,6 +923,31 @@ class DoctorController {
             const durationDays = pause_duration_days;
             const notes = modification_notes ? `Modification notes: ${modification_notes}` : null;
             // console.log(`[modifyPrescriptionItem] patientId=${patientId} itemId=${itemId} status=${status} durationDays=${durationDays} notes=${notes}`);
+
+            if (activeItem?.source === 'prescription_scan') {
+                if (status !== 'stopped') {
+                    return res.status(400).json({ success: false, error: 'Scanned medicines can only be shortened from this action' });
+                }
+
+                const shortenedDurationDays = 0;
+
+                const updatedScan = await this.doctorModel.updatePrescriptionScanMedicationDuration(
+                    patientId,
+                    itemId,
+                    shortenedDurationDays,
+                    notes || null
+                );
+
+                if (!updatedScan) {
+                    return res.status(404).json({ success: false, error: 'Prescription scan medication not found' });
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    message: `Medication duration shortened to ${shortenedDurationDays} days`,
+                    item: updatedScan
+                });
+            }
 
             // Update status in DB
             const updatedItem = await this.doctorModel.updatePrescriptionItemStatus(

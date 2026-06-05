@@ -1099,11 +1099,11 @@ export const searchDrugs = async (query) => {
   return data.drugs || [];
 };
 
-export const modifyPrescriptionItem = async (patientId, itemId, { status, pause_duration_days, modification_notes }) => {
+export const modifyPrescriptionItem = async (patientId, itemId, { status, pause_duration_days, duration_days, modification_notes }) => {
   const data = await request(`/doctor/patients/${patientId}/prescription-items/${itemId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, pause_duration_days, modification_notes }),
+    body: JSON.stringify({ status, pause_duration_days, duration_days, modification_notes }),
   });
   return data;
 };

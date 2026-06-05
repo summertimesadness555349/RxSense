@@ -778,10 +778,16 @@ export default function DoctorPatients() {
   };
 
   const openMedicationAction = (item, status) => {
+    const isScannedMedication = item.source === "prescription_scan";
+
     setMedicationAction({ item, status });
     setMedicationActionNotes(item.modification_notes || "");
     setPauseDurationDays(
-      item.pause_duration_days ? String(item.pause_duration_days) : "3"
+      isScannedMedication && status === "stopped"
+        ? "0"
+        : item.pause_duration_days
+          ? String(item.pause_duration_days)
+          : "3"
     );
   };
 
@@ -845,6 +851,10 @@ export default function DoctorPatients() {
         status,
         pause_duration_days:
           status === "paused" ? options.pauseDurationDays : null,
+        duration_days:
+          item.source === "prescription_scan" && status === "stopped"
+            ? options.durationDays
+            : null,
         modification_notes: options.notes || null,
       });
 
@@ -870,6 +880,9 @@ export default function DoctorPatients() {
   const confirmMedicationAction = () => {
     if (!medicationAction) return;
     const durationDays = parseInt(pauseDurationDays, 10);
+    const isScannedMedication =
+      medicationAction.item.source === "prescription_scan";
+
     if (
       medicationAction.status === "paused" &&
       (!durationDays || durationDays < 1)
@@ -883,6 +896,10 @@ export default function DoctorPatients() {
       medicationAction.status,
       {
         pauseDurationDays: durationDays,
+        durationDays:
+          isScannedMedication && medicationAction.status === "stopped"
+            ? 0
+            : durationDays,
         notes: medicationActionNotes.trim(),
       }
     );
@@ -1561,7 +1578,7 @@ export default function DoctorPatients() {
                                         <Pause className="w-3.5 h-3.5" /> Pause
                                       </button>
                                     )}
-                                    {!isScannedMedication && medStatus !== "stopped" && (
+                                    {medStatus !== "stopped" && (
                                       <button
                                         type="button"
                                         disabled={isUpdating}
@@ -2656,7 +2673,9 @@ export default function DoctorPatients() {
                   <h3 className="font-bold text-gray-900 dark:text-white">
                     {medicationAction.status === "paused"
                       ? "Pause medication"
-                      : "Stop medication"}
+                      : medicationAction.item.source === "prescription_scan"
+                        ? "Stop scanned medicine"
+                        : "Stop medication"}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {medicationAction.item.brand_name ||
@@ -2667,6 +2686,13 @@ export default function DoctorPatients() {
               </div>
 
               <div className="mt-5 space-y-4">
+                {medicationAction.status === "stopped" &&
+                  medicationAction.item.source === "prescription_scan" && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 rounded-xl bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 px-3 py-2">
+                      Scanned prescriptions are kept in the record. Confirming
+                      will stop it from being in active medicine list.
+                    </p>
+                  )}
                 {medicationAction.status === "paused" && (
                   <Input
                     label="Pause duration (days)"
@@ -2711,7 +2737,10 @@ export default function DoctorPatients() {
                       : ""
                   }
                 >
-                  Confirm
+                  {medicationAction.item.source === "prescription_scan" &&
+                  medicationAction.status === "stopped"
+                    ? "Stop medicine"
+                    : "Confirm"}
                 </Button>
               </div>
             </motion.div>

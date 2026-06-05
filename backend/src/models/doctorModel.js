@@ -1223,6 +1223,68 @@ class DoctorModel {
     }
   };
 
+  updatePrescriptionScanMedicationDuration = async (
+    patientId,
+    itemId,
+    durationDays = 0,
+    modificationNotes
+  ) => {
+    const [scanId, indexText] = String(itemId || "").split(":");
+    const medicationIndex = Number(indexText);
+
+    if (!scanId || !Number.isInteger(medicationIndex) || medicationIndex < 0) {
+      return null;
+    }
+
+    try {
+      const selectQuery = `
+        SELECT scan_id, medications
+        FROM prescription_scan
+        WHERE patient_id = $1
+          AND scan_id = $2
+        FOR UPDATE;
+      `;
+      const result = await this.db_connection.query_executor(selectQuery, [
+        patientId,
+        scanId,
+      ]);
+      const scan = result.rows[0];
+      if (!scan || !Array.isArray(scan.medications) || !scan.medications[medicationIndex]) {
+        return null;
+      }
+
+      const medications = scan.medications.map((med, index) => {
+        if (index !== medicationIndex) return med;
+        return {
+          ...med,
+          duration: `${durationDays} days`,
+          duration_days: durationDays,
+          modification_notes: modificationNotes,
+        };
+      });
+
+      const updateQuery = `
+        UPDATE prescription_scan
+        SET medications = $3::jsonb
+        WHERE patient_id = $1
+          AND scan_id = $2
+        RETURNING scan_id, medications;
+      `;
+      const updated = await this.db_connection.query_executor(updateQuery, [
+        patientId,
+        scanId,
+        JSON.stringify(medications),
+      ]);
+
+      return updated.rows[0] || null;
+    } catch (error) {
+      console.error(
+        `Failed to update prescription scan medication duration: ${error.message}`
+      );
+      throw error;
+    }
+  };
+
   getPausedMedicineByPatientId = async (patientId) => {
     try {
       const query = `

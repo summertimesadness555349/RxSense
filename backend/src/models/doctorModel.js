@@ -1,5 +1,7 @@
 const DB_Connection = require("../database/db.js");
-const { normalizeScanRows } = require("../utils/prescriptionScanMedicationUtils.js");
+const {
+  normalizeScanRows,
+} = require("../utils/prescriptionScanMedicationUtils.js");
 
 class DoctorModel {
   constructor() {
@@ -802,6 +804,20 @@ class DoctorModel {
 
   getPatientActivePrescriptions = async (patientId) => {
     try {
+      // 1. Update the items whose pause duration has passed
+      const updateItemsQuery = `
+    UPDATE prescription_item pi
+    SET status = 'active', paused_at = NULL, pause_duration_days = NULL
+    FROM prescription p
+    WHERE pi.prescription_id = p.prescription_id
+      AND p.patient_id = $1
+      AND pi.status = 'paused'
+      AND pi.paused_at IS NOT NULL
+      AND (pi.paused_at) + (pi.pause_duration_days * INTERVAL '1 day') < NOW();
+`;
+
+      // Execute both queries sequentially
+      await this.db_connection.query_executor(updateItemsQuery, [patientId]);
       const query = `
                 WITH latest_items AS (
                     SELECT DISTINCT ON (pi.drug_id)
@@ -837,10 +853,9 @@ class DoctorModel {
                 LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
                 ORDER BY p.issued_at DESC;
             `;
-      const result = await this.db_connection.query_executor(
-        query,
-        [patientId]
-      );
+      const result = await this.db_connection.query_executor(query, [
+        patientId,
+      ]);
 
       const rows = result.rows;
       const prescriptionsMap = new Map();
@@ -866,7 +881,7 @@ class DoctorModel {
             advice: row.advice,
             followUp: row.followUp,
             doctor_name: row.doctor_name,
-            items: []
+            items: [],
           });
         }
 
@@ -877,14 +892,19 @@ class DoctorModel {
                     JOIN drug dr ON pi.drug_id = dr.drug_id
                     WHERE pi.item_id = $1;
                 `;
-        const drugResult = await this.db_connection.query_executor(drugQuery, [row.item_id]);
+        const drugResult = await this.db_connection.query_executor(drugQuery, [
+          row.item_id,
+        ]);
         if (drugResult.rows[0]) {
           prescriptionsMap.get(pId).items.push(drugResult.rows[0]);
         }
       }
 
       const prescriptions = Array.from(prescriptionsMap.values());
-      const scanMedications = await this.getPrescriptionScanMedications(patientId, { activeOnly: true });
+      const scanMedications = await this.getPrescriptionScanMedications(
+        patientId,
+        { activeOnly: true }
+      );
       const scanGroups = new Map();
 
       for (const med of scanMedications) {
@@ -894,32 +914,38 @@ class DoctorModel {
             patient_id: patientId,
             doctor_id: null,
             issued_at: med.issued_at,
-            status: med.status === 'active' ? 'active' : 'completed',
+            status: med.status === "active" ? "active" : "completed",
             llm_interaction_checked: false,
             interaction_alert: null,
             created_at: med.created_at,
             updated_at: med.created_at,
-            doctor_name: med.doctor_name || 'Scanned prescription',
+            doctor_name: med.doctor_name || "Scanned prescription",
             hospital_name: med.hospital_name,
             rx_date: med.rx_date,
             effective_rx_date: med.effective_rx_date,
             rx_date_was_missing: med.rx_date_was_missing,
-            source: 'prescription_scan',
+            source: "prescription_scan",
             items: [],
           });
         }
         scanGroups.get(med.scan_id).items.push(med);
       }
 
-      return [...prescriptions, ...Array.from(scanGroups.values())]
-        .sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at));
+      return [...prescriptions, ...Array.from(scanGroups.values())].sort(
+        (a, b) =>
+          new Date(b.issued_at || b.created_at) -
+          new Date(a.issued_at || a.created_at)
+      );
     } catch (error) {
       console.error(`Failed to get active prescriptions: ${error.message}`);
       throw error;
     }
   };
 
-  getPrescriptionScanMedications = async (patientId, { activeOnly = false } = {}) => {
+  getPrescriptionScanMedications = async (
+    patientId,
+    { activeOnly = false } = {}
+  ) => {
     try {
       const query = `
                 SELECT scan_id, user_id, patient_id, doctor_name, doctor_specialty, hospital_name,
@@ -928,7 +954,9 @@ class DoctorModel {
                 WHERE patient_id = $1
                 ORDER BY COALESCE(created_at, NOW()) DESC;
             `;
-      const result = await this.db_connection.query_executor(query, [patientId]);
+      const result = await this.db_connection.query_executor(query, [
+        patientId,
+      ]);
       return normalizeScanRows(result.rows || [], { activeOnly });
     } catch (error) {
       console.warn(`Failed to get scan medications: ${error.message}`);
@@ -1164,14 +1192,20 @@ class DoctorModel {
       const query = `
                 UPDATE prescription_item pi
                 SET status = $1::varchar,
-                    pause_duration_days = $2,
-                    paused_at = CASE WHEN $1::varchar = 'paused' THEN NOW() ELSE NULL END,
-                    modification_notes = $3
-                FROM prescription p
-                WHERE pi.prescription_id = p.prescription_id
-                  AND p.patient_id = $4
-                  AND pi.item_id = $5
-                RETURNING pi.*;
+                pause_duration_days = $2,
+                paused_at = CASE WHEN $1::varchar = 'paused' THEN NOW() ELSE NULL END,
+                modification_notes = $3,
+    
+    -- FIX: Only extend the duration if we are shifting the status to 'paused'
+                duration_days = CASE 
+                WHEN $1::varchar = 'paused' THEN pi.duration_days + $2
+                ELSE pi.duration_days 
+                END
+         FROM prescription p
+         WHERE pi.prescription_id = p.prescription_id
+          AND p.patient_id = $4
+          AND pi.item_id = $5
+         RETURNING pi.*;
             `;
       const result = await this.db_connection.query_executor(query, [
         status,
@@ -1188,7 +1222,7 @@ class DoctorModel {
       throw error;
     }
   };
-  
+
   getPausedMedicineByPatientId = async (patientId) => {
     try {
       const query = `
@@ -1206,31 +1240,41 @@ class DoctorModel {
                   )
                 ORDER BY pi.drug_id, pi.paused_at DESC NULLS LAST;
             `;
-      const result = await this.db_connection.query_executor(query, [patientId]);
+      const result = await this.db_connection.query_executor(query, [
+        patientId,
+      ]);
       const prescriptionItems = (result.rows || []).map((item) => ({
         ...item,
         source: item.source || "prescription_item",
       }));
 
-      const stoppedScanMedications = (await this.getPrescriptionScanMedications(patientId))
+      const stoppedScanMedications = (
+        await this.getPrescriptionScanMedications(patientId)
+      )
         .filter((med) => String(med.status || "").toLowerCase() === "stopped")
         .map((med) => ({
           ...med,
           modification_notes:
             med.modification_notes ||
-            `Scanned prescription course ended after ${med.duration_days || med.durationDays || "recorded"} days`,
+            `Scanned prescription course ended after ${
+              med.duration_days || med.durationDays || "recorded"
+            } days`,
         }));
 
       return [...prescriptionItems, ...stoppedScanMedications].sort(
         (a, b) =>
-          new Date(b.paused_at || b.expires_at || b.issued_at || b.created_at || 0) -
-          new Date(a.paused_at || a.expires_at || a.issued_at || a.created_at || 0)
+          new Date(
+            b.paused_at || b.expires_at || b.issued_at || b.created_at || 0
+          ) -
+          new Date(
+            a.paused_at || a.expires_at || a.issued_at || a.created_at || 0
+          )
       );
     } catch (error) {
       console.error(`Failed to get paused medicines: ${error.message}`);
       throw error;
     }
-  }
+  };
 
   getAllHospitals = async () => {
     try {

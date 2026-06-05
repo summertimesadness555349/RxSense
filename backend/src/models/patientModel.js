@@ -397,6 +397,21 @@ class PatientModel {
     };
 
     getActiveMedications = async (patientId) => {
+        try{
+       const query1 = `
+    UPDATE prescription_item pi
+    SET status = 'active', 
+        paused_at = NULL, 
+        pause_duration_days = NULL
+    FROM prescription p
+    WHERE pi.prescription_id = p.prescription_id
+      AND p.patient_id = $1
+      AND pi.status = 'paused'
+      AND pi.paused_at IS NOT NULL
+      AND pi.paused_at + (pi.pause_duration_days * INTERVAL '1 day') < NOW();
+`;
+      
+await this.db_connection.query_executor(query1, [patientId]);
         const query = `
             SELECT
                distinct ON (pi.drug_id)
@@ -434,6 +449,10 @@ class PatientModel {
         const portalMedications = result.rows || [];
         const scanMedications = await this.getPrescriptionScanMedications(patientId, { activeOnly: true });
         return [...portalMedications, ...scanMedications];
+        } catch (err) {
+            console.warn('[PatientModel] getActiveMedications failed:', err.message);
+            return [];
+        }
     };
 
     getPrescriptionScanMedications = async (patientId, { activeOnly = false } = {}) => {

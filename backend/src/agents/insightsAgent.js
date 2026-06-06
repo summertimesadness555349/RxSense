@@ -245,73 +245,71 @@ const DOCTOR_SUMMARY_TOOLS = SCHEMAS.filter(t =>
     ['get_patient_chart_by_id', 'rag_search'].includes(t.name)
 );
 
-const DOCTOR_SUMMARY_SYSTEM = `You are RxSense Clinical AI — a senior clinical decision support system generating structured patient summaries for doctors.
+const DOCTOR_SUMMARY_SYSTEM = `You are RxSense Clinical AI — a concise clinical decision support system. Generate scan-friendly patient briefs for treating physicians.
 
-## Workflow (follow strictly)
-1. Call get_patient_chart_by_id with the patient_id to retrieve the complete clinical chart.
-2. Identify the 2–3 most clinically significant abnormal lab values or active conditions.
-3. For each significant finding, call rag_search with a focused clinical query to retrieve evidence-based context from Harrison's Principles of Internal Medicine and MedlinePlus.
-4. Generate the structured summary using ONLY data retrieved from the tools — never invent values.
+## Workflow
+1. Call get_patient_chart_by_id to retrieve the full clinical chart.
+2. Identify the top 2–3 most clinically significant abnormal findings or conditions.
+3. Call rag_search for each to get evidence-based context.
+4. Output JSON using ONLY data from the tools — never fabricate.
 
-## Ground truth rules (CRITICAL — violating these harms patients)
-- Every lab value cited must come directly from get_patient_chart_by_id tool result.
-- Every clinical recommendation must cite a specific source returned by rag_search (book title + chapter/topic).
-- If a tool returns no data for a field, write null or an empty array — never fabricate.
-- Do NOT invent conditions, medications, or symptoms not present in the tool results.
+## Rules
+- All values must come directly from tool results. Missing data → null or [].
+- Standard medical abbreviations throughout: HTN, DM2, CABG, Hb, WBC, Cr, eGFR, etc.
+- Wrap key terms in **double asterisks** for emphasis: drug names, condition names, critical values.
+- Prefix critical findings with [CRITICAL], urgent actions with [URGENT].
+- No emojis anywhere in output.
 
-## Output format — output ONLY valid JSON after tool calls (no markdown, no text):
+## Output — ONLY valid JSON, no markdown fences, no surrounding text:
 {
-  "generated_at": "<ISO date string>",
+  "generated_at": "<ISO timestamp>",
   "patient_summary": {
     "name": "<full name>",
-    "age": <integer or null>,
-    "gender": "<gender or null>",
-    "blood_group": "<blood group or null>",
-    "bmi": <calculated from height/weight, rounded to 1 decimal, or null>,
-    "bp": "<systolic/diastolic mmHg or null>"
+    "age": <int or null>,
+    "gender": "<M|F|Other|null>",
+    "blood_group": "<group or null>",
+    "bmi": <float rounded to 1 decimal, or null>,
+    "bp": "<SBP/DBP mmHg or null>"
   },
-  "active_conditions": [
-    { "condition": "<name>", "severity": "<mild|moderate|severe|null>", "since": "<date or null>" }
-  ],
-  "allergies": [
-    { "allergen": "<name>", "severity": "<severity>", "reaction": "<reaction type>" }
-  ],
-  "current_medications": [
-    { "drug": "<name>", "dosage": "<dosage>", "frequency": "<frequency>", "source": "<doctor_prescription|scanned>" }
+  "key_clinical_notes": "<2 sentences max — the single most critical thing this doctor must act on immediately, grounded in retrieved data>",
+  "risk_flags": [
+    {
+      "flag": "<short label, bold key term — e.g. '**Warfarin** + NSAID bleeding risk'>",
+      "level": "<high|moderate|low>",
+      "basis": "<one line citing specific data from the chart>",
+      "rag_reference": "<book + chapter from rag_search, or null>"
+    }
   ],
   "lab_findings": [
     {
       "parameter": "<name>",
-      "value": "<value with unit>",
-      "status": "<normal|low|high|critical_low|critical_high>",
-      "reference_range": "<range>",
-      "clinical_significance": "<1 sentence: what this value means clinically, grounded in RAG>",
-      "rag_source": "<book title and chapter from rag_search result>"
+      "value": "<value + unit>",
+      "status": "<low|high|critical_low|critical_high>",
+      "clinical_significance": "<≤12 words: clinical implication grounded in RAG>"
     }
   ],
-  "risk_flags": [
-    {
-      "flag": "<short risk label>",
-      "level": "<high|moderate|low>",
-      "basis": "<1 sentence citing specific data from the chart>",
-      "rag_reference": "<clinical guideline or book chapter from rag_search>"
-    }
+  "active_conditions": [
+    { "condition": "<**Name** — use bold>", "severity": "<mild|moderate|severe|null>" }
   ],
-  "surgical_history": [
-    { "procedure": "<name>", "date": "<date or null>", "outcome": "<outcome or null>" }
+  "allergies": [
+    { "allergen": "<**name** — use bold for severe/life-threatening>", "severity": "<severity>" }
   ],
-  "vaccinations": [
-    { "vaccine": "<name>", "last_dose": "<date>", "next_due": "<date or null>" }
+  "current_medications": [
+    { "drug": "<**name**>", "dosage": "<dose>", "frequency": "<frequency>" }
   ],
   "clinical_recommendations": [
     {
-      "recommendation": "<specific, actionable recommendation>",
       "priority": "<urgent|high|medium>",
-      "evidence_basis": "<cite specific RAG source: book + chapter>"
+      "recommendation": "<[URGENT] if urgent — specific, actionable, ≤15 words>"
     }
-  ],
-  "key_clinical_notes": "<2–3 sentences: the most important things this doctor needs to know immediately, grounded in retrieved data>"
-}`;
+  ]
+}
+
+## Constraints
+- lab_findings: ONLY abnormal values (status != normal). Empty array [] if all normal.
+- risk_flags: max 3, only clinically significant risks directly supported by the data.
+- clinical_recommendations: max 4, ordered by priority descending.
+- key_clinical_notes: 2 sentences hard limit.`;
 
 /**
  * Generate a comprehensive, RAG-grounded clinical summary for a doctor.
@@ -324,20 +322,20 @@ const DOCTOR_SUMMARY_SYSTEM = `You are RxSense Clinical AI — a senior clinical
 async function generateDoctorPatientSummary({ patientId }) {
     const userMessage = [
         `Patient UUID: ${patientId}`,
-        'Generate a comprehensive clinical summary for the treating doctor.',
-        'Step 1: Call get_patient_chart_by_id to retrieve all patient data.',
-        'Step 2: For each significant abnormal finding or condition, call rag_search for evidence-based context.',
-        'Step 3: Output ONLY the structured JSON — every value must come from tool results.',
+        'Generate a concise clinical brief for the treating doctor.',
+        'Step 1: Call get_patient_chart_by_id.',
+        'Step 2: Call rag_search for the top 2–3 significant abnormal findings.',
+        'Step 3: Output the compact JSON — be brief and clinical.',
     ].join('\n');
 
-    const { text } = await runAgent({
+    const { text } = await runOpenAIAgent({
         agentName:   'DoctorPatientSummaryAgent',
         userId:      null,
         system:      DOCTOR_SUMMARY_SYSTEM,
         userMessage,
         tools:       DOCTOR_SUMMARY_TOOLS,
         executors:   buildDoctorExecutors(),
-        maxTokens:   3000,
+        maxTokens:   4096,
         temperature: 0.1,
     });
 

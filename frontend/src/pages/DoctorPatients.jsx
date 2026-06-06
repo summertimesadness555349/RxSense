@@ -1180,7 +1180,7 @@ export default function DoctorPatients() {
                                         {flag.flag}
                                       </div>
                                       <p className="text-gray-600 dark:text-gray-300 text-xs">{flag.basis}</p>
-                                      {flag.rag_reference && <p className="text-gray-400 text-xs mt-1 italic">📚 {flag.rag_reference}</p>}
+                                      {flag.rag_reference && <p className="text-gray-400 text-xs mt-1 italic">{flag.rag_reference}</p>}
                                     </div>
                                   ))}
                                 </div>
@@ -1199,7 +1199,6 @@ export default function DoctorPatients() {
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${f.status?.includes('critical') ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : f.status === 'high' || f.status === 'low' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>{f.value}</span>
                                       </div>
                                       {f.clinical_significance && <p className="text-gray-500 text-xs">{f.clinical_significance}</p>}
-                                      {f.rag_source && <p className="text-gray-400 text-xs mt-1 italic">📚 {f.rag_source}</p>}
                                     </div>
                                   ))}
                                 </div>
@@ -1235,7 +1234,7 @@ export default function DoctorPatients() {
                             )}
 
                             {/* Clinical Recommendations */}
-                            {aiSummary.clinical_recommendations?.length > 0 && (
+                            {/* {aiSummary.clinical_recommendations?.length > 0 && (
                               <div>
                                 <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Clinical Recommendations</p>
                                 <div className="space-y-2">
@@ -1244,13 +1243,13 @@ export default function DoctorPatients() {
                                       <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-bold uppercase self-start mt-0.5 ${r.priority === 'urgent' ? 'bg-red-500 text-white' : r.priority === 'high' ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'}`}>{r.priority}</span>
                                       <div>
                                         <p className="text-gray-800 dark:text-gray-200">{r.recommendation}</p>
-                                        {r.evidence_basis && <p className="text-gray-400 text-xs mt-1 italic">📚 {r.evidence_basis}</p>}
+                                        {r.evidence_basis && <p className="text-gray-400 text-xs mt-1 italic">{r.evidence_basis}</p>}
                                       </div>
                                     </div>
                                   ))}
                                 </div>
                               </div>
-                            )}
+                            )} */}
 
                             <p className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100 dark:border-gray-800">
                               Generated {aiSummary.generated_at ? new Date(aiSummary.generated_at).toLocaleString() : 'just now'} · Grounded in Harrison's, Davidson's & MedlinePlus via RAG

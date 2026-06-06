@@ -141,6 +141,11 @@ async function runAgent({
                 continue;
             }
 
+            // max_tokens — response was cut off; throw so caller knows output is incomplete
+            if (data.stop_reason === 'max_tokens') {
+                throw new Error(`Agent response truncated by max_tokens limit (${maxTokens}). Increase maxTokens or reduce output schema size.`);
+            }
+
             // Unexpected stop reason — extract any text and return
             const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
             AgentLogger.sessionEnd({ agentName, turns, toolCalls, durationMs: Date.now() - sessionStart, outputLength: text.length });

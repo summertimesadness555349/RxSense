@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle, ChevronRight, X, Phone, Heart,
   Pill as PillIcon, FileText, FlaskConical, RefreshCw, Sparkles,
-  Loader2, CheckCircle, Droplets,
+  Loader2, CheckCircle, Droplets, TrendingUp, BarChart3,
 } from 'lucide-react';
 import { useAuth }     from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { relativeTime } from '../utils/timeUtils.js';
+import PredictionCard from '../components/predictions/PredictionCard.jsx';
 import {
   getHealthSummary,
   getPrescriptionHistory,
@@ -16,6 +17,7 @@ import {
   getReportHistory,
   getReportHistoryLocal,
   getPatientSummary,
+  getPredictions,
 } from '../services/api.js';
 
 // ── Animated health emoji ──────────────────────────────────────────────────────
@@ -102,6 +104,9 @@ export default function Dashboard() {
   const [summary,        setSummary]        = useState(() => readCache(SUMMARY_KEY));
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryStep,    setSummaryStep]    = useState(0);
+
+  const [predictions,    setPredictions]    = useState([]);
+  const [predictionsLoading, setPredictionsLoading] = useState(false);
 
   // Advance the step indicator while the agent is running (~4 s per step)
   useEffect(() => {
@@ -197,6 +202,16 @@ export default function Dashboard() {
 
         setLoading(false);
         await fetchSummary(p, freshRx, freshRpt);
+
+        setPredictionsLoading(true);
+        try {
+          const preds = await getPredictions();
+          setPredictions(preds || []);
+        } catch (err) {
+          console.warn('Failed to fetch predictions:', err);
+        } finally {
+          setPredictionsLoading(false);
+        }
       } catch {
         setLatestRx(freshRx);
         setLatestReport(freshRpt);
@@ -534,7 +549,34 @@ export default function Dashboard() {
 
       </div>
 
-      {/* ── Row 4: Health Story (AI summary) ─────────────────────────────────── */}
+      {/* ── Row 4: Future Health Risks (Predictions) ─────────────────────────── */}
+      {predictions && predictions.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 dark:text-white">Upcoming Health Risks</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Based on your trends and similar patient outcomes
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {predictions.slice(0, 2).map((pred, idx) => (
+              <PredictionCard key={idx} prediction={pred} compact={true} />
+            ))}
+            {predictions.length > 2 && (
+              <Link to="/report#predictions" className="inline-block text-sm text-amber-600 dark:text-amber-400 hover:underline font-medium mt-2">
+                View all {predictions.length} predictions →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Row 5: Health Story (AI summary) ─────────────────────────────────── */}
       <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-cyan-950/20 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-6">
 
         {/* Card header */}

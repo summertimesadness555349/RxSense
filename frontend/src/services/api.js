@@ -341,6 +341,9 @@ function saveReportToLocal(report) {
       recommendations:    report.recommendations || [],
       clinical_notes:     report.clinical_notes,
       follow_up:          report.follow_up,
+      predictions:         report.predictions || [],
+      overallRisk:         report.overallRisk || report.overall_risk || null,
+      cohortSize:          report.cohortSize || report.cohort_size || 0,
     };
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_REPORTS);
     localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));
@@ -1111,4 +1114,32 @@ export const modifyPrescriptionItem = async (patientId, itemId, { status, pause_
     body: JSON.stringify({ status, pause_duration_days, duration_days, modification_notes }),
   });
   return data;
+};
+
+export const getPredictions = async () => {
+  const data = await request('/predictions', {
+    method: 'GET',
+  });
+  return data.predictions || [];
+};
+
+export const getMetricTrend = async (metricName) => {
+  const data = await request(`/predictions/trends/${encodeURIComponent(metricName)}`, {
+    method: 'GET',
+  });
+  return data.trend || null;
+};
+
+export const refreshPredictions = async () => {
+  const data = await request('/predictions/refresh', {
+    method: 'POST',
+  });
+  return data;
+};
+
+export const computeTrends = async () => {
+  const data = await request('/predictions/compute-trends', {
+    method: 'POST',
+  });
+  return data.trends || {};
 };

@@ -30,6 +30,7 @@ const {symptomRouter}      = require('./routes/symptomRoutes.js');
 const {placesRouter}       = require('./routes/placesRoutes.js');
 const { drugRouter }     = require('./routes/drugRoutes.js');
 const { insightsRouter } = require('./routes/insightsRoutes.js');
+const { predictiveRouter } = require('./routes/predictiveRoutes.js');
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
 const socketLayer = createSocketServer(server);
@@ -142,6 +143,7 @@ app.use('/api/symptom',      apiLimiter, symptomRouter);
 app.use('/api/places',       apiLimiter, placesRouter);
 app.use('/api/drugs',    apiLimiter, drugRouter);
 app.use('/api/insights', apiLimiter, insightsRouter);
+app.use('/api/predictions', apiLimiter, predictiveRouter);
 
 const lokiTransports = [];
 if (process.env.NODE_ENV === 'production' && process.env.LOKI_HOST) {

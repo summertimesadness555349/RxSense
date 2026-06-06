@@ -6,6 +6,9 @@ const AppointmentModel = require('../models/appointmentModel.js');
 const DoctorModel = require('../models/doctorModel.js');
 const drugInteractionService = require('../utils/drugInteractionService.js');
 const LLMUtils = require('../utils/llmUtils.js');
+const { vectorizeReport } = require('../utils/reportVectorizer.js');
+const { generatePredictions, savePredictions } = require('../agents/predictiveAgent.js');
+const { updateMetricTrends } = require('../utils/trendAnalyzer.js');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -238,7 +241,27 @@ class PatientController {
                     reportRecord.metrics = savedMetrics;
 
                     console.log(`[Report] Saved to DB — report_id: ${reportRecord.report_id}`);
-                } catch (dbErr) {
+
+                    await vectorizeReport(validPatientId, reportRecord.report_id, savedMetrics, extracted.report_date || new Date()).catch(err => {
+                        console.warn('[Report] Vectorization failed:', err.message);
+                    });
+
+                    await updateMetricTrends(validPatientId).catch(err => {
+                        console.warn('[Report] Trend update failed:', err.message);
+                    });
+
+                    try {
+                        const predictions = await generatePredictions(validPatientId);
+                        if (predictions.success) {
+                            const savedPredictions = await savePredictions(validPatientId, reportRecord.report_id, predictions);
+                            reportRecord.predictions = savedPredictions;
+                            reportRecord.overallRisk = predictions.overallRisk;
+                            reportRecord.cohortSize = predictions.cohortSize || 0;
+                        }
+                    } catch (err) {
+                        console.warn('[Report] Prediction generation failed:', err.message);
+                    }
+} catch (dbErr) {
                     console.warn('[Report] DB save failed (non-fatal):', dbErr.message);
                 }
             }

@@ -969,6 +969,11 @@ export const getDoctorPatientChart = async (patientId) => {
   return data;
 };
 
+export const generateDoctorAiSummary = async (patientId) => {
+  const data = await request(`/doctor/patients/${patientId}/ai-summary`, { method: 'POST' });
+  return data;
+};
+
 export const getDoctorAppointments = async (date) => {
   const query = date ? `?date=${encodeURIComponent(date)}` : '';
   const data = await request(`/doctor/appointments${query}`);

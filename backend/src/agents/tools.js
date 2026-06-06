@@ -51,6 +51,21 @@ const SCHEMAS = [
             required: ['user_id'],
         },
     },
+    {
+        name: 'get_patient_chart_by_id',
+        description:
+            "Fetch a comprehensive clinical chart for a patient using their patient UUID. " +
+            "Returns demographics, active conditions, allergies (with severity), current medications " +
+            "from both doctor prescriptions and scanned prescriptions, surgical history, vaccinations, " +
+            "and all lab report metrics ordered by severity. Use this as the primary tool for doctor-facing summaries.",
+        input_schema: {
+            type: 'object',
+            properties: {
+                patient_id: { type: 'string', description: 'UUID of the patient (from patient table)' },
+            },
+            required: ['patient_id'],
+        },
+    },
 ];
 
 // ── Tool executors ────────────────────────────────────────────────────────────
@@ -143,16 +158,147 @@ const EXECUTORS = {
         `, [user_id, Math.min(parseInt(limit) || 3, 5)]);
         return result.rows.length ? result.rows : [{ info: 'No past reports found.' }];
     },
+
+    get_patient_chart_by_id: async ({ patient_id }) => {
+        // Demographics + conditions + allergies + medications
+        const profileRes = await db.query_executor(`
+            SELECT
+                u.full_name,
+                u.email,
+                EXTRACT(YEAR FROM AGE(p.date_of_birth))::int AS age,
+                p.date_of_birth,
+                p.gender,
+                p.blood_group,
+                p.height,
+                p.weight,
+                p.smoking_status,
+                p.blood_pressure_systolic   AS bp_systolic,
+                p.blood_pressure_diastolic  AS bp_diastolic,
+                p.emergency_contact_name,
+                p.emergency_contact_phone,
+                -- Active conditions
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'condition',    kc.condition_name,
+                    'icd10',        kc.icd_10_code,
+                    'status',       kc.status,
+                    'severity',     kc.severity,
+                    'diagnosed_at', kc.diagnosed_at,
+                    'notes',        kc.notes
+                ) ORDER BY kc.diagnosed_at DESC NULLS LAST), '[]'::json)
+                 FROM known_condition kc
+                 WHERE kc.patient_id = p.patient_id AND kc.status IN ('active','chronic','managed')
+                ) AS active_conditions,
+                -- Allergies
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'allergen',  COALESCE(d.generic_name, d.brand_name, 'Unknown'),
+                    'severity',  pa.severity,
+                    'reaction',  pa.reaction_type
+                )), '[]'::json)
+                 FROM patient_allergy pa
+                 LEFT JOIN drug d ON d.drug_id = pa.drug_id
+                 WHERE pa.patient_id = p.patient_id
+                ) AS allergies,
+                -- Doctor-issued prescriptions (active)
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'drug',       COALESCE(dr.generic_name, dr.brand_name),
+                    'dosage',     pi.dosage,
+                    'frequency',  pi.frequency,
+                    'duration',   pi.duration_days,
+                    'issued_at',  pr.issued_at
+                ) ORDER BY pr.issued_at DESC), '[]'::json)
+                 FROM prescription pr
+                 JOIN prescription_item pi ON pi.prescription_id = pr.prescription_id
+                 JOIN drug dr ON dr.drug_id = pi.drug_id
+                 WHERE pr.patient_id = p.patient_id AND pr.status = 'active'
+                ) AS active_prescriptions,
+                -- Latest scanned prescription medications
+                (SELECT COALESCE(ps.medications, '[]'::jsonb)
+                 FROM prescription_scan ps
+                 JOIN users u2 ON u2.id = ps.user_id
+                 WHERE u2.id = u.id
+                 ORDER BY ps.created_at DESC
+                 LIMIT 1
+                ) AS scanned_medications,
+                -- Surgical history
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'procedure',    sh.procedure_name,
+                    'performed_at', sh.performed_at,
+                    'outcome',      sh.outcome,
+                    'complications',sh.complications
+                ) ORDER BY sh.performed_at DESC NULLS LAST), '[]'::json)
+                 FROM surgical_history sh
+                 WHERE sh.patient_id = p.patient_id
+                ) AS surgical_history,
+                -- Recent vaccinations
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'vaccine',         vr.vaccine_name,
+                    'administered_at', vr.administered_at,
+                    'dose',            vr.dose_number,
+                    'next_due',        vr.next_due_date
+                ) ORDER BY vr.administered_at DESC NULLS LAST), '[]'::json)
+                 FROM vaccination_record vr
+                 WHERE vr.patient_id = p.patient_id
+                ) AS vaccinations
+            FROM patient p
+            JOIN users u ON u.id = p.user_id
+            WHERE p.patient_id = $1
+            LIMIT 1
+        `, [patient_id]);
+
+        // Lab reports with ALL metrics ordered by severity
+        const reportsRes = await db.query_executor(`
+            SELECT
+                mr.report_id,
+                mr.report_type,
+                mr.report_date,
+                mr.facility,
+                mr.ordering_doctor,
+                mr.uploaded_at,
+                mr.raw_analysis->>'overall_impression' AS overall_impression,
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'parameter',  lm.parameter_name,
+                    'value',      lm.value,
+                    'unit',       lm.unit,
+                    'status',     lm.status,
+                    'ref_range',  lm.reference_range,
+                    'flagged',    lm.llm_flagged
+                ) ORDER BY CASE lm.status
+                    WHEN 'critical_high' THEN 1 WHEN 'critical_low' THEN 2
+                    WHEN 'high'          THEN 3 WHEN 'low'          THEN 4
+                    ELSE 5 END
+                ), '[]'::json)
+                 FROM report_metric lm WHERE lm.report_id = mr.report_id
+                ) AS metrics
+            FROM medical_report mr
+            WHERE mr.patient_id = $1
+            ORDER BY mr.uploaded_at DESC
+            LIMIT 5
+        `, [patient_id]);
+
+        if (!profileRes.rows.length) return { error: 'Patient not found' };
+        return {
+            profile:  profileRes.rows[0],
+            reports:  reportsRes.rows,
+        };
+    },
 };
 
 // Build a bound executor map: each function receives the tool input plus the
 // calling userId so rag_search can include user-private vectors in future.
 function buildExecutors(userId) {
     return {
-        rag_search:          (input) => EXECUTORS.rag_search(input, userId),
-        get_patient_profile: (input) => EXECUTORS.get_patient_profile(input),
-        get_report_history:  (input) => EXECUTORS.get_report_history(input),
+        rag_search:               (input) => EXECUTORS.rag_search(input, userId),
+        get_patient_profile:      (input) => EXECUTORS.get_patient_profile(input),
+        get_report_history:       (input) => EXECUTORS.get_report_history(input),
+        get_patient_chart_by_id:  (input) => EXECUTORS.get_patient_chart_by_id(input),
     };
 }
 
-module.exports = { SCHEMAS, EXECUTORS, buildExecutors };
+function buildDoctorExecutors() {
+    return {
+        rag_search:              (input) => EXECUTORS.rag_search(input, null),
+        get_patient_chart_by_id: (input) => EXECUTORS.get_patient_chart_by_id(input),
+    };
+}
+
+module.exports = { SCHEMAS, EXECUTORS, buildExecutors, buildDoctorExecutors };

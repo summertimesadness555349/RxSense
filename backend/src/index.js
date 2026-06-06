@@ -145,16 +145,20 @@ app.use('/api/drugs',    apiLimiter, drugRouter);
 app.use('/api/insights', apiLimiter, insightsRouter);
 app.use('/api/predictions', apiLimiter, predictiveRouter);
 
-const options = {
+const lokiTransports = [];
+if (process.env.NODE_ENV === 'production' && process.env.LOKI_HOST) {
+  lokiTransports.push(new LokiTransport({
+    host: process.env.LOKI_HOST,
+    handleExceptions: false,
+    labels: { app: 'node-backend' }
+  }));
+}
+const logger = createLogger({
   transports: [
-    new LokiTransport({
-      host: "http://loki:3100",
-      handleExceptions: true,
-      labels: { app: 'node-backend' }
-    })
+    new transports.Console(),
+    ...lokiTransports
   ]
-};
-const logger = createLogger(options);
+});
 
 if (process.env.ENABLE_SWAGGER !== 'false') {
     app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

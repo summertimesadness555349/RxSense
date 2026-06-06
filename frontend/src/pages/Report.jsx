@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Clock, Upload, ShieldAlert } from 'lucide-react';
 import FileDropzone from '../components/ui/FileDropzone.jsx';
 import ReportChatbot from '../components/report/ReportChatbot.jsx';
+import PredictionCard from '../components/predictions/PredictionCard.jsx';
+import ComplicationsCard from '../components/predictions/ComplicationsCard.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { Select } from '../components/ui/Input.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -339,6 +341,25 @@ function ResultView({ report, onSave, onRemove, onDelete }) {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('followUp')}</p>
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{report.follow_up}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(report.predictions || report.overallRisk) && (
+        <div className="py-4 space-y-4 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{t('futurePredictions') || 'AI Health Predictions'}</p>
+          <ComplicationsCard
+            predictions={report.predictions}
+            overallRisk={report.overallRisk}
+            cohortSize={report.cohortSize || 0}
+          />
+          {report.predictions && report.predictions.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Individual Predictions:</p>
+              {report.predictions.slice(0, 3).map((pred, idx) => (
+                <PredictionCard key={idx} prediction={pred} compact={true} />
+              ))}
             </div>
           )}
         </div>

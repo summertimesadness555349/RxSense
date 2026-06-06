@@ -1107,3 +1107,31 @@ export const modifyPrescriptionItem = async (patientId, itemId, { status, pause_
   });
   return data;
 };
+
+export const getPredictions = async () => {
+  const data = await request('/predictions', {
+    method: 'GET',
+  });
+  return data.predictions || [];
+};
+
+export const getMetricTrend = async (metricName) => {
+  const data = await request(`/predictions/trends/${encodeURIComponent(metricName)}`, {
+    method: 'GET',
+  });
+  return data.trend || null;
+};
+
+export const refreshPredictions = async () => {
+  const data = await request('/predictions/refresh', {
+    method: 'POST',
+  });
+  return data;
+};
+
+export const computeTrends = async () => {
+  const data = await request('/predictions/compute-trends', {
+    method: 'POST',
+  });
+  return data.trends || {};
+};

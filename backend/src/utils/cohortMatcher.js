@@ -19,16 +19,20 @@ async function findSimilarPatients(patientId, topK = 5) {
         const embedding = patientVector.rows[0].embedding;
 
         const cohort = await db.query_executor(`
-            SELECT DISTINCT ON (prv.patient_id)
-                prv.patient_id,
-                prv.report_id,
-                prv.report_date,
-                1 - (prv.embedding <=> $1::vector) as similarity,
-                prv.summary_text
-            FROM patient_report_vector prv
-            WHERE prv.is_public = true
-                AND prv.patient_id != $2
-            ORDER BY prv.patient_id, similarity DESC
+            SELECT *
+            FROM (
+                SELECT DISTINCT ON (prv.patient_id)
+                    prv.patient_id,
+                    prv.report_id,
+                    prv.report_date,
+                    1 - (prv.embedding <=> $1::vector) as similarity,
+                    prv.summary_text
+                FROM patient_report_vector prv
+                WHERE prv.is_public = true
+                    AND prv.patient_id != $2
+                ORDER BY prv.patient_id, similarity DESC
+            ) ranked
+            ORDER BY similarity DESC
             LIMIT $3
         `, [embedding, patientId, topK]);
 

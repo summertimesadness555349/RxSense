@@ -568,7 +568,7 @@ export default function Dashboard() {
               <PredictionCard key={idx} prediction={pred} compact={true} />
             ))}
             {predictions.length > 2 && (
-              <Link to="/report" className="inline-block text-sm text-amber-600 dark:text-amber-400 hover:underline font-medium mt-2">
+              <Link to="/report#predictions" className="inline-block text-sm text-amber-600 dark:text-amber-400 hover:underline font-medium mt-2">
                 View all {predictions.length} predictions →
               </Link>
             )}

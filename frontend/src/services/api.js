@@ -341,6 +341,9 @@ function saveReportToLocal(report) {
       recommendations:    report.recommendations || [],
       clinical_notes:     report.clinical_notes,
       follow_up:          report.follow_up,
+      predictions:         report.predictions || [],
+      overallRisk:         report.overallRisk || report.overall_risk || null,
+      cohortSize:          report.cohortSize || report.cohort_size || 0,
     };
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_REPORTS);
     localStorage.setItem(REPORT_HISTORY_KEY, JSON.stringify(updated));

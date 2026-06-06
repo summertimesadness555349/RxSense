@@ -8,6 +8,11 @@ function parseNumericValue(value) {
     return isNaN(num) ? null : num;
 }
 
+function toTime(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+}
+
 function calculateSlope(values) {
     if (values.length < 2) return 0;
 
@@ -82,7 +87,8 @@ async function computePatientTrends(patientId) {
     metricsMap.forEach((values, metricName) => {
         if (values.length < 2) return;
 
-        values.sort((a, b) => a.date - b.date);
+        values.sort((a, b) => toTime(a.date) - toTime(b.date));
+        const current = values[values.length - 1];
 
         const slope = calculateSlope(values);
         const volatility = calculateVolatility(values);
@@ -95,9 +101,9 @@ async function computePatientTrends(patientId) {
             direction,
             slope: parseFloat(slope.toFixed(4)),
             volatility: parseFloat(volatility.toFixed(4)),
-            current: values[0].rawValue,
-            currentUnit: values[0].unit,
-            currentStatus: values[0].status,
+            current: current.rawValue,
+            currentUnit: current.unit,
+            currentStatus: current.status,
             historicalValues: values.map(v => ({
                 date: v.date,
                 value: v.rawValue,
@@ -123,16 +129,24 @@ async function updateMetricTrends(patientId) {
             status: v.status
         }));
 
-        await db.query_executor(`
-            INSERT INTO metric_trends (patient_id, metric_name, values, trend_slope, volatility, trend_direction, last_computed)
-            VALUES ($1, $2, $3::jsonb, $4, $5, $6, NOW())
-            ON CONFLICT (patient_id, metric_name) DO UPDATE SET
-                values = EXCLUDED.values,
-                trend_slope = EXCLUDED.trend_slope,
-                volatility = EXCLUDED.volatility,
-                trend_direction = EXCLUDED.trend_direction,
+        const updated = await db.query_executor(`
+            UPDATE metric_trends
+            SET values = $3::jsonb,
+                trend_slope = $4,
+                volatility = $5,
+                trend_direction = $6,
                 last_computed = NOW()
+            WHERE patient_id = $1
+                AND metric_name = $2
+            RETURNING id
         `, [patientId, metricName, JSON.stringify(values), trendData.slope, trendData.volatility, trendData.direction]);
+
+        if (!updated.rows.length) {
+            await db.query_executor(`
+                INSERT INTO metric_trends (patient_id, metric_name, values, trend_slope, volatility, trend_direction, last_computed)
+                VALUES ($1, $2, $3::jsonb, $4, $5, $6, NOW())
+            `, [patientId, metricName, JSON.stringify(values), trendData.slope, trendData.volatility, trendData.direction]);
+        }
     }
 
     return trends;

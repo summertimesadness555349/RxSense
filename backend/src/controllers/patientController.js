@@ -242,26 +242,25 @@ class PatientController {
 
                     console.log(`[Report] Saved to DB — report_id: ${reportRecord.report_id}`);
 
-                    Promise.all([
-                        vectorizeReport(validPatientId, reportRecord.report_id, savedMetrics, extracted.report_date || new Date()).catch(err => {
-                            console.warn('[Report] Vectorization failed:', err.message);
-                        }),
-                        updateMetricTrends(validPatientId).catch(err => {
-                            console.warn('[Report] Trend update failed:', err.message);
-                        }),
-                        (async () => {
-                            try {
-                                const predictions = await generatePredictions(validPatientId);
-                                if (predictions.success) {
-                                    await savePredictions(validPatientId, reportRecord.report_id, predictions);
-                                    reportRecord.predictions = predictions.predictions;
-                                    reportRecord.overallRisk = predictions.overallRisk;
-                                }
-                            } catch (err) {
-                                console.warn('[Report] Prediction generation failed:', err.message);
-                            }
-                        })()
-                    ]).catch(err => console.warn('[Report] Post-processing error:', err.message));
+                    await vectorizeReport(validPatientId, reportRecord.report_id, savedMetrics, extracted.report_date || new Date()).catch(err => {
+                        console.warn('[Report] Vectorization failed:', err.message);
+                    });
+
+                    await updateMetricTrends(validPatientId).catch(err => {
+                        console.warn('[Report] Trend update failed:', err.message);
+                    });
+
+                    try {
+                        const predictions = await generatePredictions(validPatientId);
+                        if (predictions.success) {
+                            const savedPredictions = await savePredictions(validPatientId, reportRecord.report_id, predictions);
+                            reportRecord.predictions = savedPredictions;
+                            reportRecord.overallRisk = predictions.overallRisk;
+                            reportRecord.cohortSize = predictions.cohortSize || 0;
+                        }
+                    } catch (err) {
+                        console.warn('[Report] Prediction generation failed:', err.message);
+                    }
 } catch (dbErr) {
                     console.warn('[Report] DB save failed (non-fatal):', dbErr.message);
                 }

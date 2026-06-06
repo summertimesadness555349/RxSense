@@ -26,23 +26,36 @@ class PredictiveController {
             const patientId = patientResult.rows[0].patient_id;
 
             const predictions = await db.query_executor(`
-                SELECT
-                    id,
-                    metric_name,
-                    prediction_type,
-                    confidence,
-                    predicted_date,
-                    predicted_value,
-                    reasoning,
-                    comparable_patients,
-                    trend_direction,
-                    severity_level,
-                    created_at
-                FROM patient_predictions
-                WHERE patient_id = $1
-                    AND expires_at > NOW()
-                ORDER BY created_at DESC
-                LIMIT 20
+                SELECT *
+                FROM (
+                    SELECT DISTINCT ON (LOWER(TRIM(predicted_value)))
+                        id,
+                        report_id,
+                        metric_name,
+                        prediction_type,
+                        confidence,
+                        predicted_date,
+                        predicted_value,
+                        reasoning,
+                        comparable_patients,
+                        trend_direction,
+                        severity_level,
+                        created_at
+                    FROM patient_predictions
+                    WHERE patient_id = $1
+                        AND expires_at > NOW()
+                    ORDER BY LOWER(TRIM(predicted_value)), created_at DESC, confidence DESC
+                ) latest_unique
+                ORDER BY
+                    CASE severity_level
+                        WHEN 'critical' THEN 4
+                        WHEN 'high' THEN 3
+                        WHEN 'moderate' THEN 2
+                        ELSE 1
+                    END DESC,
+                    confidence DESC,
+                    created_at DESC
+                LIMIT 6
             `, [patientId]);
 
             res.json({

@@ -44,9 +44,13 @@ async function vectorizeReport(patientId, reportId, reportData, reportDate) {
         const db = DB_Connection.getInstance();
 
         await db.query_executor(`
+            DELETE FROM patient_report_vector
+            WHERE report_id = $1
+        `, [reportId]);
+
+        await db.query_executor(`
             INSERT INTO patient_report_vector (patient_id, report_id, report_date, embedding, summary_text, is_public)
             VALUES ($1, $2, $3, $4::vector, $5, true)
-            ON CONFLICT DO NOTHING
         `, [patientId, reportId, reportDate, JSON.stringify(embedding), summaryText]);
 
         return {

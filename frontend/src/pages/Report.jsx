@@ -16,6 +16,7 @@ import {
   saveReportScan,
   removeReportScan,
   deleteReportScan,
+  getPredictions,
 } from '../services/api.js';
 
 const REPORT_TYPES = [
@@ -346,8 +347,8 @@ function ResultView({ report, onSave, onRemove, onDelete }) {
         </div>
       )}
 
-      {(report.predictions || report.overallRisk) && (
-        <div className="py-4 space-y-4 border-t border-gray-100 dark:border-gray-800">
+      {((report.predictions && report.predictions.length > 0) || report.overallRisk) && (
+        <div id="predictions" className="py-4 space-y-4 border-t border-gray-100 dark:border-gray-800 scroll-mt-6">
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{t('futurePredictions') || 'AI Health Predictions'}</p>
           <ComplicationsCard
             predictions={report.predictions}
@@ -402,13 +403,30 @@ export default function Report() {
   const [reportType, setReportType]     = useState('Complete Blood Count (CBC)');
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [pendingSaveReport, setPendingSaveReport] = useState(null);
+  const [patientPredictions, setPatientPredictions] = useState([]);
 
   const normalizeName = (name) => String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
   const refreshReportHistory = async () => {
     const updated = await getReportHistory();
-    setHistory(updated || []);
+    const merged = mergeReportsWithPredictions(updated || [], patientPredictions);
+    setHistory(merged);
     return updated || [];
+  };
+
+  const mergeReportsWithPredictions = (reports, predictions) => {
+    if (!predictions?.length) return reports || [];
+    return (reports || []).map((report) => {
+      const reportPredictions = predictions.filter((prediction) => {
+        const predictionReportId = prediction.report_id || prediction.reportId;
+        return !predictionReportId || predictionReportId === report.id || predictionReportId === report.report_id;
+      });
+      return {
+        ...report,
+        predictions: reportPredictions,
+        overallRisk: report.overallRisk || (reportPredictions.length ? 'Review these possible future risks with a clinician if symptoms appear or values keep changing.' : null),
+      };
+    });
   };
 
   const performSaveReport = async (report) => {
@@ -493,8 +511,12 @@ export default function Report() {
   useEffect(() => {
     (async () => {
       try {
-        let h = await getReportHistory();
-        h = h || [];
+        const [historyResult, predictionResult] = await Promise.all([
+          getReportHistory(),
+          getPredictions().catch(() => []),
+        ]);
+        setPatientPredictions(predictionResult || []);
+        let h = mergeReportsWithPredictions(historyResult || [], predictionResult || []);
         setHistory(h);
         if (h.length > 0) {
           setActiveReport(h[0]);
@@ -506,6 +528,22 @@ export default function Report() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!activeReport || patientPredictions.length === 0) return;
+    const merged = mergeReportsWithPredictions([activeReport], patientPredictions)[0];
+    if (JSON.stringify(merged.predictions || []) !== JSON.stringify(activeReport.predictions || [])) {
+      setActiveReport(merged);
+    }
+  }, [patientPredictions]);
+
+  useEffect(() => {
+    if (window.location.hash !== '#predictions') return;
+    const timer = setTimeout(() => {
+      document.getElementById('predictions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [activeReport?.id, activeReport?.predictions?.length]);
 
   const handleUpload = async (file) => {
     setPhase('processing');

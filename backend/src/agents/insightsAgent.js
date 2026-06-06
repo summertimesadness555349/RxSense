@@ -1,8 +1,8 @@
 'use strict';
 
-const { runAgent }                = require('./agentRunner.js');
-const { runOpenAIAgent }          = require('./openaiAgentRunner.js');
-const { SCHEMAS, buildExecutors } = require('./tools.js');
+const { runAgent }                              = require('./agentRunner.js');
+const { runOpenAIAgent }                        = require('./openaiAgentRunner.js');
+const { SCHEMAS, buildExecutors, buildDoctorExecutors } = require('./tools.js');
 const DB_Connection               = require('../database/db.js');
 
 const INSIGHTS_TOOLS = SCHEMAS.filter(t =>
@@ -239,6 +239,111 @@ Output this exact JSON:
     return extractJSON(text);
 }
 
+// ─── Doctor patient summary (agent loop + RAG grounding) ─────────────────────
+
+const DOCTOR_SUMMARY_TOOLS = SCHEMAS.filter(t =>
+    ['get_patient_chart_by_id', 'rag_search'].includes(t.name)
+);
+
+const DOCTOR_SUMMARY_SYSTEM = `You are RxSense Clinical AI — a senior clinical decision support system generating structured patient summaries for doctors.
+
+## Workflow (follow strictly)
+1. Call get_patient_chart_by_id with the patient_id to retrieve the complete clinical chart.
+2. Identify the 2–3 most clinically significant abnormal lab values or active conditions.
+3. For each significant finding, call rag_search with a focused clinical query to retrieve evidence-based context from Harrison's Principles of Internal Medicine and MedlinePlus.
+4. Generate the structured summary using ONLY data retrieved from the tools — never invent values.
+
+## Ground truth rules (CRITICAL — violating these harms patients)
+- Every lab value cited must come directly from get_patient_chart_by_id tool result.
+- Every clinical recommendation must cite a specific source returned by rag_search (book title + chapter/topic).
+- If a tool returns no data for a field, write null or an empty array — never fabricate.
+- Do NOT invent conditions, medications, or symptoms not present in the tool results.
+
+## Output format — output ONLY valid JSON after tool calls (no markdown, no text):
+{
+  "generated_at": "<ISO date string>",
+  "patient_summary": {
+    "name": "<full name>",
+    "age": <integer or null>,
+    "gender": "<gender or null>",
+    "blood_group": "<blood group or null>",
+    "bmi": <calculated from height/weight, rounded to 1 decimal, or null>,
+    "bp": "<systolic/diastolic mmHg or null>"
+  },
+  "active_conditions": [
+    { "condition": "<name>", "severity": "<mild|moderate|severe|null>", "since": "<date or null>" }
+  ],
+  "allergies": [
+    { "allergen": "<name>", "severity": "<severity>", "reaction": "<reaction type>" }
+  ],
+  "current_medications": [
+    { "drug": "<name>", "dosage": "<dosage>", "frequency": "<frequency>", "source": "<doctor_prescription|scanned>" }
+  ],
+  "lab_findings": [
+    {
+      "parameter": "<name>",
+      "value": "<value with unit>",
+      "status": "<normal|low|high|critical_low|critical_high>",
+      "reference_range": "<range>",
+      "clinical_significance": "<1 sentence: what this value means clinically, grounded in RAG>",
+      "rag_source": "<book title and chapter from rag_search result>"
+    }
+  ],
+  "risk_flags": [
+    {
+      "flag": "<short risk label>",
+      "level": "<high|moderate|low>",
+      "basis": "<1 sentence citing specific data from the chart>",
+      "rag_reference": "<clinical guideline or book chapter from rag_search>"
+    }
+  ],
+  "surgical_history": [
+    { "procedure": "<name>", "date": "<date or null>", "outcome": "<outcome or null>" }
+  ],
+  "vaccinations": [
+    { "vaccine": "<name>", "last_dose": "<date>", "next_due": "<date or null>" }
+  ],
+  "clinical_recommendations": [
+    {
+      "recommendation": "<specific, actionable recommendation>",
+      "priority": "<urgent|high|medium>",
+      "evidence_basis": "<cite specific RAG source: book + chapter>"
+    }
+  ],
+  "key_clinical_notes": "<2–3 sentences: the most important things this doctor needs to know immediately, grounded in retrieved data>"
+}`;
+
+/**
+ * Generate a comprehensive, RAG-grounded clinical summary for a doctor.
+ * Uses full agent loop — Claude is forced to call tools before synthesising.
+ *
+ * @param {object} opts
+ * @param {string} opts.patientId  — patient UUID
+ * @returns {Promise<object>} structured clinical summary with RAG references
+ */
+async function generateDoctorPatientSummary({ patientId }) {
+    const userMessage = [
+        `Patient UUID: ${patientId}`,
+        'Generate a comprehensive clinical summary for the treating doctor.',
+        'Step 1: Call get_patient_chart_by_id to retrieve all patient data.',
+        'Step 2: For each significant abnormal finding or condition, call rag_search for evidence-based context.',
+        'Step 3: Output ONLY the structured JSON — every value must come from tool results.',
+    ].join('\n');
+
+    const { text } = await runAgent({
+        agentName:   'DoctorPatientSummaryAgent',
+        userId:      null,
+        system:      DOCTOR_SUMMARY_SYSTEM,
+        userMessage,
+        tools:       DOCTOR_SUMMARY_TOOLS,
+        executors:   buildDoctorExecutors(),
+        maxTokens:   3000,
+        temperature: 0.1,
+    });
+
+    return extractJSON(text);
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function extractJSON(text) {
@@ -460,4 +565,4 @@ Rules:
     return extractJSON(data.content?.[0]?.text || '');
 }
 
-module.exports = { generateInsights, generateDoctorSummary, generatePatientSummary };
+module.exports = { generateInsights, generateDoctorSummary, generatePatientSummary, generateDoctorPatientSummary };

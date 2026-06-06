@@ -24,6 +24,7 @@ import { useToast } from "../context/ToastContext.jsx";
 import {
   getDoctorPatients,
   getDoctorPatientChart,
+  generateDoctorAiSummary,
   searchDrugs,
   checkPrescriptionSafety,
   createPrescription,
@@ -314,6 +315,11 @@ export default function DoctorPatients() {
 
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState(null);
+  const [loadingAiSummary, setLoadingAiSummary] = useState(false);
+  const [showAiSummary, setShowAiSummary] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
 
   // New forms show/hide toggles
@@ -422,6 +428,22 @@ export default function DoctorPatients() {
       addToast(err.message || "Failed to load patient chart", "error");
     } finally {
       setLoadingChart(false);
+    }
+  };
+
+  const handleGenerateAiSummary = async () => {
+    if (!selectedPatientId) return;
+    setLoadingAiSummary(true);
+    setAiSummary(null);
+    setShowAiSummary(true);
+    try {
+      const data = await generateDoctorAiSummary(selectedPatientId);
+      setAiSummary(data.summary);
+    } catch (err) {
+      addToast(err.message || 'Failed to generate AI summary', 'error');
+      setShowAiSummary(false);
+    } finally {
+      setLoadingAiSummary(false);
     }
   };
 
@@ -1046,31 +1068,200 @@ export default function DoctorPatients() {
                   </div>
                 </div>
 
-                <div className="flex gap-6 text-sm">
-                  {chartData.patient?.phone && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Phone className="w-4 h-4 text-emerald-500" />
-                      <span>{chartData.patient.phone}</span>
-                    </div>
-                  )}
-                  {chartData.patient?.height && (
-                    <div className="text-center">
-                      <p className="text-xs text-gray-400">Height</p>
-                      <p className="font-bold text-gray-800 dark:text-gray-200">
-                        {chartData.patient.height} cm
-                      </p>
-                    </div>
-                  )}
-                  {chartData.patient?.weight && (
-                    <div className="text-center">
-                      <p className="text-xs text-gray-400">Weight</p>
-                      <p className="font-bold text-gray-800 dark:text-gray-200">
-                        {chartData.patient.weight} kg
-                      </p>
-                    </div>
-                  )}
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex gap-6 text-sm">
+                    {chartData.patient?.phone && (
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <Phone className="w-4 h-4 text-emerald-500" />
+                        <span>{chartData.patient.phone}</span>
+                      </div>
+                    )}
+                    {chartData.patient?.height && (
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400">Height</p>
+                        <p className="font-bold text-gray-800 dark:text-gray-200">
+                          {chartData.patient.height} cm
+                        </p>
+                      </div>
+                    )}
+                    {chartData.patient?.weight && (
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400">Weight</p>
+                        <p className="font-bold text-gray-800 dark:text-gray-200">
+                          {chartData.patient.weight} kg
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleGenerateAiSummary}
+                    loading={loadingAiSummary}
+                    className="border border-purple-200 text-purple-700 hover:bg-purple-50 dark:border-purple-900/70 dark:text-purple-300 dark:hover:bg-purple-950/30 ml-auto"
+                  >
+                    <Sparkles className="w-4 h-4" /> AI Clinical Summary
+                  </Button>
                 </div>
               </div>
+
+              {/* AI Summary Modal */}
+              <AnimatePresence>
+                {showAiSummary && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    onClick={() => setShowAiSummary(false)}
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+                    >
+                      {/* Modal Header */}
+                      <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between rounded-t-3xl">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-purple-500" />
+                          <h3 className="font-bold text-gray-900 dark:text-white">AI Clinical Summary</h3>
+                          <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">RAG Grounded</span>
+                        </div>
+                        <button onClick={() => setShowAiSummary(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">✕</button>
+                      </div>
+
+                      <div className="p-6 space-y-5">
+                        {loadingAiSummary ? (
+                          <div className="text-center py-12 space-y-3">
+                            <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                            <p className="text-gray-500 text-sm">Fetching patient data and searching clinical literature…</p>
+                            <p className="text-gray-400 text-xs">This usually takes 20–40 seconds</p>
+                          </div>
+                        ) : aiSummary ? (
+                          <>
+                            {/* Patient Summary */}
+                            {aiSummary.patient_summary && (
+                              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                {[
+                                  ['Name', aiSummary.patient_summary.name],
+                                  ['Age', aiSummary.patient_summary.age],
+                                  ['Blood Group', aiSummary.patient_summary.blood_group],
+                                  ['BMI', aiSummary.patient_summary.bmi],
+                                  ['Gender', aiSummary.patient_summary.gender],
+                                  ['BP', aiSummary.patient_summary.bp],
+                                ].filter(([, v]) => v).map(([label, value]) => (
+                                  <div key={label}>
+                                    <p className="text-xs text-gray-400">{label}</p>
+                                    <p className="font-semibold text-gray-900 dark:text-white">{value}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Key Clinical Notes */}
+                            {aiSummary.key_clinical_notes && (
+                              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4">
+                                <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Key Clinical Notes</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{aiSummary.key_clinical_notes}</p>
+                              </div>
+                            )}
+
+                            {/* Risk Flags */}
+                            {aiSummary.risk_flags?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Risk Flags</p>
+                                <div className="space-y-2">
+                                  {aiSummary.risk_flags.map((flag, i) => (
+                                    <div key={i} className={`rounded-xl p-3 border text-sm ${flag.level === 'high' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' : flag.level === 'moderate' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'}`}>
+                                      <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-1">
+                                        <span className={`text-xs px-1.5 py-0.5 rounded font-bold uppercase ${flag.level === 'high' ? 'bg-red-500 text-white' : flag.level === 'moderate' ? 'bg-amber-500 text-white' : 'bg-blue-500 text-white'}`}>{flag.level}</span>
+                                        {flag.flag}
+                                      </div>
+                                      <p className="text-gray-600 dark:text-gray-300 text-xs">{flag.basis}</p>
+                                      {flag.rag_reference && <p className="text-gray-400 text-xs mt-1 italic">📚 {flag.rag_reference}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Lab Findings */}
+                            {aiSummary.lab_findings?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Lab Findings</p>
+                                <div className="space-y-2">
+                                  {aiSummary.lab_findings.map((f, i) => (
+                                    <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="font-semibold text-gray-900 dark:text-white">{f.parameter}</span>
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${f.status?.includes('critical') ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : f.status === 'high' || f.status === 'low' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>{f.value}</span>
+                                      </div>
+                                      {f.clinical_significance && <p className="text-gray-500 text-xs">{f.clinical_significance}</p>}
+                                      {f.rag_source && <p className="text-gray-400 text-xs mt-1 italic">📚 {f.rag_source}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Active Conditions */}
+                            {aiSummary.active_conditions?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Active Conditions</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {aiSummary.active_conditions.map((c, i) => (
+                                    <span key={i} className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800/50">
+                                      {c.condition}{c.severity ? ` (${c.severity})` : ''}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Allergies */}
+                            {aiSummary.allergies?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Allergies</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {aiSummary.allergies.map((a, i) => (
+                                    <span key={i} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs px-3 py-1 rounded-full border border-red-200 dark:border-red-800/50">
+                                      {a.allergen} — {a.severity}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Clinical Recommendations */}
+                            {aiSummary.clinical_recommendations?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Clinical Recommendations</p>
+                                <div className="space-y-2">
+                                  {aiSummary.clinical_recommendations.map((r, i) => (
+                                    <div key={i} className="flex gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 text-sm">
+                                      <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-bold uppercase self-start mt-0.5 ${r.priority === 'urgent' ? 'bg-red-500 text-white' : r.priority === 'high' ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'}`}>{r.priority}</span>
+                                      <div>
+                                        <p className="text-gray-800 dark:text-gray-200">{r.recommendation}</p>
+                                        {r.evidence_basis && <p className="text-gray-400 text-xs mt-1 italic">📚 {r.evidence_basis}</p>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <p className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100 dark:border-gray-800">
+                              Generated {aiSummary.generated_at ? new Date(aiSummary.generated_at).toLocaleString() : 'just now'} · Grounded in Harrison's, Davidson's & MedlinePlus via RAG
+                            </p>
+                          </>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Patient Chart Tabs */}
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">

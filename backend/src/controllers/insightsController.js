@@ -1,7 +1,7 @@
 'use strict';
 
 const DB_Connection                                              = require('../database/db.js');
-const { generateInsights, generateDoctorSummary, generatePatientSummary } = require('../agents/insightsAgent.js');
+const { generateInsights, generateDoctorSummary, generatePatientSummary, generateDoctorPatientSummary } = require('../agents/insightsAgent.js');
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -105,6 +105,23 @@ class InsightsController {
             return res.json({ success: true, summary });
         } catch (err) {
             console.error('[InsightsController] getDoctorSummary error:', err.message);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+    };
+
+    /**
+     * POST /api/doctor/patients/:patientId/ai-summary
+     * Doctor-triggered RAG-grounded clinical summary for a specific patient.
+     */
+    getDoctorPatientSummary = async (req, res) => {
+        const { patientId } = req.params;
+        if (!patientId) return res.status(400).json({ success: false, message: 'patientId required' });
+
+        try {
+            const summary = await generateDoctorPatientSummary({ patientId });
+            return res.json({ success: true, summary });
+        } catch (err) {
+            console.error('[InsightsController] getDoctorPatientSummary error:', err.message);
             return res.status(500).json({ success: false, message: err.message });
         }
     };

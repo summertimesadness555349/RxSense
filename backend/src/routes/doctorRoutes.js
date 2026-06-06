@@ -1,9 +1,11 @@
 const express = require('express');
 const DoctorController = require('../controllers/doctorController.js');
+const InsightsController = require('../controllers/insightsController.js');
 const AuthenticateDoctor = require('../middlewares/authenticateDoctor.js');
 
 const doctorRouter = express.Router();
 const doctorController = new DoctorController();
+const insightsController = new InsightsController();
 const authenticateDoctor = new AuthenticateDoctor();
 
 
@@ -36,4 +38,5 @@ doctorRouter.post('/patients/:patientId/surgeries', doctorController.addPatientS
 doctorRouter.patch('/patients/:patientId/prescription-items/:itemId', doctorController.modifyPrescriptionItem);
 doctorRouter.get('/drugs/search', doctorController.searchDrugs);
 doctorRouter.get('/patients/:patientId/paused-medications', doctorController.getPausedOrStoppedMedicine);
+doctorRouter.post('/patients/:patientId/ai-summary', insightsController.getDoctorPatientSummary);
 module.exports = { doctorRouter };

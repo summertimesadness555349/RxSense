@@ -59,6 +59,22 @@ const formatChartDate = (value) => {
   }
 };
 
+const calculateBMI = (heightCm, weightKg) => {
+  if (!heightCm || !weightKg) return null;
+  const heightM = heightCm / 100;
+  const bmi = weightKg / (heightM * heightM);
+  return bmi.toFixed(1);
+};
+
+const bmiCategory = (bmi) => {
+  if (!bmi) return null;
+  const val = parseFloat(bmi);
+  if (val < 18.5) return "Underweight";
+  if (val < 25) return "Normal";
+  if (val < 30) return "Overweight";
+  return "Obese";
+};
+
 const medicineLabel = (item) =>
   item?.brand_name || item?.generic_name || item?.name || "Medication";
 
@@ -101,11 +117,8 @@ const createEmptyPrescriptionDraft = () => ({
   chiefComplaint: "",
   examination: "",
   diagnosis: "",
-  investigations: "",
   allergies: "No known drug allergies recorded.",
   currentMedications: "No current medicines recorded as still taken.",
-  surgeries: "No surgical history recorded.",
-  vaccinations: "No vaccination record noted for this visit.",
   advice: "",
   followUp: "",
 });
@@ -132,6 +145,12 @@ const createPrescriptionDraftFromChart = (data) => {
         bp,
         patient.height ? `Height: ${patient.height} cm` : null,
         patient.weight ? `Weight: ${patient.weight} kg` : null,
+        patient.height && patient.weight
+          ? `BMI: ${calculateBMI(
+              patient.height,
+              patient.weight
+            )} (${bmiCategory(calculateBMI(patient.height, patient.weight))})`
+          : null,
         patient.bloodGroup ? `Blood group: ${patient.bloodGroup}` : null,
       ],
       ""
@@ -146,17 +165,6 @@ const createPrescriptionDraftFromChart = (data) => {
           .filter(Boolean)
           .join(" - ")
       ),
-      ""
-    ),
-    investigations: joinLines(
-      (chart.reports || [])
-        .slice(0, 4)
-        .map(
-          (report) =>
-            `${report.report_type || "Lab"} report - ${formatChartDate(
-              report.uploaded_at
-            )}`
-        ),
       ""
     ),
     allergies: joinLines(
@@ -187,44 +195,8 @@ const createPrescriptionDraftFromChart = (data) => {
       ),
       "No current medicines recorded as still taken."
     ),
-    surgeries: joinLines(
-      (chart.surgeries || [])
-        .slice(0, 3)
-        .map((surgery) =>
-          [
-            surgery.procedure_name || "Surgery",
-            formatChartDate(surgery.performed_at),
-            surgery.outcome ? `Outcome: ${surgery.outcome}` : null,
-          ]
-            .filter(Boolean)
-            .join(" - ")
-        ),
-      "No surgical history recorded."
-    ),
-    vaccinations: joinLines(
-      (chart.vaccinations || [])
-        .slice(0, 4)
-        .map((vaccination) =>
-          [
-            vaccination.vaccine_name || "Vaccine",
-            vaccination.dose_number
-              ? `Dose ${vaccination.dose_number}/${
-                  vaccination.total_doses || 1
-                }`
-              : null,
-            formatChartDate(vaccination.administered_at),
-            vaccination.next_due_date
-              ? `Next due: ${formatChartDate(vaccination.next_due_date)}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" - ")
-        ),
-      "No vaccination record noted for this visit."
-    ),
   };
 };
-
 function PrescriptionTextarea({
   label,
   value,
@@ -440,7 +412,7 @@ export default function DoctorPatients() {
       const data = await generateDoctorAiSummary(selectedPatientId);
       setAiSummary(data.summary);
     } catch (err) {
-      addToast(err.message || 'Failed to generate AI summary', 'error');
+      addToast(err.message || "Failed to generate AI summary", "error");
       setShowAiSummary(false);
     } finally {
       setLoadingAiSummary(false);
@@ -808,8 +780,8 @@ export default function DoctorPatients() {
       isScannedMedication && status === "stopped"
         ? "0"
         : item.pause_duration_days
-          ? String(item.pause_duration_days)
-          : "3"
+        ? String(item.pause_duration_days)
+        : "3"
     );
   };
 
@@ -1092,6 +1064,32 @@ export default function DoctorPatients() {
                         </p>
                       </div>
                     )}
+                    {chartData.patient?.height &&
+                      chartData.patient?.weight &&
+                      (() => {
+                        const bmi = calculateBMI(
+                          chartData.patient.height,
+                          chartData.patient.weight
+                        );
+                        const category = bmiCategory(bmi);
+                        const color =
+                          parseFloat(bmi) < 18.5
+                            ? "text-blue-500"
+                            : parseFloat(bmi) < 25
+                            ? "text-emerald-500"
+                            : parseFloat(bmi) < 30
+                            ? "text-amber-500"
+                            : "text-rose-500";
+                        return (
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400">BMI</p>
+                            <p className={`font-bold ${color}`}>{bmi}</p>
+                            <p className="text-[10px] text-gray-400">
+                              {category}
+                            </p>
+                          </div>
+                        );
+                      })()}
                   </div>
                   <Button
                     type="button"
@@ -1126,18 +1124,32 @@ export default function DoctorPatients() {
                       <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between rounded-t-3xl">
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-5 h-5 text-purple-500" />
-                          <h3 className="font-bold text-gray-900 dark:text-white">AI Clinical Summary</h3>
-                          <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">RAG Grounded</span>
+                          <h3 className="font-bold text-gray-900 dark:text-white">
+                            AI Clinical Summary
+                          </h3>
+                          <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
+                            RAG Grounded
+                          </span>
                         </div>
-                        <button onClick={() => setShowAiSummary(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">✕</button>
+                        <button
+                          onClick={() => setShowAiSummary(false)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold"
+                        >
+                          ✕
+                        </button>
                       </div>
 
                       <div className="p-6 space-y-5">
                         {loadingAiSummary ? (
                           <div className="text-center py-12 space-y-3">
                             <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                            <p className="text-gray-500 text-sm">Fetching patient data and searching clinical literature…</p>
-                            <p className="text-gray-400 text-xs">This usually takes 20–40 seconds</p>
+                            <p className="text-gray-500 text-sm">
+                              Fetching patient data and searching clinical
+                              literature…
+                            </p>
+                            <p className="text-gray-400 text-xs">
+                              This usually takes 20–40 seconds
+                            </p>
                           </div>
                         ) : aiSummary ? (
                           <>
@@ -1145,42 +1157,82 @@ export default function DoctorPatients() {
                             {aiSummary.patient_summary && (
                               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                                 {[
-                                  ['Name', aiSummary.patient_summary.name],
-                                  ['Age', aiSummary.patient_summary.age],
-                                  ['Blood Group', aiSummary.patient_summary.blood_group],
-                                  ['BMI', aiSummary.patient_summary.bmi],
-                                  ['Gender', aiSummary.patient_summary.gender],
-                                  ['BP', aiSummary.patient_summary.bp],
-                                ].filter(([, v]) => v).map(([label, value]) => (
-                                  <div key={label}>
-                                    <p className="text-xs text-gray-400">{label}</p>
-                                    <p className="font-semibold text-gray-900 dark:text-white">{value}</p>
-                                  </div>
-                                ))}
+                                  ["Name", aiSummary.patient_summary.name],
+                                  ["Age", aiSummary.patient_summary.age],
+                                  [
+                                    "Blood Group",
+                                    aiSummary.patient_summary.blood_group,
+                                  ],
+                                  ["BMI", aiSummary.patient_summary.bmi],
+                                  ["Gender", aiSummary.patient_summary.gender],
+                                  ["BP", aiSummary.patient_summary.bp],
+                                ]
+                                  .filter(([, v]) => v)
+                                  .map(([label, value]) => (
+                                    <div key={label}>
+                                      <p className="text-xs text-gray-400">
+                                        {label}
+                                      </p>
+                                      <p className="font-semibold text-gray-900 dark:text-white">
+                                        {value}
+                                      </p>
+                                    </div>
+                                  ))}
                               </div>
                             )}
 
                             {/* Key Clinical Notes */}
                             {aiSummary.key_clinical_notes && (
                               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4">
-                                <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Key Clinical Notes</p>
-                                <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{aiSummary.key_clinical_notes}</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
+                                  Key Clinical Notes
+                                </p>
+                                <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                                  {aiSummary.key_clinical_notes}
+                                </p>
                               </div>
                             )}
 
                             {/* Risk Flags */}
                             {aiSummary.risk_flags?.length > 0 && (
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Risk Flags</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                                  Risk Flags
+                                </p>
                                 <div className="space-y-2">
                                   {aiSummary.risk_flags.map((flag, i) => (
-                                    <div key={i} className={`rounded-xl p-3 border text-sm ${flag.level === 'high' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' : flag.level === 'moderate' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'}`}>
+                                    <div
+                                      key={i}
+                                      className={`rounded-xl p-3 border text-sm ${
+                                        flag.level === "high"
+                                          ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50"
+                                          : flag.level === "moderate"
+                                          ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50"
+                                          : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50"
+                                      }`}
+                                    >
                                       <div className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-1">
-                                        <span className={`text-xs px-1.5 py-0.5 rounded font-bold uppercase ${flag.level === 'high' ? 'bg-red-500 text-white' : flag.level === 'moderate' ? 'bg-amber-500 text-white' : 'bg-blue-500 text-white'}`}>{flag.level}</span>
+                                        <span
+                                          className={`text-xs px-1.5 py-0.5 rounded font-bold uppercase ${
+                                            flag.level === "high"
+                                              ? "bg-red-500 text-white"
+                                              : flag.level === "moderate"
+                                              ? "bg-amber-500 text-white"
+                                              : "bg-blue-500 text-white"
+                                          }`}
+                                        >
+                                          {flag.level}
+                                        </span>
                                         {flag.flag}
                                       </div>
-                                      <p className="text-gray-600 dark:text-gray-300 text-xs">{flag.basis}</p>
-                                      {flag.rag_reference && <p className="text-gray-400 text-xs mt-1 italic">{flag.rag_reference}</p>}
+                                      <p className="text-gray-600 dark:text-gray-300 text-xs">
+                                        {flag.basis}
+                                      </p>
+                                      {flag.rag_reference && (
+                                        <p className="text-gray-400 text-xs mt-1 italic">
+                                          {flag.rag_reference}
+                                        </p>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1190,15 +1242,37 @@ export default function DoctorPatients() {
                             {/* Lab Findings */}
                             {aiSummary.lab_findings?.length > 0 && (
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Lab Findings</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                                  Lab Findings
+                                </p>
                                 <div className="space-y-2">
                                   {aiSummary.lab_findings.map((f, i) => (
-                                    <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm">
+                                    <div
+                                      key={i}
+                                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm"
+                                    >
                                       <div className="flex items-center justify-between mb-1">
-                                        <span className="font-semibold text-gray-900 dark:text-white">{f.parameter}</span>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${f.status?.includes('critical') ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : f.status === 'high' || f.status === 'low' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>{f.value}</span>
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                          {f.parameter}
+                                        </span>
+                                        <span
+                                          className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                                            f.status?.includes("critical")
+                                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                              : f.status === "high" ||
+                                                f.status === "low"
+                                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                          }`}
+                                        >
+                                          {f.value}
+                                        </span>
                                       </div>
-                                      {f.clinical_significance && <p className="text-gray-500 text-xs">{f.clinical_significance}</p>}
+                                      {f.clinical_significance && (
+                                        <p className="text-gray-500 text-xs">
+                                          {f.clinical_significance}
+                                        </p>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1208,11 +1282,17 @@ export default function DoctorPatients() {
                             {/* Active Conditions */}
                             {aiSummary.active_conditions?.length > 0 && (
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Active Conditions</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                                  Active Conditions
+                                </p>
                                 <div className="flex flex-wrap gap-2">
                                   {aiSummary.active_conditions.map((c, i) => (
-                                    <span key={i} className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800/50">
-                                      {c.condition}{c.severity ? ` (${c.severity})` : ''}
+                                    <span
+                                      key={i}
+                                      className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800/50"
+                                    >
+                                      {c.condition}
+                                      {c.severity ? ` (${c.severity})` : ""}
                                     </span>
                                   ))}
                                 </div>
@@ -1222,10 +1302,15 @@ export default function DoctorPatients() {
                             {/* Allergies */}
                             {aiSummary.allergies?.length > 0 && (
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Allergies</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                                  Allergies
+                                </p>
                                 <div className="flex flex-wrap gap-2">
                                   {aiSummary.allergies.map((a, i) => (
-                                    <span key={i} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs px-3 py-1 rounded-full border border-red-200 dark:border-red-800/50">
+                                    <span
+                                      key={i}
+                                      className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs px-3 py-1 rounded-full border border-red-200 dark:border-red-800/50"
+                                    >
                                       {a.allergen} — {a.severity}
                                     </span>
                                   ))}
@@ -1252,7 +1337,14 @@ export default function DoctorPatients() {
                             )} */}
 
                             <p className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100 dark:border-gray-800">
-                              Generated {aiSummary.generated_at ? new Date(aiSummary.generated_at).toLocaleString() : 'just now'} · Grounded in Harrison's, Davidson's & MedlinePlus via RAG
+                              Generated{" "}
+                              {aiSummary.generated_at
+                                ? new Date(
+                                    aiSummary.generated_at
+                                  ).toLocaleString()
+                                : "just now"}{" "}
+                              · Grounded in Harrison's, Davidson's & MedlinePlus
+                              via RAG
                             </p>
                           </>
                         ) : null}
@@ -1617,13 +1709,14 @@ export default function DoctorPatients() {
                                         )}
                                         {isScannedMedication && (
                                           <p className="text-[11px] text-emerald-600 dark:text-emerald-300 mt-1 font-semibold">
-                                            Rx date: {scannedRxDateLabel(histItem)}
+                                            Rx date:{" "}
+                                            {scannedRxDateLabel(histItem)}
                                           </p>
                                         )}
                                         {histItem.modification_notes && (
                                           <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 italic">
-                                            Reason: "{histItem.modification_notes}
-                                            "
+                                            Reason: "
+                                            {histItem.modification_notes}"
                                           </p>
                                         )}
                                       </div>
@@ -1717,11 +1810,17 @@ export default function DoctorPatients() {
                                     )}
                                     <p className="text-[11px] text-gray-400 mt-2">
                                       {isScannedMedication ? "" : "Dr. "}
-                                      {item.doctor_name || (isScannedMedication ? "Scanned prescription" : "System")} ·{" "}
+                                      {item.doctor_name ||
+                                        (isScannedMedication
+                                          ? "Scanned prescription"
+                                          : "System")}{" "}
+                                      ·{" "}
                                       {item.issued_at
                                         ? formatChartDate(item.issued_at)
                                         : "No issue date"}
-                                      {isScannedMedication ? " · Uploaded scan" : ""}
+                                      {isScannedMedication
+                                        ? " · Uploaded scan"
+                                        : ""}
                                     </p>
                                     {isScannedMedication && (
                                       <p className="text-[11px] text-emerald-600 dark:text-emerald-300 mt-1 font-semibold">
@@ -1741,33 +1840,37 @@ export default function DoctorPatients() {
                                         Scan record
                                       </span>
                                     )}
-                                    {!isScannedMedication && medStatus !== "active" && (
-                                      <button
-                                        type="button"
-                                        disabled={isUpdating}
-                                        onClick={() =>
-                                          handleMedicationStatusChange(
-                                            item,
-                                            "active"
-                                          )
-                                        }
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold disabled:opacity-60"
-                                      >
-                                        <Play className="w-3.5 h-3.5" /> Resume
-                                      </button>
-                                    )}
-                                    {!isScannedMedication && medStatus !== "paused" && (
-                                      <button
-                                        type="button"
-                                        disabled={isUpdating}
-                                        onClick={() =>
-                                          openMedicationAction(item, "paused")
-                                        }
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold disabled:opacity-60"
-                                      >
-                                        <Pause className="w-3.5 h-3.5" /> Pause
-                                      </button>
-                                    )}
+                                    {!isScannedMedication &&
+                                      medStatus !== "active" && (
+                                        <button
+                                          type="button"
+                                          disabled={isUpdating}
+                                          onClick={() =>
+                                            handleMedicationStatusChange(
+                                              item,
+                                              "active"
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold disabled:opacity-60"
+                                        >
+                                          <Play className="w-3.5 h-3.5" />{" "}
+                                          Resume
+                                        </button>
+                                      )}
+                                    {!isScannedMedication &&
+                                      medStatus !== "paused" && (
+                                        <button
+                                          type="button"
+                                          disabled={isUpdating}
+                                          onClick={() =>
+                                            openMedicationAction(item, "paused")
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold disabled:opacity-60"
+                                        >
+                                          <Pause className="w-3.5 h-3.5" />{" "}
+                                          Pause
+                                        </button>
+                                      )}
                                     {medStatus !== "stopped" && (
                                       <button
                                         type="button"
@@ -1806,8 +1909,14 @@ export default function DoctorPatients() {
                               <div>
                                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
                                   {rx.source === "prescription_scan"
-                                    ? `Scanned prescription${rx.doctor_name ? ` · ${rx.doctor_name}` : ""}`
-                                    : `Prescribed by Dr. ${rx.doctor_name || "System"}`}
+                                    ? `Scanned prescription${
+                                        rx.doctor_name
+                                          ? ` · ${rx.doctor_name}`
+                                          : ""
+                                      }`
+                                    : `Prescribed by Dr. ${
+                                        rx.doctor_name || "System"
+                                      }`}
                                 </p>
                                 <p className="text-[10px] text-gray-400">
                                   Issued:{" "}
@@ -1815,11 +1924,12 @@ export default function DoctorPatients() {
                                     ? formatChartDate(rx.issued_at)
                                     : "No prescription date"}
                                 </p>
-                                {rx.source === "prescription_scan" && scannedRxDateValue(rx) && (
-                                  <p className="text-[10px] text-emerald-600 dark:text-emerald-300 font-semibold">
-                                    Rx date: {scannedRxDateLabel(rx)}
-                                  </p>
-                                )}
+                                {rx.source === "prescription_scan" &&
+                                  scannedRxDateValue(rx) && (
+                                    <p className="text-[10px] text-emerald-600 dark:text-emerald-300 font-semibold">
+                                      Rx date: {scannedRxDateLabel(rx)}
+                                    </p>
+                                  )}
                               </div>
                               <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded-full capitalize">
                                 {rx.status}
@@ -2450,7 +2560,7 @@ export default function DoctorPatients() {
                         onChange={(value) =>
                           updatePrescriptionDraft("examination", value)
                         }
-                        placeholder="BP, pulse, weight, physical findings"
+                        placeholder="BP, pulse, weight, BMI, physical findings"
                       />
                       <PrescriptionTextarea
                         label="Diagnosis"
@@ -2460,15 +2570,6 @@ export default function DoctorPatients() {
                           updatePrescriptionDraft("diagnosis", value)
                         }
                         placeholder="Write diagnosis"
-                      />
-                      <PrescriptionTextarea
-                        label="Investigation"
-                        rows={3}
-                        value={prescriptionDraft.investigations}
-                        onChange={(value) =>
-                          updatePrescriptionDraft("investigations", value)
-                        }
-                        placeholder="Tests advised or reviewed"
                       />
                       <PrescriptionTextarea
                         label="Allergies"
@@ -2488,24 +2589,6 @@ export default function DoctorPatients() {
                         }
                         readOnly={true}
                       />
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
-                        <PrescriptionTextarea
-                          label="Surgery Record"
-                          rows={3}
-                          value={prescriptionDraft.surgeries}
-                          onChange={(value) =>
-                            updatePrescriptionDraft("surgeries", value)
-                          }
-                        />
-                        <PrescriptionTextarea
-                          label="Vaccination Record"
-                          rows={3}
-                          value={prescriptionDraft.vaccinations}
-                          onChange={(value) =>
-                            updatePrescriptionDraft("vaccinations", value)
-                          }
-                        />
-                      </div>
                     </aside>
 
                     <section className="min-h-[720px] px-5 py-5">
@@ -2864,8 +2947,8 @@ export default function DoctorPatients() {
                     {medicationAction.status === "paused"
                       ? "Pause medication"
                       : medicationAction.item.source === "prescription_scan"
-                        ? "Stop scanned medicine"
-                        : "Stop medication"}
+                      ? "Stop scanned medicine"
+                      : "Stop medication"}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {medicationAction.item.brand_name ||

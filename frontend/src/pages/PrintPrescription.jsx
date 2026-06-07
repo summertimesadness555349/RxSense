@@ -142,25 +142,6 @@ const PrintPrescription = () => {
     patient.bloodGroup ? `Blood: ${patient.bloodGroup}` : null,
   ].filter(Boolean).join("  •  ");
 
-  const cleanDiagnosis =
-    latestRx?.diagnosis
-      ? latestRx.diagnosis
-          .split(",")
-          .map((d) => d.split(" - Severity:")[0].split(" - Status:")[0].trim())
-          .join(", ")
-      : (chart.conditions || [])
-          .map((c) => c.condition_name)
-          .filter(Boolean)
-          .join(", ") || undefined;
-
-  const cleanInvestigations =
-    latestRx?.investigations ||
-    (chart.reports || [])
-      .slice(0, 4)
-      .map((r) => r.report_type?.split(" - ")[0].trim())
-      .filter(Boolean)
-      .join("\n") ||
-    undefined;
 
   const doctorName    = user?.name || user?.username || "Doctor";
   const specialty     = Array.isArray(user?.specialty)
@@ -240,8 +221,6 @@ const PrintPrescription = () => {
                 />
               )}
               <Block label="On Examination" text={latestRx?.examination} />
-              <Block label="Diagnosis" text={cleanDiagnosis} />
-              <Block label="Investigation" text={cleanInvestigations} />
               <Block label="Referred By" text={latestRx?.referredBy} />
             </div>
 
@@ -250,7 +229,6 @@ const PrintPrescription = () => {
               {(latestRx?.chiefComplaint || latestRx?.notes) && (
                 <Block label="Chief Complaint" text={latestRx?.chiefComplaint || latestRx?.notes} />
               )}
-              <Block label="Diagnosis" text={cleanDiagnosis} />
             </div>
 
             {/* Right Column: Prescription Proper */}

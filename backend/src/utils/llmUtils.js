@@ -32,16 +32,9 @@ function extractJSON(text) {
 
 class LLMUtils {
     constructor() {
-        // Initialize doctor model for DB interactions (logs, caches)
-        this.doctorModel = new DoctorModel();
-
-        // Claude API Configuration
-        this.claudeApiKey = process.env.CLAUDE_API_KEY;
-        this.claudeModelName = 'claude-sonnet-4-6';
-        this.claudeEndpoint = 'https://api.anthropic.com/v1/messages';
-
-        // OpenAI API Configuration
-        this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        this.doctorModel      = new DoctorModel();
+        this.openai           = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        this.safetyModelName  = process.env.OPENAI_SAFETY_MODEL || 'gpt-4o-mini';
     }
 
     /**
@@ -159,52 +152,36 @@ Respond in strict JSON only:
             proposedMedications: activeProposedMedications.map(p => ({ generic_name: medName(p), dosage: p.dosage || 'Standard', frequency: p.frequency || 'As directed' }))
         };
 
-        /**
-         * Helper: call Claude with a given prompt and label for logging.
-         */
-        const callClaude = async (prompt, label) => {
-            if (!this.claudeApiKey) {
-                console.log(`Claude API key missing. Skipping ${label} call.`);
+        const callOpenAI = async (prompt, label) => {
+            if (!process.env.OPENAI_API_KEY) {
+                console.log(`OpenAI API key missing. Skipping ${label} call.`);
                 return null;
             }
-            console.log(`Calling Claude API (${this.claudeModelName}) for ${label}...`);
-            const response = await globalThis.fetch(this.claudeEndpoint, {
-                method: 'POST',
-                headers: {
-                    'x-api-key': this.claudeApiKey,
-                    'anthropic-version': '2023-06-01',
-                    'content-type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: this.claudeModelName,
-                    max_tokens: 1000,
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.0
-                })
+            console.log(`Calling OpenAI (${this.safetyModelName}) for ${label}...`);
+            const response = await this.openai.chat.completions.create({
+                model:           this.safetyModelName,
+                max_tokens:      1000,
+                temperature:     0.0,
+                response_format: { type: 'json_object' },
+                messages:        [{ role: 'user', content: prompt }],
             });
 
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`Claude API returned error code ${response.status}: ${errText}`);
-            }
+            const rawText = response.choices[0]?.message?.content;
+            if (!rawText) throw new Error(`OpenAI returned empty response for ${label}.`);
 
-            const data = await response.json();
-            const rawText = data.content?.[0]?.text;
-            if (!rawText) throw new Error(`Claude API returned empty response content for ${label}.`);
+            const parsed       = extractJSON(rawText);
+            const inputTokens  = response.usage?.prompt_tokens     || 0;
+            const outputTokens = response.usage?.completion_tokens  || 0;
+            const tUsed        = inputTokens + outputTokens;
 
-            const parsed = extractJSON(rawText);
-            const inputTokens = data.usage?.input_tokens || Math.ceil(prompt.length / 4);
-            const outputTokens = data.usage?.output_tokens || Math.ceil(rawText.length / 4);
-            const tUsed = inputTokens + outputTokens;
-
-            console.log(`[Claude Token Metrics — ${label}] Prompt: ${inputTokens} | Completion: ${outputTokens} | Total: ${tUsed}`);
+            console.log(`[OpenAI Token Metrics — ${label}] Prompt: ${inputTokens} | Completion: ${outputTokens} | Total: ${tUsed}`);
             return { parsed, tokensUsed: tUsed };
         };
 
-        // Run both Claude calls in parallel
+        // Run both calls in parallel
         const [interactionResult, allergyResult] = await Promise.allSettled([
-            callClaude(interactionPrompt, 'drug interaction analysis'),
-            callClaude(allergyPrompt, 'allergy & other checks')
+            callOpenAI(interactionPrompt, 'drug interaction analysis'),
+            callOpenAI(allergyPrompt, 'allergy & other checks')
         ]);
 
         let interactionData = null;
@@ -215,8 +192,8 @@ Respond in strict JSON only:
         if (interactionResult.status === 'fulfilled' && interactionResult.value) {
             interactionData = interactionResult.value.parsed;
             tokensUsed += interactionResult.value.tokensUsed;
-            modelsUsed.push(`${this.claudeModelName}(interactions)`);
-            console.log("Claude drug interaction analysis success.");
+            modelsUsed.push(`${this.safetyModelName}(interactions)`);
+            console.log("Drug interaction analysis success.");
         } else {
             const err = interactionResult.status === 'rejected'
                 ? interactionResult.reason?.message || interactionResult.reason
@@ -227,8 +204,8 @@ Respond in strict JSON only:
         if (allergyResult.status === 'fulfilled' && allergyResult.value) {
             allergyData = allergyResult.value.parsed;
             tokensUsed += allergyResult.value.tokensUsed;
-            modelsUsed.push(`${this.claudeModelName}(allergies)`);
-            console.log("Claude allergy check success.");
+            modelsUsed.push(`${this.safetyModelName}(allergies)`);
+            console.log("Allergy check success.");
         } else {
             const err = allergyResult.status === 'rejected'
                 ? allergyResult.reason?.message || allergyResult.reason
@@ -283,7 +260,7 @@ Respond in strict JSON only:
             };
         } else {
             // Local fallback when both Claude calls fail or are unconfigured
-            console.log("Both Claude calls failed or unconfigured. Using local rule-based safety checker.");
+            console.log("Both OpenAI calls failed or unconfigured. Using local rule-based safety checker.");
             resultJson = this.performLocalSafetyCheck(inputContextForLogging);
             resultJson.tokens_used = 0;
             resultJson.tokensUsed = 0;

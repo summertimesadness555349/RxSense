@@ -1,6 +1,5 @@
 'use strict';
 
-const { runAgent }                              = require('./agentRunner.js');
 const { runOpenAIAgent }                        = require('./openaiAgentRunner.js');
 const { SCHEMAS, buildExecutors, buildDoctorExecutors } = require('./tools.js');
 const DB_Connection               = require('../database/db.js');
@@ -83,13 +82,14 @@ async function generateInsights({ userId }) {
         'After using the tools, output ONLY the insights JSON object.',
     ].join('\n');
 
-    const { text } = await runAgent({
+    const { text } = await runOpenAIAgent({
         agentName:   'InsightsAgent',
         userId,
         system:      INSIGHTS_SYSTEM,
         userMessage,
         tools:       INSIGHTS_TOOLS,
         executors:   buildExecutors(userId),
+        model:       'gpt-4o',
         maxTokens:   2048,
         temperature: 0.1,
     });
@@ -211,31 +211,19 @@ Output this exact JSON:
   "emergency_contact": "<name — phone, or 'Not provided'>"
 }`;
 
-    const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('CLAUDE_API_KEY not set');
+    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');
+    const { OpenAI } = require('openai');
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type':      'application/json',
-            'x-api-key':         apiKey,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model:      process.env.CLAUDE_REPORT_MODEL || 'claude-sonnet-4-6',
-            max_tokens: 1024,
-            temperature: 0.1,
-            messages: [{ role: 'user', content: prompt }],
-        }),
+    const res = await openai.chat.completions.create({
+        model:           process.env.OPENAI_SUMMARY_MODEL || 'gpt-4o',
+        max_tokens:      1024,
+        temperature:     0.1,
+        response_format: { type: 'json_object' },
+        messages:        [{ role: 'user', content: prompt }],
     });
 
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Claude API error (${res.status}): ${err}`);
-    }
-
-    const data = await res.json();
-    const text = data.content?.[0]?.text || '';
+    const text = res.choices[0]?.message?.content || '';
     return extractJSON(text);
 }
 

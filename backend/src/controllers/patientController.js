@@ -158,7 +158,7 @@ class PatientController {
                         return null;
                     })
                     : Promise.resolve(null),
-                this.reportAnalysisUtils.extract({ buffer: apiBuffer, mimetype: apiMimetype, originalname: req.file.originalname }),
+                this.reportAnalysisUtils.extract({ buffer: apiBuffer, mimetype: apiMimetype, originalname: req.file.originalname }, reportType),
             ]);
 
             const imageUrl      = cloudResult?.secure_url || null;

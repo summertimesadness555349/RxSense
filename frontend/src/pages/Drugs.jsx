@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Info, Pill, CheckCircle2, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Plus, Info, Pill, CheckCircle2, ShieldAlert, AlertTriangle, Sparkles, ShieldCheck, FlaskConical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DrugInputRow from '../components/drugs/DrugInputRow.jsx';
 import InteractionCard from '../components/drugs/InteractionCard.jsx';
@@ -125,45 +125,43 @@ export default function Drugs() {
       addToast(t('enterOneMed'), 'error');
       return;
     }
+    if (ongoingMeds.length === 0) {
+      addToast('No ongoing medications found to check against.', 'error');
+      return;
+    }
 
     setLoadingPatientCheck(true);
     setPatientCheckResult(null);
 
     try {
-      // TODO: Call the LLM agent to analyze drug interactions for the patient.
-      // The LLM agent should check if the new medicine (newMedName, dosage, type) has
-      // any conflicts or bad interactions with the patient's ongoing medications.
-      // Payload to LLM agent:
-      // - newMed: { name: newMedName, dosage: newMedDosage, type: newMedType }
-      // - ongoingMedications: ongoingMeds (both prescription_item and scanned_prescription)
-      // - patientHealthProfile (optional, for allergies/conditions if retrieved)
+      const allDrugs = [
+        ...ongoingMeds.map(m => ({ name: m.name })),
+        { name: newMedName.trim() },
+      ];
+      const data = await checkDrugInteractions(allDrugs);
+      if (!data) throw new Error('No response from interaction checker');
 
-      // Simulate a loading delay for the LLM agent response
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Mock response for demonstration and hackathon visual integration
-      const hasConflicts = ongoingMeds.length > 0 && ongoingMeds.some(m => 
-        m.name.toLowerCase().includes('warfarin') || 
-        m.name.toLowerCase().includes('aspirin')
+      // Filter to only pairs that involve the new medication
+      const newName = newMedName.trim().toLowerCase();
+      const relevant = (data.interactions || []).filter(it =>
+        (it.drug1 || '').toLowerCase().includes(newName) ||
+        (it.drug2 || '').toLowerCase().includes(newName)
       );
 
-      const mockLlmResponse = {
-        success: true,
-        summary: `Analyzed "${newMedName}" (${newMedType === 'allopathy' ? 'Allopathy' : 'Homeopathy'}) against your ${ongoingMeds.length} active medication(s).`,
-        findings: hasConflicts 
-          ? [
-              {
-                severity: 'warning',
-                interaction: `${newMedName} + Warfarin / Aspirin`,
-                description: `Moderate interaction risk. Taking ${newMedName} with blood-thinners like Aspirin or Warfarin may increase risk of bleeding or reduce efficacy.`,
-                recommendation: 'Seek advice from your healthcare practitioner before taking these together.'
-              }
-            ]
-          : []
-      };
-
-      setPatientCheckResult(mockLlmResponse);
-      addToast(t('checkOngoingBtn'), 'success');
+      setPatientCheckResult({
+        summary:          `Checked "${newMedName}" against ${ongoingMeds.length} active medication(s).`,
+        clinical_summary: data.clinical_summary,
+        overall_risk:     data.overall_risk,
+        findings:         relevant.map(it => ({
+          severity:       it.severity,
+          interaction:    it.title,
+          description:    it.description,
+          mechanism:      it.mechanism,
+          recommendation: it.clinical_action,
+          source:         it.source,
+        })),
+      });
+      addToast('Safety check complete', 'success');
     } catch (err) {
       console.error('Patient-oriented drug check failed:', err);
       addToast('Failed to analyze safety.', 'error');
@@ -240,9 +238,31 @@ export default function Drugs() {
           </Card>
 
           <AnimatePresence mode="wait">
+            {!result && !loading && (
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="flex flex-col items-center gap-3 py-10 text-center text-gray-400 dark:text-gray-500">
+                  <FlaskConical className="w-10 h-10 opacity-30" />
+                  <p className="text-sm font-medium">Enter your medications above and click<br /><span className="text-emerald-500 font-semibold">Check Interactions</span> to run an AI safety analysis.</p>
+                  <p className="text-xs opacity-70">Powered by RxNorm · Medscape · Web search</p>
+                </div>
+              </motion.div>
+            )}
+
             {result && (
               <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                {/* Summary */}
+
+                {/* AI Clinical Summary */}
+                {result.clinical_summary && (
+                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/10 p-4 flex gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mb-1">AI Clinical Assessment</p>
+                      <p className="text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">{result.clinical_summary}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary counts */}
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { labelKey: 'safeCount',    count: result.summary.safe,    color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
@@ -256,18 +276,33 @@ export default function Drugs() {
                   ))}
                 </div>
 
-                {/* Interactions */}
-                <div className="space-y-3">
-                  {result.interactions.map((int) => (
-                    <InteractionCard key={int.id} interaction={int} />
-                  ))}
-                </div>
+                {/* All-clear state */}
+                {result.interactions.length === 0 && (
+                  <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-sm text-emerald-800 dark:text-emerald-300">No interactions detected</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">These medications appear safe to take together based on available data. Always confirm with your pharmacist or doctor.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Interaction cards */}
+                {result.interactions.length > 0 && (
+                  <div className="space-y-3">
+                    {result.interactions.map((int) => (
+                      <InteractionCard key={int.id} interaction={int} />
+                    ))}
+                  </div>
+                )}
 
                 {/* Matrix */}
-                <Card>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('interactionMatrix')}</h3>
-                  <InteractionMatrix matrix={result.matrix} drugs={result.drugs} />
-                </Card>
+                {result.matrix.length > 0 && (
+                  <Card>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('interactionMatrix')}</h3>
+                    <InteractionMatrix matrix={result.matrix} drugs={result.drugs} />
+                  </Card>
+                )}
 
                 {/* Data source */}
                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 px-1">
@@ -399,51 +434,50 @@ export default function Drugs() {
                 className="space-y-4"
               >
                 <Card>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                    {t('summaryLabel')}
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                    {patientCheckResult.summary}
-                  </p>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{t('summaryLabel')}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{patientCheckResult.summary}</p>
+
+                  {/* AI summary */}
+                  {patientCheckResult.clinical_summary && (
+                    <div className="flex gap-2.5 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 mb-3">
+                      <Sparkles className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">{patientCheckResult.clinical_summary}</p>
+                    </div>
+                  )}
 
                   {patientCheckResult.findings.length === 0 ? (
                     <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/60 rounded-xl">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="font-bold text-emerald-950 dark:text-emerald-400 text-sm">
-                          No Interactions Detected
-                        </h4>
+                        <h4 className="font-bold text-emerald-950 dark:text-emerald-400 text-sm">No Interactions Detected</h4>
                         <p className="text-xs text-emerald-800/80 dark:text-emerald-500/85 mt-0.5">
-                          It appears safe to take {newMedName} alongside your active medications.
+                          It appears safe to take <strong>{newMedName}</strong> alongside your active medications.
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {patientCheckResult.findings.map((f, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-4 border rounded-xl flex gap-3 ${
-                            f.severity === 'danger'
-                              ? 'bg-red-50 dark:bg-red-950/10 border-red-200 dark:border-red-900/50'
-                              : 'bg-amber-50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900/50'
-                          }`}
-                        >
-                          {f.severity === 'danger' ? (
-                            <ShieldAlert className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                          ) : (
-                            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                          )}
-                          <div className="space-y-1">
-                            <h4 className="font-bold text-sm text-gray-950 dark:text-white">
-                              {f.interaction}
-                            </h4>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                              {f.description}
-                            </p>
+                        <div key={idx} className={`p-4 border rounded-xl flex gap-3 ${
+                          f.severity === 'danger'
+                            ? 'bg-red-50 dark:bg-red-950/10 border-red-200 dark:border-red-900/50'
+                            : 'bg-amber-50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900/50'
+                        }`}>
+                          {f.severity === 'danger'
+                            ? <ShieldAlert className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            : <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                          }
+                          <div className="space-y-1.5">
+                            <h4 className="font-bold text-sm text-gray-950 dark:text-white">{f.interaction}</h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{f.description}</p>
+                            {f.mechanism && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                <span className="font-semibold not-italic">Mechanism: </span>{f.mechanism}
+                              </p>
+                            )}
                             {f.recommendation && (
-                              <p className="text-xs font-semibold text-emerald-650 dark:text-emerald-400 mt-2 bg-emerald-500/10 dark:bg-emerald-950/30 rounded-lg px-2.5 py-1.5 inline-block">
-                                Recommendation: {f.recommendation}
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mt-1 bg-emerald-500/10 dark:bg-emerald-950/30 rounded-lg px-2.5 py-1.5 inline-block">
+                                Action: {f.recommendation}
                               </p>
                             )}
                           </div>
@@ -452,17 +486,9 @@ export default function Drugs() {
                     </div>
                   )}
 
-                  {/* LLM TODO comment placeholder & disclaimer */}
-                  <div className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500 px-1 mt-4 pt-3 border-t border-gray-150 dark:border-gray-800">
-                    <Info className="w-4 h-4 flex-shrink-0 text-emerald-500 mt-0.5" />
-                    <div>
-                      <span>
-                        This check is currently running in simulated offline mode using local logic.
-                      </span>
-                      <div className="mt-1 font-mono text-[10px] text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-950 p-2 rounded border border-gray-150 dark:border-gray-900">
-                        {`// TODO: Integrators - call the LLM agent API (e.g. POST /api/patient/me/medication-safety)`}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+                    <Info className="w-3.5 h-3.5 flex-shrink-0 text-emerald-500" />
+                    AI-powered check via RxNorm · Medscape · Web search. Always confirm with your pharmacist.
                   </div>
                 </Card>
               </motion.div>

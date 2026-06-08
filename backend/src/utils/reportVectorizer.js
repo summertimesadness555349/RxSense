@@ -24,6 +24,23 @@ function buildReportSummary(metrics) {
     return summaryParts.join(', ');
 }
 
+function normalizeDate(raw) {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    // Already ISO: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // DD-MM-YYYY or DD/MM/YYYY
+    const dmy = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+    // MM-DD-YYYY or MM/DD/YYYY
+    const mdy = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')}`;
+    // Try native parse as last resort
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    return null;
+}
+
 async function vectorizeReport(patientId, reportId, reportData, reportDate) {
     try {
         const metrics = reportData.metrics || reportData || [];
@@ -42,6 +59,7 @@ async function vectorizeReport(patientId, reportId, reportData, reportDate) {
         }
 
         const db = DB_Connection.getInstance();
+        const safeDate = normalizeDate(reportDate);
 
         await db.query_executor(`
             DELETE FROM patient_report_vector
@@ -51,7 +69,7 @@ async function vectorizeReport(patientId, reportId, reportData, reportDate) {
         await db.query_executor(`
             INSERT INTO patient_report_vector (patient_id, report_id, report_date, embedding, summary_text, is_public)
             VALUES ($1, $2, $3, $4::vector, $5, true)
-        `, [patientId, reportId, reportDate, JSON.stringify(embedding), summaryText]);
+        `, [patientId, reportId, safeDate, JSON.stringify(embedding), summaryText]);
 
         return {
             reportId,

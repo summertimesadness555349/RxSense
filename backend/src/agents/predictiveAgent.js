@@ -91,7 +91,8 @@ Based on the patient context, their metric trends, and similar patient outcomes,
             });
 
             try {
-                const parsed = JSON.parse(response.text);
+                const cleanText = response.text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(cleanText);
                 const normalized = normalizePredictionList(parsed.predictions || []);
                 return {
                     success: true,
@@ -277,7 +278,7 @@ async function getPredictionContext(patientId, cohortPatientIds) {
     try {
         const medications = await db.query_executor(`
             SELECT
-                COALESCE(d.generic_name, d.brand_name, pi.extracted_name) AS name,
+                COALESCE(d.generic_name, d.brand_name, 'Unknown') AS name,
                 pi.dosage,
                 pi.frequency,
                 pi.status
@@ -286,7 +287,7 @@ async function getPredictionContext(patientId, cohortPatientIds) {
             JOIN prescription_scan ps ON ps.scan_id = pi.prescription_id
             WHERE ps.patient_id = $1
                 AND COALESCE(pi.status, 'active') = 'active'
-            ORDER BY COALESCE(pi.issued_at, pi.created_at) DESC
+            ORDER BY ps.created_at DESC
             LIMIT 8
         `, [patientId]);
 

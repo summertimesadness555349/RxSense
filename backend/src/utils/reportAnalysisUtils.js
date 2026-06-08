@@ -1,15 +1,23 @@
 'use strict';
 
-const EXTRACTION_PROMPT = `You are a medical data extraction specialist.
-Extract ALL information visible in this medical report and return it as structured JSON.
-Include every piece of data — leave nothing out, even if the fields seem unusual.
-Return ONLY raw JSON starting with { and ending with }. No markdown, no code fences, no explanation.
+const { OpenAI } = require('openai');
+const pdfParse   = require('pdf-parse');
+
+const EXTRACTION_PROMPT = `TASK: Extract every piece of data from this medical report into the JSON schema below.
+
+CRITICAL RULES — follow without exception:
+- You MUST return valid JSON. No markdown fences, no prose, no apologies, no refusals.
+- Start your response with { and end with }. Nothing else.
+- Extract EVERY row from every table — do not skip any parameter or test result.
+- Preserve values, units, and reference ranges exactly as printed.
+- If a field is not visible, use null — never omit the key.
+- Do not invent or modify values. Transcribe what you see.
 
 {
-  "report_type": "type of report e.g. CBC, Lipid Panel, X-Ray, Ultrasound, ECG, Urine Analysis",
-  "report_date": "date as written in the report, or null",
-  "facility": "lab, clinic, or hospital name, or null",
-  "ordering_doctor": "doctor name who ordered the report, or null",
+  "report_type": "CBC or Lipid Panel or Metabolic Panel or Thyroid or Urine Analysis or Imaging or Other",
+  "report_date": "date exactly as written, or null",
+  "facility": "lab or hospital name, or null",
+  "ordering_doctor": "doctor name, or null",
   "patient": {
     "name": null,
     "age": null,
@@ -19,88 +27,86 @@ Return ONLY raw JSON starting with { and ending with }. No markdown, no code fen
   },
   "sections": [
     {
-      "title": "section heading exactly as in report e.g. Complete Blood Count, Biochemistry, Findings, Impression",
-      "type": "lab_results or imaging or vitals or medications or narrative or other",
+      "title": "section heading exactly as printed e.g. Complete Blood Count",
+      "type": "lab_results or imaging or vitals or narrative or other",
       "entries": [
         {
-          "label": "parameter or test name",
-          "value": "value exactly as printed",
-          "unit": "unit of measurement, or null",
-          "reference_range": "normal range exactly as printed in the report, or null",
-          "flag": "H or L or HH or LL or * or null — exactly as printed on the report",
+          "label": "parameter name exactly as printed",
+          "value": "result value exactly as printed",
+          "unit": "unit or null",
+          "reference_range": "reference range exactly as printed or null",
+          "flag": "H or L or HH or LL or * or null — exactly as printed",
           "status": "normal or high or low or critical or borderline or null"
         }
       ],
-      "narrative": "free-text content for imaging/impression/narrative sections, null for table sections"
+      "narrative": "free text for findings/impression sections, null for table sections"
     }
   ],
-  "overall_impression": "overall conclusion or impression from the report, or null",
-  "diagnoses": ["list of diagnoses if mentioned"],
-  "recommendations": ["list of recommendations or advice if mentioned"],
-  "clinical_notes": "any other clinical notes or comments, or null",
-  "follow_up": "follow-up instructions, or null"
+  "overall_impression": "conclusion or null",
+  "diagnoses": [],
+  "recommendations": [],
+  "clinical_notes": null,
+  "follow_up": null
 }
 
-Rules:
-- For sections with tabular data (blood counts, chemistry panels, etc.) use type "lab_results" and populate "entries"
-- For sections with free text (findings, impression, history) use type "narrative" and put text in "narrative", leave "entries" as []
-- For vitals (BP, HR, temp, weight, SpO2) use type "vitals" and populate "entries"
-- Preserve original values and units exactly as written
-- If the report is an image and text is unclear, do your best — include partial info rather than omitting`;
+- Tabular data (blood counts, panels): type = "lab_results", populate entries
+- Narrative sections (Findings, Impression): type = "narrative", put text in narrative, entries = []
+- Vitals (BP, HR, SpO2, weight): type = "vitals", populate entries`;
 
-const SUPPORTED_CLAUDE_TYPES = new Set([
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'image/webp',
-    'image/gif',
-]);
+const SUPPORTED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const SUPPORTED_TYPES       = new Set(['application/pdf', ...SUPPORTED_IMAGE_TYPES]);
 
 // Labels that are derived ratios/indices — skip reference lookup
 const SKIP_LABEL_PATTERNS = /ratio|index|vldl|pcv/i;
 
 class ReportAnalysisUtils {
     constructor() {
-        this.apiKey    = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-        this.modelName = process.env.CLAUDE_REPORT_MODEL || 'claude-sonnet-4-6';
-        this.endpoint  = 'https://api.anthropic.com/v1/messages';
+        this.openai     = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        this.modelName  = process.env.OPENAI_REPORT_MODEL || 'gpt-4.1';
         this._refLookup = null;
     }
 
     validateApiKey() {
-        if (!this.apiKey || this.apiKey === 'your_claude_api_key_here') {
-            throw new Error('CLAUDE_API_KEY is missing or still set to the placeholder value. Add it to .env to enable report analysis.');
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY is not set. Add it to .env to enable report analysis.');
         }
     }
 
     isSupportedType(mimetype) {
-        return SUPPORTED_CLAUDE_TYPES.has(mimetype?.toLowerCase());
+        return SUPPORTED_TYPES.has(mimetype?.toLowerCase());
     }
 
-    buildContent(file) {
-        if (file.mimetype === 'application/pdf') {
+    async buildMessages(file) {
+        const system = {
+            role: 'system',
+            content: 'You are a medical records digitization assistant for RxSense. Your only output is valid JSON — never prose, never markdown, never refusals. Extract every data point from the medical document exactly as instructed. Refusing or hedging is not an option; digitization is your sole function.',
+        };
+
+        if (SUPPORTED_IMAGE_TYPES.has(file.mimetype?.toLowerCase())) {
+            const dataUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
             return [
+                system,
                 {
-                    type: 'document',
-                    source: {
-                        type: 'base64',
-                        media_type: 'application/pdf',
-                        data: file.buffer.toString('base64'),
-                    },
+                    role: 'user',
+                    content: [
+                        { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+                        { type: 'text', text: EXTRACTION_PROMPT },
+                    ],
                 },
-                { type: 'text', text: EXTRACTION_PROMPT },
             ];
         }
+
+        // PDF — extract text with pdf-parse; fall back to error if scanned/empty
+        const parsed = await pdfParse(file.buffer);
+        const text   = (parsed.text || '').trim();
+        if (!text) throw new Error('PDF appears to be a scanned image with no extractable text. Please upload a JPEG or PNG image of the report instead.');
+
         return [
+            system,
             {
-                type: 'image',
-                source: {
-                    type: 'base64',
-                    media_type: file.mimetype,
-                    data: file.buffer.toString('base64'),
-                },
+                role: 'user',
+                content: `${EXTRACTION_PROMPT}\n\nReport text extracted from PDF:\n\`\`\`\n${text}\n\`\`\``,
             },
-            { type: 'text', text: EXTRACTION_PROMPT },
         ];
     }
 
@@ -130,45 +136,27 @@ class ReportAnalysisUtils {
             try { return JSON.parse(candidate); } catch {}
         }
 
-        console.error('[Report] Could not parse Claude JSON:', clean.slice(0, 500));
+        console.error('[Report] Could not parse extraction JSON:', clean.slice(0, 500));
         throw new Error('Could not parse report extraction response');
     }
 
-    extract = async (file) => {
+    extract = async (file, reportType = '') => {
         this.validateApiKey();
+        const messages = await this.buildMessages(file);
 
-        const response = await fetch(this.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type':      'application/json',
-                'x-api-key':         this.apiKey,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model:      this.modelName,
-                max_tokens: 8192,
-                messages:   [{ role: 'user', content: this.buildContent(file) }],
-            }),
+        console.log(`[Report] Extracting with ${this.modelName}...`);
+        const response = await this.openai.chat.completions.create({
+            model:      this.modelName,
+            max_tokens: 8192,
+            messages,
         });
 
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`Claude extraction failed (${response.status}): ${text}`);
-        }
-
-        const data    = await response.json();
-
-        if (data.stop_reason === 'max_tokens') {
-            console.warn('[Report] Claude hit max_tokens — response was truncated. Report may be too large.');
+        if (response.choices[0]?.finish_reason === 'length') {
+            console.warn('[Report] OpenAI hit max_tokens — response truncated. Report may be too large.');
             throw new Error('Report is too large to fully extract. Try uploading individual pages.');
         }
 
-        const rawText = (data.content || [])
-            .filter(b => b.type === 'text')
-            .map(b => b.text)
-            .join('\n')
-            .trim();
-
+        const rawText = response.choices[0]?.message?.content || '';
         return this.parseJson(rawText);
     };
 

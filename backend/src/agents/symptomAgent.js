@@ -1,6 +1,6 @@
 'use strict';
 
-const { runAgent }              = require('./agentRunner.js');
+const { runOpenAIAgent }        = require('./openaiAgentRunner.js');
 const { SCHEMAS, buildExecutors } = require('./tools.js');
 
 const SYMPTOM_TOOLS = SCHEMAS.filter(t =>
@@ -63,13 +63,14 @@ async function analyzeSymptoms({ userId, messages = [], question }) {
         `রোগীর নতুন বার্তা: ${question}`,
     ].filter(Boolean).join('\n');
 
-    const { text } = await runAgent({
+    const { text } = await runOpenAIAgent({
         agentName:   'SymptomAgent',
         userId,
         system:      SYSTEM_PROMPT,
         userMessage,
         tools:       SYMPTOM_TOOLS,
         executors:   buildExecutors(userId),
+        model:       'gpt-4o-mini',
         maxTokens:   1024,
         temperature: 0.5,
     });

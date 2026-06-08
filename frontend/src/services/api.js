@@ -498,6 +498,16 @@ export const checkSymptoms = async (question, messages = []) => {
   return { reply: data.reply, emergency: data.emergency || null };
 };
 
+export const shareSymptoms = async ({ doctorId, appointmentId, messages }) => {
+  const data = await request('/symptom/share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ doctorId, appointmentId, messages }),
+  });
+  return data;
+};
+
+
 // POST /api/drugs/interactions
 export const checkDrugInteractions = async (drugList) => {
   // Expecting drugList: [{ id?, name, dosage? }, ...]

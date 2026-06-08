@@ -628,7 +628,10 @@ class PatientController {
             );
 
             // 4. Map LLM result to frontend expectations
-            const warnings = safetyResult.warnings || [];
+            // Filter out mild and moderate warnings to prevent patient anxiety
+            const warnings = (safetyResult.warnings || []).filter(
+                w => w.severity !== 'mild' && w.severity !== 'moderate'
+            );
             let overallStatus = 'safe';
 
             if (warnings.some(w => w.severity === 'critical' || w.severity === 'severe')) {

@@ -1338,6 +1338,23 @@ class DoctorModel {
     }
   };
 
+  getSharedSymptoms = async (patientId) => {
+    try {
+      const query = `
+        SELECT ss.*, d.name AS doctor_name
+        FROM shared_symptoms ss
+        JOIN doctor d ON ss.doctor_id = d.doctor_id
+        WHERE ss.patient_id = $1
+        ORDER BY ss.created_at DESC;
+      `;
+      const result = await this.db_connection.query_executor(query, [patientId]);
+      return result.rows || [];
+    } catch (error) {
+      console.error(`Failed to get shared symptoms: ${error.message}`);
+      throw error;
+    }
+  };
+
   getAllHospitals = async () => {
     try {
       const query = `SELECT * FROM hospital ORDER BY name ASC;`;

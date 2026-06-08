@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, Info, ChevronDown, ChevronUp, Calendar, Sunrise, Sun, Moon, PlayCircle, PauseCircle, StopCircle, ShieldCheck, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Modal from '../components/ui/Modal.jsx';
 import { getPatientActiveMedications, getPrescriptionHistoryLocal, getHealthSummary, checkPatientMedicationSafety } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
@@ -360,6 +361,30 @@ export default function HistoryMedications() {
           )}
         </button>
       </div>
+
+      <AnimatePresence>
+        {isCheckingSafety && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -10 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/60 rounded-2xl p-4 flex items-center gap-4 animate-pulse shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                <ShieldCheck className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Checking medication safety...</p>
+                <p className="text-xs text-emerald-600/90 dark:text-emerald-400/80 mt-0.5 leading-relaxed">
+                  We are reviewing your active prescriptions with doctor-patient care to ensure everything is safe for you.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Consolidated Medication Chart */}
       {unifiedActiveMeds.length === 0 ? (

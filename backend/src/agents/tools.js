@@ -160,7 +160,7 @@ const EXECUTORS = {
     },
 
     get_patient_chart_by_id: async ({ patient_id }) => {
-        // Demographics + conditions + allergies + medications
+        // Demographics + conditions + allergies + medications + shared symptoms
         const profileRes = await db.query_executor(`
             SELECT
                 u.full_name,
@@ -238,7 +238,19 @@ const EXECUTORS = {
                 ) ORDER BY vr.administered_at DESC NULLS LAST), '[]'::json)
                  FROM vaccination_record vr
                  WHERE vr.patient_id = p.patient_id
-                ) AS vaccinations
+                ) AS vaccinations,
+                -- Shared symptoms history (Newly Added)
+                (SELECT COALESCE(json_agg(json_build_object(
+                    'id',             ss.id,
+                    'doctor_id',      ss.doctor_id,
+                    'appointment_id', ss.appointment_id,
+                    'key_symptoms',   ss.key_symptoms,
+                    'summary',        ss.summary,
+                    'created_at',     ss.created_at
+                ) ORDER BY ss.created_at DESC), '[]'::json)
+                 FROM shared_symptoms ss
+                 WHERE ss.patient_id = p.patient_id
+                ) AS shared_symptoms
             FROM patient p
             JOIN users u ON u.id = p.user_id
             WHERE p.patient_id = $1

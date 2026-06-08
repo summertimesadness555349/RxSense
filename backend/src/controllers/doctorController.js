@@ -555,7 +555,10 @@ class DoctorController {
             // Fetch self-reported symptom logs and AI risk assessments
             const symptomLogs = await this.patientModel.getTimelineSymptoms(patientId, 100);
 
-            console.log(`[getPatientChart] patientId=${patientId} conditions=${conditions.length} prescriptions=${activePrescriptions.length} reports=${reports.length}`);
+            // Fetch patient shared symptoms
+            const sharedSymptoms = await this.doctorModel.getSharedSymptoms(patientId);
+
+            console.log(`[getPatientChart] patientId=${patientId} conditions=${conditions.length} prescriptions=${activePrescriptions.length} reports=${reports.length} sharedSymptoms=${sharedSymptoms.length}`);
 
             return res.status(200).json({
                 success: true,
@@ -567,7 +570,8 @@ class DoctorController {
                     allergies,
                     activePrescriptions,
                     reports,
-                    symptomLogs
+                    symptomLogs,
+                    sharedSymptoms
                 }
             });
         } catch (error) {

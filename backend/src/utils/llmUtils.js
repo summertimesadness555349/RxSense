@@ -1,3 +1,4 @@
+const { OpenAI } = require('openai');
 const DoctorModel = require('../models/doctorModel.js');
 
 /**
@@ -38,7 +39,60 @@ class LLMUtils {
         this.claudeApiKey = process.env.CLAUDE_API_KEY;
         this.claudeModelName = 'claude-sonnet-4-6';
         this.claudeEndpoint = 'https://api.anthropic.com/v1/messages';
+
+        // OpenAI API Configuration
+        this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     }
+
+    /**
+     * Summarizes the chat messages using OpenAI to extract key symptoms and a brief summary.
+     */
+    summarizeSymptoms = async (chatMessages) => {
+        if (!process.env.OPENAI_API_KEY) {
+            console.log("OpenAI API key missing. Using fallback for symptom summarization.");
+            return {
+                key_symptoms: "Fever, Cough",
+                summary: "Patient reported fever and cough during the conversation history."
+            };
+        }
+
+        const chatStr = chatMessages
+            .filter(m => m.content?.trim())
+            .map(m => `[${m.role === 'user' ? 'Patient' : 'Doctor/Assistant'}]: ${m.content}`)
+            .join('\n');
+
+        const prompt = `You are a clinical assistant AI. Summarize the following symptom checker chat history between a patient and the AI assistant.
+Extract ONLY the key physical symptoms (e.g. fever, chest pain, cough, headache) as a concise comma-separated list.
+Also provide a short clinical summary of the reported symptoms (maximum 2 sentences).
+
+Symptom checker chat history:
+${chatStr}
+
+Respond in strict JSON only:
+{
+  "key_symptoms": "comma-separated list of key symptoms in English",
+  "summary": "brief summary of symptoms in English (maximum 2 sentences)"
+}
+Return raw JSON only. No markdown formatting, no code fences.`;
+
+        console.log("Calling OpenAI API for symptom summarization...");
+        const response = await this.openai.chat.completions.create({
+            model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.0,
+            response_format: { type: "json_object" }
+        });
+
+        const rawText = response.choices?.[0]?.message?.content;
+        if (!rawText) throw new Error("OpenAI API returned empty response content for symptom summarization.");
+
+        const parsed = JSON.parse(rawText.trim());
+        return {
+            key_symptoms: parsed.key_symptoms || "Unknown",
+            summary: parsed.summary || "No summary provided."
+        };
+    };
+
 
     /**
      * Perform the drug cross-over and allergy checks using Claude (two parallel calls).

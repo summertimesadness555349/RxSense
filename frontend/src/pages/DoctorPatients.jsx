@@ -116,7 +116,6 @@ const createEmptyPrescriptionDraft = () => ({
   referredBy: "",
   chiefComplaint: "",
   examination: "",
-  diagnosis: "",
   allergies: "No known drug allergies recorded.",
   currentMedications: "No current medicines recorded as still taken.",
   advice: "",
@@ -153,18 +152,6 @@ const createPrescriptionDraftFromChart = (data) => {
           : null,
         patient.bloodGroup ? `Blood group: ${patient.bloodGroup}` : null,
       ],
-      ""
-    ),
-    diagnosis: joinLines(
-      (chart.conditions || []).map((condition) =>
-        [
-          condition.condition_name,
-          condition.severity ? `Severity: ${condition.severity}` : null,
-          condition.status ? `Status: ${condition.status}` : null,
-        ]
-          .filter(Boolean)
-          .join(" - ")
-      ),
       ""
     ),
     allergies: joinLines(
@@ -212,8 +199,8 @@ function PrescriptionTextarea({
       : "border-gray-200 bg-white focus:border-emerald-500";
 
   const readOnlyClass = readOnly
-    ? "cursor-not-allowed bg-gray-50 text-gray-600"
-    : "";
+  ? "cursor-not-allowed bg-slate-50/60 text-slate-500 border-slate-200/60 shadow-none"
+  : "shadow-sm";
 
   return (
     <label className="block">
@@ -1359,6 +1346,11 @@ export default function DoctorPatients() {
                 <div className="flex border-b border-gray-100 dark:border-gray-800 pb-2 mb-4 overflow-x-auto gap-2">
                   {[
                     {
+                      id: "sharedSymptoms",
+                      label: "Shared Symptoms",
+                      count: chartData.chart?.sharedSymptoms?.length,
+                    },
+                    {
                       id: "conditions",
                       label: "Conditions",
                       count: chartData.chart?.conditions?.length,
@@ -1374,11 +1366,6 @@ export default function DoctorPatients() {
                       count: activeMedications.length,
                     },
                     {
-                      id: "prescriptions",
-                      label: "Active Prescriptions",
-                      count: chartData.chart?.activePrescriptions?.length,
-                    },
-                    {
                       id: "surgeries",
                       label: "Surgeries",
                       count: chartData.chart?.surgeries?.length,
@@ -1392,6 +1379,11 @@ export default function DoctorPatients() {
                       id: "reports",
                       label: "Lab Reports",
                       count: chartData.chart?.reports?.length,
+                    },
+                    {
+                      id: "prescriptions",
+                      label: "Active Prescriptions",
+                      count: chartData.chart?.activePrescriptions?.length,
                     },
                   ].map((tab) => (
                     <button
@@ -2393,6 +2385,49 @@ export default function DoctorPatients() {
                       )}
                     </div>
                   )}
+
+                  {activeTab === "sharedSymptoms" && (
+                    <div className="space-y-3">
+                      {chartData.chart?.sharedSymptoms?.length > 0 ? (
+                        chartData.chart.sharedSymptoms.map((ss) => (
+                          <div
+                            key={ss.id}
+                            className="p-4 bg-emerald-50/40 dark:bg-emerald-950/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/30"
+                          >
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                                  Key Symptoms
+                                </span>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
+                                  {ss.key_symptoms}
+                                </p>
+                              </div>
+                              <span className="text-xs text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap">
+                                {new Date(ss.created_at).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-emerald-100/50 dark:border-emerald-900/20">
+                              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                AI Symptom Summary
+                              </span>
+                              <p className="text-xs text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">
+                                {ss.summary}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 text-center py-6">
+                          No symptoms shared by this patient.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2543,53 +2578,55 @@ export default function DoctorPatients() {
                   </div>
 
                   <div className="grid lg:grid-cols-[minmax(260px,36%)_1fr]">
-                    <aside className="space-y-4 border-b border-gray-300 bg-gray-50/70 px-5 py-5 lg:border-b-0 lg:border-r">
-                      <PrescriptionTextarea
-                        label="Chief Complaint"
-                        rows={3}
-                        value={prescriptionDraft.chiefComplaint}
-                        onChange={(value) =>
-                          updatePrescriptionDraft("chiefComplaint", value)
-                        }
-                        placeholder="Write presenting complaints"
-                      />
-                      <PrescriptionTextarea
-                        label="On Examination"
-                        rows={4}
-                        value={prescriptionDraft.examination}
-                        onChange={(value) =>
-                          updatePrescriptionDraft("examination", value)
-                        }
-                        placeholder="BP, pulse, weight, BMI, physical findings"
-                      />
-                      <PrescriptionTextarea
-                        label="Diagnosis"
-                        rows={4}
-                        value={prescriptionDraft.diagnosis}
-                        onChange={(value) =>
-                          updatePrescriptionDraft("diagnosis", value)
-                        }
-                        placeholder="Write diagnosis"
-                      />
-                      <PrescriptionTextarea
-                        label="Allergies"
-                        rows={3}
-                        tone="warning"
-                        value={prescriptionDraft.allergies}
-                        onChange={(value) =>
-                          updatePrescriptionDraft("allergies", value)
-                        }
-                      />
-                      <PrescriptionTextarea
-                        label="Current Medicine Still Taken"
-                        rows={4}
-                        value={prescriptionDraft.currentMedications}
-                        onChange={(value) =>
-                          updatePrescriptionDraft("currentMedications", value)
-                        }
-                        readOnly={true}
-                      />
-                    </aside>
+                    <aside className="w-full space-y-5 border-gray-100 bg-slate-50/40 px-6 py-6 lg:w-80 lg:shrink-0 lg:border-r">
+  
+  {/* Section Header to anchor the sidebar */}
+  <div className="mb-2">
+    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      Clinical Notes
+    </h3>
+  </div>
+
+  <PrescriptionTextarea
+    label="Chief Complaint"
+    rows={3}
+    value={prescriptionDraft.chiefComplaint}
+    onChange={(value) => updatePrescriptionDraft("chiefComplaint", value)}
+    placeholder="e.g., Fever for 3 days, acute lower back pain"
+  />
+
+  <PrescriptionTextarea
+    label="On Examination"
+    rows={4}
+    value={prescriptionDraft.examination}
+    onChange={(value) => updatePrescriptionDraft("examination", value)}
+    placeholder="BP: 120/80, HR: 72, Temp: 98.6°F"
+  />
+
+  {/* Allergies: Kept warning tone but using a softer visual separator */}
+  <div className="pt-2">
+    <PrescriptionTextarea
+      label="Allergies"
+      rows={2}
+      tone="warning"
+      value={prescriptionDraft.allergies}
+      onChange={(value) => updatePrescriptionDraft("allergies", value)}
+      placeholder="No known drug allergies"
+    />
+  </div>
+
+  {/* Current Medicine: Cleaned up the read-only appearance */}
+  <div className="border-t border-slate-100 pt-5">
+    <PrescriptionTextarea
+      label="Current Medications"
+      rows={3}
+      value={prescriptionDraft.currentMedications}
+      onChange={(value) => updatePrescriptionDraft("currentMedications", value)}
+      readOnly={true}
+      placeholder="No active chronic medications"
+    />
+  </div>
+</aside>
 
                     <section className="min-h-[720px] px-5 py-5">
                       <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-3">

@@ -9,5 +9,6 @@ const symptomController  = new SymptomController();
 const authenticateToken  = new AuthenticateToken();
 
 symptomRouter.post('/check', authenticateToken.authenticateToken, symptomController.check);
+symptomRouter.post('/share', authenticateToken.authenticateToken, symptomController.shareSymptoms);
 
 module.exports = { symptomRouter };

@@ -249,7 +249,7 @@ const EXECUTORS = {
                     'created_at',     ss.created_at
                 ) ORDER BY ss.created_at DESC), '[]'::json)
                  FROM shared_symptoms ss
-                 WHERE ss.patient_id = p.patient_id
+                 WHERE ss.patient_id = p.patient_id and ss.created_at >= NOW() - INTERVAL '3 days'
                 ) AS shared_symptoms
             FROM patient p
             JOIN users u ON u.id = p.user_id

@@ -1344,7 +1344,7 @@ class DoctorModel {
         SELECT ss.*, d.name AS doctor_name
         FROM shared_symptoms ss
         JOIN doctor d ON ss.doctor_id = d.doctor_id
-        WHERE ss.patient_id = $1
+        WHERE ss.patient_id = $1 and ss.created_at >= NOW() - INTERVAL '3 days'
         ORDER BY ss.created_at DESC;
       `;
       const result = await this.db_connection.query_executor(query, [patientId]);

@@ -1,4 +1,5 @@
 const sharp                        = require('sharp');
+const { OpenAI }                   = require('openai');
 const { matchAllTokens }           = require('../utils/drugMatcher.js');
 const { uploadPrescriptionBuffer } = require('../utils/cloudinary.js');
 const DB_Connection                = require('../database/db.js');
@@ -17,6 +18,65 @@ async function toJpeg(buffer) {
 const PRESCRIPTO_URL     = 'https://www.prescriptoai.com/api/v1/prescription/extract';
 const PRESCRIPTO_API_KEY = process.env.PRESCRIPTO_API_KEY;
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL;
+
+const _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const DOSAGE_MODEL = process.env.OPENAI_DOSAGE_MODEL || 'gpt-4.1';
+
+const DOSAGE_SYSTEM = `You are a prescription dosage extraction assistant. You will receive a prescription image and a list of confirmed drug names. For each drug, extract exactly what is written next to it in the prescription: dosage strength, frequency notation, duration, and meal instruction. Return ONLY a valid JSON array — no markdown, no prose.`;
+
+function buildDosagePrompt(drugNames) {
+    const names = drugNames.map(n => `- ${n}`).join('\n');
+    return `The following medications are confirmed in this prescription image:
+${names}
+
+Bangladeshi prescription format guide:
+- Frequency: written as morning+afternoon+night e.g. 1+0+1, 1+1+1, 0+0+1, ½+0+½
+- Meal: PC = after meal, AC = before meal, HS = bedtime, SOS = as needed
+- Duration: ×7 days, 10 days, 1 month, 2 সপ্তাহ
+
+Example — image shows "Tab. Metformin 500mg  1+0+1  ×30 days  PC":
+[{"name":"Metformin","dosage":"500mg","frequency":"1+0+1","duration":"30 days","instructions":"after meal"}]
+
+Now extract from the actual image. Return ONLY a JSON array:
+[
+  {
+    "name": "medication name exactly as listed above",
+    "dosage": "strength e.g. 500mg or null",
+    "frequency": "e.g. 1+0+1 or null",
+    "duration": "e.g. 7 days or null",
+    "instructions": "e.g. after meal or null"
+  }
+]`;
+}
+
+async function callOpenAIDosages(fileBuffer, mimetype, drugNames) {
+    if (!process.env.OPENAI_API_KEY || !drugNames.length) return [];
+    try {
+        const dataUrl = `data:${mimetype};base64,${fileBuffer.toString('base64')}`;
+        const response = await _openai.chat.completions.create({
+            model: DOSAGE_MODEL,
+            max_tokens: 1024,
+            messages: [
+                { role: 'system', content: DOSAGE_SYSTEM },
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+                        { type: 'text', text: buildDosagePrompt(drugNames) },
+                    ],
+                },
+            ],
+        });
+
+        const raw = (response.choices[0]?.message?.content || '').replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return [];
+    } catch (err) {
+        console.warn('[Prescription] GPT-4.1 dosage extraction failed:', err.message);
+        return null; // null = signal fallback to MedGemma
+    }
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -231,20 +291,31 @@ class PrescriptionController {
                 // });
             }
 
-            // 3. Fuzzy match + MedGemma dosages in parallel
-            console.log(`[Prescription] Fuzzy match + MedGemma dosage extraction (parallel)...`);
+            // 3. Fuzzy match + GPT-4.1 dosages in parallel (MedGemma as fallback)
+            console.log(`[Prescription] Fuzzy match + GPT-4.1 dosage extraction (parallel)...`);
             const t1 = Date.now();
 
-            const [candidates, medGemmaDosages] = await Promise.all([
+            const [candidates, gptDosages] = await Promise.all([
                 matchAllTokens(tokens),
-                callMedGemmaDosages(req.file.buffer, req.file.mimetype, req.file.originalname, tokens),
+                callOpenAIDosages(apiBuffer, apiMimetype, tokens),
             ]);
 
-            console.log(`[Prescription] Parallel calls done in ${((Date.now() - t1) / 1000).toFixed(1)}s`);
+            let dosageResults = gptDosages;
+            let dosageSource = 'gpt-4.1';
 
-            // Index MedGemma results by lowercased name
+            if (dosageResults === null) {
+                // GPT-4.1 failed — try MedGemma
+                console.log('[Prescription] GPT-4.1 dosages failed, falling back to MedGemma...');
+                dosageResults = await callMedGemmaDosages(req.file.buffer, req.file.mimetype, req.file.originalname, tokens);
+                dosageSource = 'medgemma';
+            }
+
+            dosageResults = dosageResults || [];
+            console.log(`[Prescription] Dosages from ${dosageSource} (${dosageResults.length}), parallel done in ${((Date.now() - t1) / 1000).toFixed(1)}s`);
+
+            // Index dosage results by lowercased name
             const dosageMap = {};
-            for (const d of medGemmaDosages) {
+            for (const d of dosageResults) {
                 if (d.name) dosageMap[d.name.toLowerCase()] = d;
             }
 
@@ -270,7 +341,7 @@ class PrescriptionController {
             });
 
             const needs_review = drugs.filter(d => d.confidence === 'low');
-            const models_used  = ['prescriptoai', ...(medGemmaDosages.length ? ['medgemma'] : [])];
+            const models_used  = ['prescriptoai', ...(dosageResults.length ? [dosageSource] : [])];
 
             // Average confidence score (0-100)
             const confMap = { high: 100, medium: 70, low: 30 };

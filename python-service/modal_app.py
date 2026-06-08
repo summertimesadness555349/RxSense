@@ -21,6 +21,7 @@ image = (
         "torchvision>=0.17.0",
         "transformers>=4.45.0",
         "accelerate>=0.30.0",
+        "bitsandbytes>=0.43.0",
         "huggingface_hub>=0.22.0",
         "easyocr>=1.7.0",
         "opencv-python-headless>=4.8.0",
@@ -68,12 +69,13 @@ def download_models():
 
 @app.function(
     image=image,
-    gpu="T4",
+    gpu="L4",
     secrets=[
         modal.Secret.from_name("huggingface-secret"),
     ],
     volumes={CACHE_DIR: model_volume},
-    scaledown_window=300,
+    scaledown_window=600,
+    min_containers=1,
 )
 @modal.asgi_app()
 def serve():
@@ -82,7 +84,7 @@ def serve():
     import tempfile
     from fastapi import FastAPI, Form, HTTPException, UploadFile
     from fastapi.middleware.cors import CORSMiddleware
-    from extract import extract, extract_dosages, load_vlm
+    from extract import extract, extract_dosages, extract_report, load_vlm
 
     os.environ["HF_HOME"] = f"{CACHE_DIR}/huggingface"
     os.environ["EASYOCR_MODULE_PATH"] = f"{CACHE_DIR}/easyocr"
@@ -135,6 +137,35 @@ def serve():
 
         try:
             return await extract(tmp_path, processor, vlm_model)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+        finally:
+            os.unlink(tmp_path)
+
+    @web_app.post("/extract-report")
+    async def extract_report_endpoint(file: UploadFile, report_type: str = Form(default="")):
+        content_type = (file.content_type or "").lower()
+        if content_type not in ALLOWED_MIME:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported type '{content_type}'. Send JPEG, PNG, or WEBP.",
+            )
+
+        if processor is None or vlm_model is None:
+            raise HTTPException(status_code=503, detail="MedGemma model not loaded")
+
+        ext = (
+            "." + file.filename.rsplit(".", 1)[-1]
+            if file.filename and "." in file.filename
+            else ".jpg"
+        )
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+            tmp.write(await file.read())
+            tmp_path = tmp.name
+
+        try:
+            result = await extract_report(tmp_path, report_type, processor, vlm_model)
+            return {"success": True, "data": result}
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
         finally:

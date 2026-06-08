@@ -525,50 +525,48 @@ export const checkDrugInteractions = async (drugList) => {
 
     // Map backend shape to frontend expected shape
     const canonical = data.canonical || [];
-
-    const matrix = data.matrix || [];
-    const summary = data.summary || { safe: 0, warning: 0, danger: 0 };
-
-    const inputs = payload.drugs.map(d => d.name);
-    const names = canonical.length ? canonical : inputs;
+    const matrix    = data.matrix    || [];
+    const summary   = data.summary   || { safe: 0, warning: 0, danger: 0 };
+    const inputs    = payload.drugs.map(d => d.name);
+    const names     = canonical.length ? canonical : inputs;
 
     const drugs = names.map((n, idx) => ({
-      id: `d${idx+1}`,
-      name: n,
+      id:        `d${idx + 1}`,
+      name:      n,
       inputName: inputs[idx] || n,
-      dosage: drugList[idx]?.dosage || '',
+      dosage:    drugList[idx]?.dosage || '',
     }));
 
     const interactions = (data.interactions || []).map((it) => {
-
-      const aInput = (drugs.find(d => d.name.toLowerCase() === it.drugA.toLowerCase()) || {}).inputName || it.drugA;
-      const bInput = (drugs.find(d => d.name.toLowerCase() === it.drugB.toLowerCase()) || {}).inputName || it.drugB;
+      const aInput = (drugs.find(d => d.name.toLowerCase() === (it.drugA || '').toLowerCase()) || {}).inputName || it.drugA;
+      const bInput = (drugs.find(d => d.name.toLowerCase() === (it.drugB || '').toLowerCase()) || {}).inputName || it.drugB;
       return {
-        id: it.id || `${it.drugA}_${it.drugB}`,
-        drug1: it.drugA,
-        drug2: it.drugB,
-
-        drug1_input: aInput,
-        drug2_input: bInput,
-        severity: it.category || (it.severity || 'warning'),
-        title: `${it.drugA} (${aInput}) + ${it.drugB} (${bInput})`,
-        description: it.description || '',
-        recommendation: null,
-
+        id:              it.id || `${it.drugA}_${it.drugB}`,
+        drug1:           it.drugA,
+        drug2:           it.drugB,
+        drug1_input:     aInput,
+        drug2_input:     bInput,
+        severity:        it.category || it.severity || 'warning',
+        title:           `${it.drugA} + ${it.drugB}`,
+        description:     it.description || '',
+        mechanism:       it.mechanism   || null,
+        clinical_action: it.clinical_action || null,
+        source:          it.source || null,
       };
     });
 
     return {
       drugs,
       interactions,
-
       matrix,
       summary,
-      dataSource: data.dataSource || 'Local drug interactions database',
+      clinical_summary: data.clinical_summary || null,
+      overall_risk:     data.overall_risk     || 'safe',
+      unrecognized:     data.unrecognized     || [],
+      dataSource:       data.dataSource       || 'AI — RxNorm · Medscape · Web search',
     };
   } catch (err) {
-    // Fallback to mock data on error
-    await delay(500);
+    console.error('Drug interaction check failed:', err);
     return null;
   }
 };

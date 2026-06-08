@@ -29,11 +29,8 @@ async function fetchPhone(placeId, key) {
     }
 }
 
-const CLAUDE_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-
-function claudeKey() {
-    return process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-}
+const { OpenAI } = require('openai');
+const _placesOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 class PlacesController {
 
@@ -54,14 +51,15 @@ Rules:
 - For emergency symptoms (chest pain, stroke, breathing difficulty) → {"specialty":"emergency medicine","keyword":"emergency hospital"}
 - If unclear or general → {"specialty":null,"keyword":""}`;
 
-            const r = await fetch(CLAUDE_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey(), 'anthropic-version': '2023-06-01' },
-                body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 80, messages: [{ role: 'user', content: prompt }] }),
+            const r   = await _placesOpenAI.chat.completions.create({
+                model:           'gpt-4o-mini',
+                max_tokens:      80,
+                temperature:     0.0,
+                response_format: { type: 'json_object' },
+                messages:        [{ role: 'user', content: prompt }],
             });
-            const data = await r.json();
-            const raw  = (data.content || []).find(b => b.type === 'text')?.text || '{}';
-            const m    = raw.match(/\{[^}]+\}/);
+            const raw    = r.choices[0]?.message?.content || '{}';
+            const m      = raw.match(/\{[^}]+\}/);
             const result = m ? JSON.parse(m[0]) : { specialty: null, keyword: '' };
 
             return res.json({ success: true, specialty: result.specialty || null, keyword: result.keyword || '' });

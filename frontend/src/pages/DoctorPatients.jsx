@@ -1350,11 +1350,11 @@ export default function DoctorPatients() {
                       label: "Shared Symptoms",
                       count: chartData.chart?.sharedSymptoms?.length,
                     },
-                    {
-                      id: "conditions",
-                      label: "Conditions",
-                      count: chartData.chart?.conditions?.length,
-                    },
+                    // {
+                    //   id: "conditions",
+                    //   label: "Conditions",
+                    //   count: chartData.chart?.conditions?.length,
+                    // },
                     {
                       id: "allergies",
                       label: "Allergies",

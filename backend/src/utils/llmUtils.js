@@ -98,7 +98,7 @@ Return raw JSON only. No markdown formatting, no code fences.`;
      */
     checkPrescriptionSafety = async (patientId, allergies, currentMedications, proposedMedications, surgeries = [], vaccinations = []) => {
         // Compress patient context with dosages/frequencies included for accurate clinical checks
-        const allergyStr = allergies.map(a => `${a.generic_name || a.brand_name || a.drug_class} (severity: ${a.severity || 'moderate'})`).join('; ') || 'None';
+        const allergyStr = allergies.map(a => `${a.name || a.generic_name || a.brand_name || a.drug_class || 'Unknown'} (severity: ${a.severity || 'moderate'})`).join('; ') || 'None';
         const medName = (m) => m.generic_name || m.generic || m.brand_name || m.name || m.extracted_name || 'Unknown medication';
         const isActiveMedication = (m) => String(m?.status || 'active').toLowerCase() === 'active';
         const activeCurrentMedications = (currentMedications || []).filter(isActiveMedication);
@@ -359,21 +359,45 @@ Respond in strict JSON only:
                 const aBrand = allergy.brand_name ? allergy.brand_name.toLowerCase() : '';
                 const aClass = allergy.drug_class ? allergy.drug_class.toLowerCase() : '';
 
+                const getLevenshteinDistance = (s1, s2) => {
+                    if (!s1 || !s2) return Infinity;
+                    const len1 = s1.length, len2 = s2.length;
+                    const d = Array.from({ length: len1 + 1 }, () => new Array(len2 + 1).fill(0));
+                    for (let i = 0; i <= len1; i++) d[i][0] = i;
+                    for (let j = 0; j <= len2; j++) d[0][j] = j;
+                    for (let i = 1; i <= len1; i++) {
+                        for (let j = 1; j <= len2; j++) {
+                            const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+                            d[i][j] = Math.min(
+                                d[i - 1][j] + 1,
+                                d[i][j - 1] + 1,
+                                d[i - 1][j - 1] + cost
+                            );
+                        }
+                    }
+                    return d[len1][len2];
+                };
+
                 let match = false;
                 let reason = '';
 
+                const allergyDisplayName = allergy.name || allergy.generic_name || allergy.brand_name || allergy.drug_class || 'Unknown';
+
                 if (pGeneric && pGeneric === aGeneric) {
                     match = true;
-                    reason = `matches the patient's allergy to ${allergy.generic_name}`;
+                    reason = `matches the patient's allergy to ${allergyDisplayName}`;
                 } else if (pBrand && pBrand === aBrand) {
                     match = true;
-                    reason = `matches the patient's allergy to ${allergy.brand_name}`;
+                    reason = `matches the patient's allergy to ${allergyDisplayName}`;
                 } else if (pClass && pClass === aClass) {
                     match = true;
                     reason = `belongs to the same class (${allergy.drug_class}) as the patient's allergy`;
                 } else if (pGeneric.includes(aGeneric) || aGeneric.includes(pGeneric)) {
                     match = true;
-                    reason = `is closely related to the patient's allergy to ${allergy.generic_name}`;
+                    reason = `is closely related to the patient's allergy to ${allergyDisplayName}`;
+                } else if (pGeneric.length > 3 && aGeneric.length > 3 && getLevenshteinDistance(pGeneric, aGeneric) <= 2) {
+                    match = true;
+                    reason = `is very similar to the patient's allergy to ${allergyDisplayName}`;
                 }
 
                 if (match) {
@@ -381,7 +405,7 @@ Respond in strict JSON only:
                         type: 'allergy_conflict',
                         severity: allergy.severity || 'severe',
                         drugs_involved: [proposedName],
-                        description: `Safety Alert: Patient is allergic to ${allergy.generic_name || allergy.drug_class} (Reaction: ${allergy.reaction_type || 'unspecified'}). Proposed drug ${proposedName} ${reason}.`,
+                        description: `Safety Alert: Patient is allergic to ${allergyDisplayName} (Reaction: ${allergy.reaction_type || 'unspecified'}). Proposed drug ${proposedName} ${reason}.`,
                         recommendation: `Discontinue proposed ${proposedName} and prescribe a medication from a different drug class.`
                     });
                 }

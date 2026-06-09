@@ -1,7 +1,7 @@
 'use strict';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_DURATION_DAYS = 15;
+const DEFAULT_DURATION_DAYS = 7; 
 const MAX_DURATION_DAYS = 180;
 const MISSING_RX_DATE_FALLBACK_DAYS = 90;
 
@@ -55,6 +55,13 @@ function parsePrescriptionDate(rxDate) {
     const raw = String(rxDate || '').trim();
     if (!raw) return null;
 
+    // Handle standard YYYY-MM-DD variations explicitly as UTC to prevent local timezone shifts
+    const ymd = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+    if (ymd) {
+        const parsed = new Date(Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])));
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+
     const isoParsed = new Date(raw);
     if (!Number.isNaN(isoParsed.getTime())) return isoParsed;
 
@@ -92,7 +99,20 @@ function medicationDedupeKey(med) {
 }
 
 function normalizeScanMedication(scan, med, index, now = new Date()) {
-    const originalRxDate = isBlank(scan.rx_date) ? null : scan.rx_date;
+    const rxDateWasMissing = isBlank(scan.rx_date);
+    
+    // FIX: Safely handles scan.created_at whether it's a string or a Date object
+    let fallbackDate = null;
+    if (scan.created_at) {
+        if (scan.created_at instanceof Date) {
+            fallbackDate = scan.created_at.toISOString().split('T')[0];
+        } else {
+            fallbackDate = String(scan.created_at).split(' ')[0];
+        }
+    }
+    
+    const originalRxDate = rxDateWasMissing ? fallbackDate : scan.rx_date;
+    
     const issuedAt = parsePrescriptionDate(originalRxDate) || fallbackPrescriptionDate(now);
     const issuedDay = issuedAt ? startOfUtcDay(issuedAt) : null;
     const durationDays = parseDurationDays(med.duration);
@@ -135,7 +155,7 @@ function normalizeScanMedication(scan, med, index, now = new Date()) {
         diseases: Array.isArray(scan.diseases) ? scan.diseases : [],
         rx_date: originalRxDate,
         effective_rx_date: issuedDay ? issuedDay.toISOString().slice(0, 10) : null,
-        rx_date_was_missing: !originalRxDate,
+        rx_date_was_missing: rxDateWasMissing,
         created_at: scan.created_at,
     };
 }

@@ -161,8 +161,8 @@ export default function Dashboard() {
     const cached = readCache(DASH_KEY);
     const rxHistory  = getPrescriptionHistoryLocal();
     const rptHistory = getReportHistoryLocal();
-    let freshRx    = rxHistory[0]  ?? null;
-    let freshRpt   = rptHistory[0] ?? null;
+    let freshRx    = rxHistory.find(rx => rx.patient_id != null) ?? rxHistory[0] ?? null;
+    let freshRpt   = rptHistory.find(rpt => rpt.patient_id != null) ?? rptHistory[0] ?? null;
 
     const stale = !cached
       || freshRx?.savedAt  !== cached.latestRxSavedAt
@@ -182,8 +182,8 @@ export default function Dashboard() {
         const { profile: p, metrics: raw } = await getHealthSummary();
         const rxHistoryNew  = await getPrescriptionHistory();
         const rptHistoryNew = await getReportHistory();
-        freshRx = rxHistoryNew[0] ?? null;
-        freshRpt = rptHistoryNew[0] ?? null;
+        freshRx = rxHistoryNew.find(rx => rx.patient_id != null) ?? rxHistoryNew[0] ?? null;
+        freshRpt = rptHistoryNew.find(rpt => rpt.patient_id != null) ?? rptHistoryNew[0] ?? null;
         const comp = computeCompleteness(p, raw);
         setProfile(p);
         setCompleteness(comp);

@@ -84,9 +84,9 @@ function savePrescriptionToLocal(data) {
 
     const medications = drugs.map((d, i) => ({
       id: i + 1,
-      name:         d.matched_brand || d.extracted_name,
+      name:         d.matched_brand || d.extracted_name || d.name || null,
       generic:      d.generic      || null,
-      dosage:       d.dosage_from_prescription || d.strength || null,
+      dosage:       d.dosage_from_prescription || d.strength || d.dosage || null,
       frequency:    d.frequency    || null,
       duration:     d.duration     || null,
       instructions: d.instructions || null,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, Clock, Upload, ShieldAlert } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Upload, ShieldAlert, Pencil, Check, X } from 'lucide-react';
 import FileDropzone from '../components/ui/FileDropzone.jsx';
 import ReportChatbot from '../components/report/ReportChatbot.jsx';
 import PredictionCard from '../components/predictions/PredictionCard.jsx';
@@ -17,6 +17,7 @@ import {
   removeReportScan,
   deleteReportScan,
   getPredictions,
+  updateReport,
 } from '../services/api.js';
 
 const REPORT_TYPES = [
@@ -182,9 +183,98 @@ function StatusBadge({ status, flag }) {
   );
 }
 
+const REPORT_STATUS_OPTIONS = ['normal', 'high', 'low', 'critical_high', 'critical_low', 'borderline'];
+
+const statusToFlag = (s) =>
+  s === 'low' ? 'L' : s === 'high' ? 'H' : s === 'normal' ? 'N' : s === 'borderline' ? 'N' : null;
+
 // ── Report result view ────────────────────────────────────────────────────────
-function ResultView({ report, onSave, onRemove, onDelete }) {
+function ResultView({ report, onSave, onRemove, onDelete, onEdit }) {
   const { t } = useLanguage();
+  const { addToast } = useToast();
+
+  const [editingPatient, setEditingPatient] = useState(false);
+  const [patientDraft,   setPatientDraft]   = useState({ ...(report.patient || {}) });
+  const [entryEdits,     setEntryEdits]     = useState({});
+  const [editingEntry,   setEditingEntry]   = useState(null); // { si, ei }
+  const [saving,         setSaving]         = useState(false);
+
+  const reportKey = report.id || report.savedAt || '';
+  useEffect(() => {
+    setPatientDraft({ ...(report.patient || {}) });
+    setEntryEdits({});
+    setEditingEntry(null);
+    setEditingPatient(false);
+  }, [reportKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const emit = (patch) => onEdit && onEdit({ ...report, ...patch });
+
+  const savePatient = async () => {
+    const merged = { ...(report.patient || {}), ...patientDraft };
+    if (report.id) {
+      setSaving(true);
+      try {
+        await updateReport(report.id, { patient: merged });
+      } catch {
+        addToast(t('saveEditError') || 'Failed to save — please try again', 'error');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+    emit({ patient: merged });
+    setEditingPatient(false);
+  };
+
+  const getEntry = (si, ei) => ({ ...report.sections[si].entries[ei], ...(entryEdits[si]?.[ei] || {}) });
+
+  const setEntryField = (si, ei, field, val) =>
+    setEntryEdits(prev => ({
+      ...prev,
+      [si]: { ...(prev[si] || {}), [ei]: { ...(prev[si]?.[ei] || {}), [field]: val } }
+    }));
+
+  const saveEntry = async (si, ei) => {
+    const edited = entryEdits[si]?.[ei];
+    if (!edited) { setEditingEntry(null); return; }
+
+    const e = getEntry(si, ei);
+    if (report.id) {
+      setSaving(true);
+      try {
+        await updateReport(report.id, {
+          metric_edits: [{
+            metric_id:      e.metric_id     || null,
+            section_title:  report.sections[si].title,
+            parameter_name: e.label,
+            value:  edited.value  ?? e.value,
+            status: edited.status ?? e.status,
+          }],
+        });
+      } catch {
+        addToast(t('saveEditError') || 'Failed to save — please try again', 'error');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+
+    const sections = report.sections.map((sec, s) =>
+      s !== si ? sec : {
+        ...sec,
+        entries: sec.entries.map((e2, ei2) => {
+          if (ei2 !== ei) return e2;
+          const merged = { ...e2, ...edited };
+          return { ...merged, flag: statusToFlag(merged.status) };
+        }),
+      }
+    );
+    emit({ sections });
+    setEditingEntry(null);
+  };
+
+  const isEditing = (si, ei) => editingEntry?.si === si && editingEntry?.ei === ei;
+
   return (
     <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800">
 
@@ -192,34 +282,46 @@ function ResultView({ report, onSave, onRemove, onDelete }) {
       <div className="grid grid-cols-2 py-4">
         <div className="pr-4 space-y-1">
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('reportInfo')}</p>
-          {report.type && (
-            <p className="font-semibold text-base text-gray-900 dark:text-white leading-tight">{report.type}</p>
-          )}
-          {report.facility && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{report.facility}</p>
-          )}
-          {report.ordering_doctor && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{report.ordering_doctor}</p>
-          )}
-          {report.date && (
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{report.date}</p>
-          )}
+          {report.type          && <p className="font-semibold text-base text-gray-900 dark:text-white leading-tight">{report.type}</p>}
+          {report.facility      && <p className="text-sm text-gray-500 dark:text-gray-400">{report.facility}</p>}
+          {report.ordering_doctor && <p className="text-sm text-gray-500 dark:text-gray-400">{report.ordering_doctor}</p>}
+          {report.date          && <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{report.date}</p>}
         </div>
 
         <div className="pl-4 border-l border-gray-200 dark:border-gray-700 space-y-1">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('patientLabel')}</p>
-          {report.patient?.name ? (
-            <>
-              <p className="font-semibold text-base text-gray-900 dark:text-white leading-tight">{report.patient.name}</p>
-              {report.patient.age && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('ageLabel')} {report.patient.age}</p>
-              )}
-              {report.patient.gender && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{report.patient.gender}</p>
-              )}
-            </>
+          <div className="flex items-center mb-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{t('patientLabel')}</p>
+            {!editingPatient ? (
+              <button onClick={() => setEditingPatient(true)} className="ml-1.5 p-1 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <div className="flex gap-1 ml-1.5">
+                <button onClick={savePatient} disabled={saving} className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"><Check className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setEditingPatient(false)} disabled={saving} className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
+          </div>
+          {editingPatient ? (
+            <div className="space-y-1.5">
+              {['name', 'age', 'gender'].map(f => (
+                <input key={f}
+                  value={patientDraft[f] || ''}
+                  onChange={e => setPatientDraft(d => ({ ...d, [f]: e.target.value }))}
+                  placeholder={f.charAt(0).toUpperCase() + f.slice(1)}
+                  className="w-full rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              ))}
+            </div>
           ) : (
-            <p className="text-base text-gray-400">{t('notSpecified')}</p>
+            <>
+              {report.patient?.name
+                ? <p className="font-semibold text-base text-gray-900 dark:text-white leading-tight">{report.patient.name}</p>
+                : <p className="text-base text-gray-400">{t('notSpecified')}</p>
+              }
+              {report.patient?.age    && <p className="text-sm text-gray-500 dark:text-gray-400">{t('ageLabel')} {report.patient.age}</p>}
+              {report.patient?.gender && <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{report.patient.gender}</p>}
+            </>
           )}
         </div>
       </div>
@@ -262,9 +364,8 @@ function ResultView({ report, onSave, onRemove, onDelete }) {
         </div>
       )}
 
-      {/* Sections */}
+      {/* Sections — with inline metric editing */}
       {(report.sections || []).map((section, si) => {
-        // const isTable = section.type === 'lab_results' || section.type === 'vitals';
         const hasEntries = section.entries?.length > 0;
         if (!hasEntries && !section.narrative) return null;
 
@@ -279,25 +380,60 @@ function ResultView({ report, onSave, onRemove, onDelete }) {
                 <table className="w-full text-sm min-w-[360px]">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left font-semibold text-gray-500 pb-2 pl-2 pr-3 w-[38%]">{t('colParameter')}</th>
+                      <th className="text-left font-semibold text-gray-500 pb-2 pl-2 pr-3 w-[35%]">{t('colParameter')}</th>
                       <th className="text-left font-semibold text-gray-500 pb-2 pr-3">{t('colValue')}</th>
                       <th className="text-left font-semibold text-gray-500 pb-2 pr-3">{t('colReference')}</th>
                       <th className="text-left font-semibold text-gray-500 pb-2">{t('colStatus')}</th>
+                      <th className="pb-2 w-8" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {section.entries.map((e, ei) => {
+                    {section.entries.map((_rawEntry, ei) => {
+                      const e = getEntry(si, ei);
+                      const editing = isEditing(si, ei);
                       const isAbnormal = e.status && e.status !== 'normal';
                       return (
                         <tr key={ei} className={isAbnormal ? 'bg-red-50/40 dark:bg-red-900/5' : ''}>
                           <td className="py-2.5 pl-2 pr-3 font-medium text-gray-800 dark:text-gray-200">{e.label}</td>
                           <td className="py-2.5 pr-3 font-bold text-gray-900 dark:text-white">
-                            {e.value ?? '—'}
-                            {e.unit && <span className="font-normal text-gray-400 ml-0.5">{e.unit}</span>}
+                            {editing ? (
+                              <input
+                                value={entryEdits[si]?.[ei]?.value ?? e.value ?? ''}
+                                onChange={ev => setEntryField(si, ei, 'value', ev.target.value)}
+                                className="w-20 rounded border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              />
+                            ) : (
+                              <>
+                                {e.value ?? '—'}
+                                {e.unit && <span className="font-normal text-gray-400 ml-0.5">{e.unit}</span>}
+                              </>
+                            )}
                           </td>
                           <td className="py-2.5 pr-3 text-gray-500 dark:text-gray-400">{e.reference_range || '—'}</td>
                           <td className="py-2.5">
-                            <StatusBadge status={e.status} flag={e.flag} />
+                            {editing ? (
+                              <select
+                                value={entryEdits[si]?.[ei]?.status ?? e.status ?? ''}
+                                onChange={ev => setEntryField(si, ei, 'status', ev.target.value)}
+                                className="rounded border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              >
+                                {REPORT_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            ) : (
+                              <StatusBadge status={e.status} flag={e.flag} />
+                            )}
+                          </td>
+                          <td className="py-2.5 text-right pr-1">
+                            {editing ? (
+                              <div className="flex gap-0.5 justify-end">
+                                <button onClick={() => saveEntry(si, ei)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"><Check className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setEditingEntry(null)} className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><X className="w-3.5 h-3.5" /></button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setEditingEntry({ si, ei })} className="p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -306,25 +442,6 @@ function ResultView({ report, onSave, onRemove, onDelete }) {
                 </table>
               </div>
             )}
-
-            {/* {!isTable && section.narrative && (
-              <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">{section.narrative}</p>
-            )}
-
-            {!isTable && !section.narrative && hasEntries && (
-              <div className="space-y-2">
-                {section.entries.map((e, ei) => (
-                  <div key={ei} className="flex items-start gap-2 text-sm flex-wrap">
-                    <span className="text-gray-500 dark:text-gray-400 font-medium">{e.label}:</span>
-                    <span className="text-gray-700 dark:text-gray-300">
-                      {e.value ?? ''}{e.unit ? ' ' + e.unit : ''}
-                      {e.reference_range && <span className="text-gray-400 ml-1">({e.reference_range})</span>}
-                    </span>
-                    <StatusBadge status={e.status} flag={e.flag} />
-                  </div>
-                ))}
-              </div>
-            )} */}
           </div>
         );
       })}
@@ -680,10 +797,12 @@ export default function Report() {
 
           {activeReport && !isProcessing && (
             <ResultView
+              key={activeReport.id || activeReport.savedAt}
               report={activeReport}
               onSave={() => handleSaveReport(activeReport)}
               onRemove={() => handleRemoveReport(activeReport)}
               onDelete={() => handleDeleteReport(activeReport)}
+              onEdit={(edited) => setActiveReport(edited)}
             />
           )}
 

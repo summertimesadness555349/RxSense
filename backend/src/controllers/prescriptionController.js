@@ -408,7 +408,8 @@ class PrescriptionController {
                 `SELECT scan_id, patient_id, image_url, doctor_name, doctor_specialty, doctor_qualification,
                         hospital_name, patient_name_rx, patient_json,
                         rx_date, diseases, tests, medications,
-                        notes, follow_up, confidence, models_used, created_at
+                        notes, follow_up, confidence, models_used,
+                        rx_status, rx_end_date, created_at
                  FROM prescription_scan
                  ${whereClause}
                  ORDER BY created_at ASC
@@ -466,6 +467,63 @@ class PrescriptionController {
             return res.status(200).json({ success: true, scan });
         } catch (error) {
             console.error('[Prescription] Remove scan error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
+    updatePrescriptionScan = async (req, res) => {
+        try {
+            const { scanId } = req.params;
+            if (!scanId) return res.status(400).json({ success: false, error: 'scanId required' });
+
+            const { patient, doctor, medications, rx_status, rx_end_date } = req.body || {};
+
+            const sets = [];
+            const params = [scanId];
+            let idx = 2;
+
+            if (patient !== undefined) {
+                sets.push(`patient_name_rx = $${idx++}`);
+                params.push(patient?.name || null);
+                sets.push(`patient_json = $${idx++}`);
+                params.push(patient ? JSON.stringify(patient) : null);
+            }
+            if (doctor?.name !== undefined) {
+                sets.push(`doctor_name = $${idx++}`);
+                params.push(doctor.name || null);
+            }
+            if (doctor?.specialization !== undefined) {
+                sets.push(`doctor_specialty = $${idx++}`);
+                params.push(doctor.specialization || null);
+            }
+            if (doctor?.qualification !== undefined) {
+                sets.push(`doctor_qualification = $${idx++}`);
+                params.push(doctor.qualification || null);
+            }
+            if (medications !== undefined) {
+                sets.push(`medications = $${idx++}`);
+                params.push(JSON.stringify(medications));
+            }
+            if (rx_status !== undefined) {
+                sets.push(`rx_status = $${idx++}`);
+                params.push(rx_status || 'ongoing');
+            }
+            if (rx_end_date !== undefined) {
+                sets.push(`rx_end_date = $${idx++}`);
+                params.push(rx_end_date || null);
+            }
+
+            if (!sets.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+
+            const result = await this.db.query_executor(
+                `UPDATE prescription_scan SET ${sets.join(', ')} WHERE scan_id = $1 RETURNING *`,
+                params
+            );
+
+            if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Scan not found' });
+            return res.status(200).json({ success: true, scan: result.rows[0] });
+        } catch (error) {
+            console.error('[Prescription] updatePrescriptionScan error:', error);
             return res.status(500).json({ success: false, error: error.message });
         }
     };

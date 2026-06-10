@@ -3,6 +3,7 @@
 const { runOpenAIAgent }                        = require('./openaiAgentRunner.js');
 const { SCHEMAS, buildExecutors, buildDoctorExecutors } = require('./tools.js');
 const DB_Connection               = require('../database/db.js');
+const { normalizeScanRows }       = require('../utils/prescriptionScanMedicationUtils.js');
 
 const INSIGHTS_TOOLS = SCHEMAS.filter(t =>
     ['get_patient_profile', 'get_report_history', 'rag_search'].includes(t.name)
@@ -129,48 +130,54 @@ async function generateDoctorSummary({ userId }) {
              FROM patient_allergy pa
              LEFT JOIN drug d ON d.drug_id = pa.drug_id
              WHERE pa.patient_id = p.patient_id
-            ) AS allergies,
-            (SELECT COALESCE(ps.medications, '[]'::jsonb)
-             FROM prescription_scan ps
-             WHERE ps.user_id = u.id
-             ORDER BY ps.created_at DESC
-             LIMIT 1
-            ) AS current_medications
+            ) AS allergies
         FROM users u
         LEFT JOIN patient p ON p.user_id = u.id
         WHERE u.id = $1
         LIMIT 1
     `, [userId]);
 
-    const reportsRes = await db.query_executor(`
-        SELECT
-            mr.report_type,
-            mr.report_date,
-            (SELECT json_agg(json_build_object(
-                'parameter', lm.parameter_name,
-                'value',     lm.value,
-                'unit',      lm.unit,
-                'status',    lm.status
-            ))
-             FROM report_metric lm
-             WHERE lm.report_id = mr.report_id
-               AND lm.status NOT IN ('normal')
-            ) AS abnormal_metrics
-        FROM medical_report mr
-        JOIN patient p ON p.patient_id = mr.patient_id
-        WHERE p.user_id = $1
-        ORDER BY mr.uploaded_at DESC
-        LIMIT 2
-    `, [userId]);
+    const [scanRes, reportsRes] = await Promise.all([
+        db.query_executor(`
+            SELECT scan_id, user_id, patient_id, doctor_name, doctor_specialty,
+                   hospital_name, patient_name_rx, rx_date, diseases, medications, created_at
+            FROM prescription_scan
+            WHERE user_id = $1
+              AND (rx_status IS NULL OR rx_status = 'ongoing')
+            ORDER BY created_at DESC
+        `, [userId]),
+        db.query_executor(`
+            SELECT
+                mr.report_type,
+                mr.report_date,
+                (SELECT json_agg(json_build_object(
+                    'parameter', lm.parameter_name,
+                    'value',     lm.value,
+                    'unit',      lm.unit,
+                    'status',    lm.status
+                ))
+                 FROM report_metric lm
+                 WHERE lm.report_id = mr.report_id
+                   AND lm.status NOT IN ('normal')
+                ) AS abnormal_metrics
+            FROM medical_report mr
+            JOIN patient p ON p.patient_id = mr.patient_id
+            WHERE p.user_id = $1
+            ORDER BY mr.uploaded_at DESC
+            LIMIT 2
+        `, [userId]),
+    ]);
 
     const p        = profileRes.rows[0] || {};
+    const activeMeds = normalizeScanRows(scanRes.rows || [], { activeOnly: true });
+    p.current_medications = activeMeds;
     const reports  = reportsRes.rows;
     const today    = new Date().toISOString().slice(0, 10);
 
     const conditions  = (p.active_conditions  || []);
     const allergies   = (p.allergies          || []);
     const medications = (p.current_medications || []).map(m =>
-        [m.name || m.drug, m.dosage, m.frequency].filter(Boolean).join(' ')
+        [m.brand_name || m.generic_name || m.name || m.drug, m.dosage, m.frequency].filter(Boolean).join(' ')
     );
     const criticalAllergies = allergies
         .filter(a => ['severe', 'life_threatening'].includes(a.severity))

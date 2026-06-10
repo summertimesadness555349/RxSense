@@ -710,6 +710,45 @@ await this.db_connection.query_executor(query1, [patientId]);
         return result.rows[0] || null;
     };
 
+    updateReportData = async (reportId, { patientJson, patientNameRep, metricEdits = [] }) => {
+        const db = this.db_connection;
+
+        if (patientJson !== undefined) {
+            await db.query_executor(
+                `UPDATE medical_report
+                 SET patient_json     = $2,
+                     patient_name_rep = $3
+                 WHERE report_id = $1`,
+                [reportId, patientJson ?? null, patientNameRep ?? null]
+            );
+        }
+
+        for (const edit of metricEdits) {
+            const statusVal = edit.status || null;
+            if (edit.metric_id) {
+                await db.query_executor(
+                    `UPDATE report_metric
+                     SET value  = COALESCE($2, value),
+                         status = COALESCE($3::metric_status, status)
+                     WHERE metric_id = $1`,
+                    [edit.metric_id, edit.value ?? null, statusVal]
+                );
+            } else if (edit.section_title && edit.parameter_name) {
+                await db.query_executor(
+                    `UPDATE report_metric
+                     SET value  = COALESCE($2, value),
+                         status = COALESCE($3::metric_status, status)
+                     WHERE report_id = $1
+                       AND LOWER(TRIM(section_title))  = LOWER(TRIM($4))
+                       AND LOWER(TRIM(parameter_name)) = LOWER(TRIM($5))`,
+                    [reportId, edit.value ?? null, statusVal, edit.section_title, edit.parameter_name]
+                );
+            }
+        }
+
+        return this.getReportWithMetricsById(reportId);
+    };
+
     getReportWithMetricsById = async (reportId) => {
         const query = `
             SELECT

@@ -2,6 +2,7 @@
 
 const DB_Connection = require('../database/db.js');
 const vectorStore   = require('../rag/vectorStore.js');
+const { normalizeScanRows } = require('../utils/prescriptionScanMedicationUtils.js');
 
 const db = DB_Connection.getInstance();
 
@@ -91,43 +92,59 @@ const EXECUTORS = {
     },
 
     get_patient_profile: async ({ user_id }) => {
-        const result = await db.query_executor(`
-            SELECT
-                u.full_name                         AS name,
-                p.date_of_birth,
-                p.gender,
-                p.blood_group,
-                p.height,
-                p.weight,
-                p.blood_pressure_systolic           AS bp_systolic,
-                p.blood_pressure_diastolic          AS bp_diastolic,
-                p.smoking_status,
-                EXTRACT(YEAR FROM AGE(p.date_of_birth))::int AS age,
-                (SELECT COALESCE(json_agg(kc.condition_name), '[]'::json)
-                 FROM known_condition kc
-                 WHERE kc.patient_id = p.patient_id AND kc.status = 'active'
-                ) AS active_conditions,
-                (SELECT COALESCE(json_agg(json_build_object(
-                    'allergen', COALESCE(d.generic_name, d.brand_name, 'Unknown'),
-                    'severity', pa.severity,
-                    'reaction', pa.reaction_type
-                )), '[]'::json)
-                 FROM patient_allergy pa
-                 LEFT JOIN drug d ON d.drug_id = pa.drug_id
-                 WHERE pa.patient_id = p.patient_id
-                ) AS allergies,
-                (SELECT COALESCE(ps.medications, '[]'::jsonb)
-                 FROM prescription_scan ps
-                 WHERE ps.user_id = u.id
-                 ORDER BY ps.created_at DESC
-                 LIMIT 1
-                ) AS current_medications
-            FROM users u
-            LEFT JOIN patient p ON p.user_id = u.id
-            WHERE u.id = $1
-            LIMIT 1
-        `, [user_id]);
-        return result.rows[0] || { error: 'Patient profile not found' };
+        const [profileResult, scanResult] = await Promise.all([
+            db.query_executor(`
+                SELECT
+                    u.full_name                         AS name,
+                    p.date_of_birth,
+                    p.gender,
+                    p.blood_group,
+                    p.height,
+                    p.weight,
+                    p.blood_pressure_systolic           AS bp_systolic,
+                    p.blood_pressure_diastolic          AS bp_diastolic,
+                    p.smoking_status,
+                    EXTRACT(YEAR FROM AGE(p.date_of_birth))::int AS age,
+                    (SELECT COALESCE(json_agg(kc.condition_name), '[]'::json)
+                     FROM known_condition kc
+                     WHERE kc.patient_id = p.patient_id AND kc.status = 'active'
+                    ) AS active_conditions,
+                    (SELECT COALESCE(json_agg(json_build_object(
+                        'allergen', COALESCE(d.generic_name, d.brand_name, 'Unknown'),
+                        'severity', pa.severity,
+                        'reaction', pa.reaction_type
+                    )), '[]'::json)
+                     FROM patient_allergy pa
+                     LEFT JOIN drug d ON d.drug_id = pa.drug_id
+                     WHERE pa.patient_id = p.patient_id
+                    ) AS allergies
+                FROM users u
+                LEFT JOIN patient p ON p.user_id = u.id
+                WHERE u.id = $1
+                LIMIT 1
+            `, [user_id]),
+            db.query_executor(`
+                SELECT scan_id, user_id, patient_id, doctor_name, doctor_specialty,
+                       hospital_name, patient_name_rx, rx_date, diseases, medications, created_at
+                FROM prescription_scan
+                WHERE user_id = $1
+                  AND (rx_status IS NULL OR rx_status = 'ongoing')
+                ORDER BY created_at DESC
+            `, [user_id]),
+        ]);
+
+        if (!profileResult.rows[0]) return { error: 'Patient profile not found' };
+
+        const row = profileResult.rows[0];
+        const activeMeds = normalizeScanRows(scanResult.rows || [], { activeOnly: true });
+        row.current_medications = activeMeds.map(m => ({
+            name:      m.brand_name,
+            generic:   m.generic_name,
+            dosage:    m.dosage,
+            frequency: m.frequency,
+            duration:  m.duration,
+        }));
+        return row;
     },
 
     get_report_history: async ({ user_id, limit = 3 }) => {

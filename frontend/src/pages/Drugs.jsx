@@ -8,7 +8,9 @@ import Card from '../components/ui/Card.jsx';
 import DisclaimerBanner from '../components/ui/DisclaimerBanner.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
-import { checkDrugInteractions, getPatientActiveMedications } from '../services/api.js';
+import { checkDrugInteractions, getPatientActiveMedications, checkNewMedInteractions } from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
+
 
 const defaultDrugs = [
   { id: 'dd1', name: 'Warfarin', dosage: '500mg' },
@@ -50,10 +52,13 @@ function InteractionMatrix({ matrix, drugs = [] }) {
 
 export default function Drugs() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const patientId = user?.patient_id || user?.uuid || user?.id;
   const [drugs, setDrugs] = useState(defaultDrugs.map((d) => ({ ...d })));
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
+
 
   // Patient-oriented states
   const [activeTab, setActiveTab] = useState('standard');
@@ -125,8 +130,8 @@ export default function Drugs() {
       addToast(t('enterOneMed'), 'error');
       return;
     }
-    if (ongoingMeds.length === 0) {
-      addToast('No ongoing medications found to check against.', 'error');
+    if (!patientId) {
+      addToast('User session is invalid. Please log in again.', 'error');
       return;
     }
 
@@ -134,22 +139,21 @@ export default function Drugs() {
     setPatientCheckResult(null);
 
     try {
-      const allDrugs = [
-        ...ongoingMeds.map(m => ({ name: m.name })),
-        { name: newMedName.trim() },
-      ];
-      const data = await checkDrugInteractions(allDrugs);
+      const data = await checkNewMedInteractions(patientId, newMedName.trim(), newMedDosage);
       if (!data) throw new Error('No response from interaction checker');
 
       // Filter to only pairs that involve the new medication
       const newName = newMedName.trim().toLowerCase();
       const relevant = (data.interactions || []).filter(it =>
         (it.drug1 || '').toLowerCase().includes(newName) ||
-        (it.drug2 || '').toLowerCase().includes(newName)
+        (it.drug2 || '').toLowerCase().includes(newName) ||
+        (it.drug1_input || '').toLowerCase().includes(newName) ||
+        (it.drug2_input || '').toLowerCase().includes(newName) ||
+        (it.title || '').toLowerCase().includes(newName)
       );
 
       setPatientCheckResult({
-        summary:          `Checked "${newMedName}" against ${ongoingMeds.length} active medication(s).`,
+        summary:          `Checked "${newMedName}" against your clinical profile and active medications.`,
         clinical_summary: data.clinical_summary,
         overall_risk:     data.overall_risk,
         findings:         relevant.map(it => ({
@@ -367,7 +371,7 @@ export default function Drugs() {
                     />
                     <span>{t('typeAllopathy')}</span>
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer font-medium select-none">
+                  {/* <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer font-medium select-none">
                     <input
                       type="radio"
                       name="newMedType"
@@ -377,7 +381,7 @@ export default function Drugs() {
                       className="w-4 h-4 text-emerald-500 border-gray-300 dark:border-gray-700 focus:ring-emerald-500"
                     />
                     <span>{t('typeHomeopathy')}</span>
-                  </label>
+                  </label> */}
                 </div>
               </div>
 

@@ -627,6 +627,56 @@ export const checkDrugInteractions = async (drugList) => {
   }
 };
 
+// POST /api/drugs/newmedinteractions/:patientId
+export const checkNewMedInteractions = async (patientId, newMedName, newMedDosage) => {
+  try {
+    const payload = {
+      drugs: [{ name: newMedName, dosage: newMedDosage }]
+    };
+    const data = await request(`/drugs/newmedinteractions/${patientId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const canonical = data.canonical || [];
+    const matrix    = data.matrix    || [];
+    const summary   = data.summary   || { safe: 0, warning: 0, danger: 0 };
+
+    const interactions = (data.interactions || []).map((it) => {
+      return {
+        id:              it.id || `${it.drugA}_${it.drugB}`,
+        drug1:           it.drugA,
+        drug2:           it.drugB,
+        drug1_input:     it.drugA,
+        drug2_input:     it.drugB,
+        severity:        it.category || it.severity || 'warning',
+        title:           it.drugA.includes('Allergy') || it.drugA.includes('Clinical')
+                         ? `${it.drugA}: ${it.drugB}`
+                         : `${it.drugA} + ${it.drugB}`,
+        description:     it.description || '',
+        mechanism:       it.mechanism   || null,
+        clinical_action: it.clinical_action || null,
+        source:          it.source || null,
+      };
+    });
+
+    return {
+      interactions,
+      matrix,
+      summary,
+      clinical_summary: data.clinical_summary || null,
+      overall_risk:     data.overall_risk     || 'safe',
+      unrecognized:     data.unrecognized     || [],
+      dataSource:       data.dataSource       || 'AI — RxNorm · Medscape · Web search · Health Profile',
+    };
+  } catch (err) {
+    console.error('New medication safety check failed:', err);
+    return null;
+  }
+};
+
+
 // GET /api/timeline/:userId
 export const getTimeline = async (userId, filters = {}) => {
   if (!userId) return [];

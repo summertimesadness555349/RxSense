@@ -31,14 +31,37 @@ export default function InteractionCheckModal({ isOpen, onClose, report }) {
       badge: 'amber'
     },
     danger: {
-      label: 'Danger',
-      icon: <ShieldAlert className="w-5 h-5" />,
-      className: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
-      badge: 'red'
+      label: 'Doctor Consultation Recommended',
+      icon: <AlertTriangle className="w-5 h-5" />,
+      className: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+      badge: 'amber'
     }
   };
 
   const currentStatus = statusConfig[overallStatus] || statusConfig.safe;
+
+  // Helper to soften terms and suggest contacting a doctor to prevent patient panic
+  const softenText = (text) => {
+    if (!text) return '';
+    let softened = text;
+    
+    // Transform safety check summaries if they start with default format
+    if (softened.startsWith('Safety check completed with:')) {
+      softened = softened
+        .replace(/^Safety check completed with:/i, 'Medication check complete. Doctor consultation is recommended for:')
+        .replace(/Please review conflicts\.$/i, 'Please consult with your doctor.');
+    }
+
+    softened = softened
+      .replace(/\bdangerous\b/gi, 'doctor-review recommended')
+      .replace(/\bdanger\b/gi, 'consultation recommended')
+      .replace(/\bcritical\b/gi, 'important')
+      .replace(/\bsevere\b/gi, 'significant')
+      .replace(/please review conflicts/gi, 'please consult with your doctor')
+      .replace(/please review the conflicts/gi, 'please consult with your doctor');
+
+    return softened;
+  };
 
   return (
     <AnimatePresence>
@@ -81,9 +104,11 @@ export default function InteractionCheckModal({ isOpen, onClose, report }) {
                   {currentStatus.icon}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold uppercase tracking-wider">{currentStatus.label} Profile</p>
+                  <p className="text-sm font-bold uppercase tracking-wider">
+                    {overallStatus === 'danger' ? 'Doctor Consultation Recommended' : `${currentStatus.label} Profile`}
+                  </p>
                   <p className="text-sm opacity-90 mt-0.5 leading-relaxed">
-                    {summary}
+                    {softenText(summary)}
                   </p>
                 </div>
               </div>
@@ -104,18 +129,18 @@ export default function InteractionCheckModal({ isOpen, onClose, report }) {
                             {finding.interaction}
                           </span>
                           <Badge variant={statusConfig[finding.severity]?.badge || 'gray'}>
-                            {statusConfig[finding.severity]?.label || finding.severity}
+                            {finding.severity === 'danger' ? 'Consult Doctor' : (statusConfig[finding.severity]?.label || finding.severity)}
                           </Badge>
                         </div>
 
                         <div className="space-y-2">
                           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                            {finding.description}
+                            {softenText(finding.description)}
                           </p>
                           {finding.recommendation && (
                             <div className="p-2.5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200/60 dark:border-gray-700/60">
                               <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                                <span className="font-bold mr-1">Recommendation:</span> {finding.recommendation}
+                                <span className="font-bold mr-1">Recommendation:</span> {softenText(finding.recommendation)}
                               </p>
                             </div>
                           )}

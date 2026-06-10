@@ -339,6 +339,27 @@ class PatientController {
         }
     };
 
+    updateReport = async (req, res) => {
+        try {
+            const { reportId } = req.params;
+            if (!reportId) return res.status(400).json({ success: false, error: 'reportId required' });
+
+            const { patient, metric_edits = [] } = req.body || {};
+
+            const report = await this.patientModel.updateReportData(reportId, {
+                patientJson:    patient ? patient : undefined,
+                patientNameRep: patient?.name || undefined,
+                metricEdits:    metric_edits,
+            });
+
+            if (!report) return res.status(404).json({ success: false, error: 'Report not found' });
+            return res.status(200).json({ success: true, report });
+        } catch (error) {
+            console.error('[PatientController] updateReport error:', error);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
     deleteReport = async (req, res) => {
         try {
             const { reportId } = req.params;
@@ -385,12 +406,22 @@ class PatientController {
             const patientId = identity.patientId || (UUID_RE.test(String(userId)) ? userId : null);
             if (!patientId) return res.status(404).json({ success: false, error: 'Patient not found' });
 
-            const [profile, metrics] = await Promise.all([
+            const [profile, metrics, activeMeds] = await Promise.all([
                 this.patientModel.getPatientProfile({ patientId }),
                 this.patientModel.getLatestReportMetrics(patientId),
+                this.patientModel.getActiveMedications(patientId),
             ]);
 
             if (!profile) return res.status(404).json({ success: false, error: 'Patient not found' });
+
+            profile.medications = (activeMeds || []).map(m => ({
+                name:      m.brand_name,
+                generic:   m.generic_name,
+                dosage:    m.dosage,
+                frequency: m.frequency,
+                duration:  m.duration,
+                status:    m.status,
+            }));
 
             return res.status(200).json({ success: true, profile, metrics });
         } catch (error) {

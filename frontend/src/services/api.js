@@ -159,6 +159,8 @@ function savePrescriptionToLocal(data) {
       medications: medications,
       notes:       data.notes,
       followUp:    data.followUp,
+      rx_status:   data.rx_status  || 'ongoing',
+      rx_end_date: data.rx_end_date || null,
     };
     const updated = [entry, ...existing].slice(0, MAX_LOCAL_HISTORY);
     localStorage.setItem(PRESCRIPTION_HISTORY_KEY, JSON.stringify(updated));
@@ -307,10 +309,11 @@ function metricsToSections(metrics = []) {
 
     // convert metric → entry format
     section.entries.push({
-      label: m.parameter_name,
-      value: m.value,
-      unit: m.unit,
-      status: m.status,
+      metric_id:       m.metric_id,
+      label:           m.parameter_name,
+      value:           m.value,
+      unit:            m.unit,
+      status:          m.status,
       reference_range: m.reference_range,
       flag: m.status === "low" ? "L" :
             m.status === "high" ? "H" :
@@ -474,6 +477,59 @@ export const deleteReportScan = async (reportId) => {
   deleteReportHistoryLocal(reportId);
 
   return data.report || null;
+};
+
+// PATCH /api/patient/reports/update/:reportId
+// patch = { patient?: {...}, metric_edits?: [{metric_id, value, status}] }
+export const updateReport = async (reportId, patch) => {
+  const data = await request(`/patient/reports/update/${reportId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  updateReportHistoryLocal(reportId, (entry) => {
+    let updated = { ...entry };
+    if (patch.patient) {
+      updated.patient = patch.patient;
+    }
+    if (patch.metric_edits?.length) {
+      const statusToFlag = (s) =>
+        s === 'low' ? 'L' : s === 'high' ? 'H' : s === 'normal' ? 'N' : s === 'borderline' ? 'N' : null;
+      updated.sections = (entry.sections || []).map(sec => ({
+        ...sec,
+        entries: (sec.entries || []).map(e => {
+          const edit = patch.metric_edits.find(m =>
+            (m.metric_id && m.metric_id === e.metric_id) ||
+            (!m.metric_id && m.section_title === sec.title && m.parameter_name === e.label)
+          );
+          if (!edit) return e;
+          const newStatus = edit.status ?? e.status;
+          return { ...e, value: edit.value ?? e.value, status: newStatus, flag: statusToFlag(newStatus) };
+        }),
+      }));
+    }
+    return updated;
+  });
+  return data;
+};
+
+// PATCH /api/prescription/update/:scanId
+// patch = { patient?: {...}, doctor?: {...}, medications?: [...] }
+export const updatePrescriptionScan = async (scanId, patch) => {
+  const data = await request(`/prescription/update/${scanId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  updatePrescriptionHistoryLocal(scanId, (entry) => ({
+    ...entry,
+    ...(patch.patient     !== undefined && { patient:     patch.patient }),
+    ...(patch.doctor      !== undefined && { doctor:      patch.doctor }),
+    ...(patch.medications !== undefined && { medications: patch.medications }),
+    ...(patch.rx_status   !== undefined && { rx_status:   patch.rx_status }),
+    ...(patch.rx_end_date !== undefined && { rx_end_date: patch.rx_end_date }),
+  }));
+  return data;
 };
 
 // POST /api/patient/reports/chat

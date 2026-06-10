@@ -91,6 +91,11 @@ patientRouter.post('/reports/chat',
     reportChatController.chat
 );
 
+patientRouter.patch('/reports/update/:reportId',
+    authenticateToken.authenticateToken,
+    patientController.updateReport
+);
+
 patientRouter.patch('/reports/save/:reportId',
     authenticateToken.authenticateToken,
     patientController.saveReport

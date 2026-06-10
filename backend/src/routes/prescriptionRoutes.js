@@ -90,6 +90,12 @@ prescriptionRouter.get(
  *         description: Prescription scan not found
  */
 prescriptionRouter.patch(
+    '/update/:scanId',
+    authenticateToken.authenticateToken,
+    prescriptionController.updatePrescriptionScan
+);
+
+prescriptionRouter.patch(
     '/save/:scanId',
     authenticateToken.authenticateToken,
     prescriptionController.savePrescriptionScan

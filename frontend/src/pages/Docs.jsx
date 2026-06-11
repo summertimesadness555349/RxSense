@@ -1,57 +1,138 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 const NAV_SECTIONS = [
-  { id: 'overview',      label: 'Overview' },
-  { id: 'problem',       label: 'Problem' },
-  { id: 'solution',      label: 'Solution' },
-  { id: 'features',      label: 'Features' },
-  { id: 'architecture',  label: 'Architecture' },
-  { id: 'dataflow',      label: 'Data Flow' },
-  { id: 'ai',            label: 'AI & Models' },
-  { id: 'rag',           label: 'RAG Pipeline' },
-  { id: 'stack',         label: 'Tech Stack' },
-  { id: 'api',           label: 'API Reference' },
-  { id: 'database',      label: 'Database' },
-  { id: 'security',      label: 'Security' },
-  { id: 'roadmap',       label: 'Roadmap' },
-  { id: 'team',          label: 'Team' },
+  { id: 'overview',     label: 'Overview' },
+  { id: 'problem',      label: 'Problem' },
+  { id: 'solution',     label: 'Solution' },
+  { id: 'features',     label: 'Features' },
+  { id: 'architecture', label: 'Architecture' },
+  { id: 'dataflow',     label: 'Data Flow' },
+  { id: 'ai',           label: 'AI & Models' },
+  { id: 'rag',          label: 'RAG Pipeline' },
+  { id: 'stack',        label: 'Tech Stack' },
+  { id: 'api',          label: 'API Reference' },
+  { id: 'database',     label: 'Database' },
+  { id: 'security',     label: 'Security' },
+  { id: 'roadmap',      label: 'Roadmap' },
+  { id: 'team',         label: 'Team' },
 ];
 
 const TEAM = [
   { name: 'Pritom Biswas',       role: 'Team Lead · Full-Stack & AI Engineer', phone: '+880 01753861838', avatar: 'PB' },
-  { name: 'Ananta Debnath',      role: 'Member · Full-Stack & AI Engineer',           phone: '+880 1728564128',  avatar: 'AD' },
-  { name: 'Shadman Sami Shanon', role: 'Member · Full-Stack & AI Engineer',          phone: '+880 1873346089',  avatar: 'SS' },
-  { name: 'Tafsir Al Nafin',     role: 'Member · Full-Stack & AI Engineer',          phone: '+880 1700645096',  avatar: 'TN' },
+  { name: 'Ananta Debnath',      role: 'Member · Full-Stack & AI Engineer',    phone: '+880 1728564128',  avatar: 'AD' },
+  { name: 'Shadman Sami Shanon', role: 'Member · Full-Stack & AI Engineer',    phone: '+880 1873346089',  avatar: 'SS' },
+  { name: 'Tafsir Al Nafin',     role: 'Member · Full-Stack & AI Engineer',    phone: '+880 1700645096',  avatar: 'TN' },
 ];
 
 const API_ENDPOINTS = [
-  { method: 'POST', path: '/auth/register',               desc: 'Register new patient account' },
-  { method: 'POST', path: '/auth/login',                  desc: 'Login with email and password' },
-  { method: 'POST', path: '/auth/google-login',           desc: 'Login via Google OAuth' },
-  { method: 'GET',  path: '/auth/verify-token',           desc: 'Verify JWT access token' },
-  { method: 'POST', path: '/auth/password/reset',         desc: 'Reset password via token' },
-  { method: 'GET',  path: '/patient/me',                  desc: 'Get current patient profile' },
-  { method: 'PUT',  path: '/patient/me',                  desc: 'Update patient profile' },
-  { method: 'GET',  path: '/patient/me/health-summary',   desc: 'AI-generated health summary' },
-  { method: 'POST', path: '/patient/reports/analyze',     desc: 'Upload & analyze lab report image' },
-  { method: 'POST', path: '/patient/reports/chat',        desc: 'Chat with AI about a report' },
-  { method: 'GET',  path: '/patient/timeline',            desc: 'Chronological health timeline' },
-  { method: 'POST', path: '/prescription/analyze',        desc: 'Analyze prescription image via OCR' },
-  { method: 'GET',  path: '/prescription/history',        desc: 'Prescription scan history' },
-  { method: 'POST', path: '/prescription/chat',           desc: 'Chat about a prescription' },
-  { method: 'POST', path: '/symptom/check',               desc: 'AI symptom assessment (Claude agent)' },
-  { method: 'POST', path: '/drugs/interactions',          desc: 'Check drug-drug interactions' },
-  { method: 'GET',  path: '/insights',                    desc: 'Health insights & risk score' },
-  { method: 'POST', path: '/insights/patient-summary',   desc: 'AI patient health narrative' },
-  { method: 'POST', path: '/insights/doctor-summary',    desc: 'AI clinical summary for doctor' },
-  { method: 'GET',  path: '/family/my-code',             desc: 'Get family share code' },
-  { method: 'POST', path: '/family/link',                desc: 'Link a family member' },
-  { method: 'GET',  path: '/family/members/:id/health',  desc: 'View family member health' },
-  { method: 'POST', path: '/doctor/register',            desc: 'Register doctor account' },
-  { method: 'GET',  path: '/doctor/patients',            desc: 'Get assigned patients' },
-  { method: 'POST', path: '/doctor/patients/:id/prescriptions', desc: 'Create prescription for patient' },
-  { method: 'POST', path: '/doctor/patients/:id/check-safety',  desc: 'Drug safety check before prescribing' },
-  { method: 'GET',  path: '/places/nearby',              desc: 'Find nearby hospitals & pharmacies' },
+  // ── Auth ──
+  { method: 'POST',   path: '/auth/register',                                        desc: 'Register new patient account' },
+  { method: 'POST',   path: '/auth/login',                                           desc: 'Login with email and password' },
+  { method: 'POST',   path: '/auth/google-login',                                    desc: 'Login via Google OAuth ID token' },
+  { method: 'GET',    path: '/auth/me',                                               desc: 'Get authenticated user profile' },
+  { method: 'POST',   path: '/auth/logout/:userId',                                   desc: 'Invalidate refresh token' },
+  { method: 'GET',    path: '/auth/verify-token',                                     desc: 'Check JWT token validity' },
+  { method: 'POST',   path: '/auth/send-verification-email',                          desc: 'Request email verification link' },
+  { method: 'GET',    path: '/auth/verify-email',                                     desc: 'Verify email via link token' },
+  { method: 'POST',   path: '/auth/password/request',                                 desc: 'Send password reset email' },
+  { method: 'POST',   path: '/auth/password/reset',                                   desc: 'Reset password with token' },
+  { method: 'POST',   path: '/auth/password/change',                                  desc: 'Change password (authenticated)' },
+  // ── Patient – Profile ──
+  { method: 'GET',    path: '/patient/me',                                             desc: 'Get current patient profile' },
+  { method: 'PUT',    path: '/patient/me',                                             desc: 'Update patient demographics & vitals' },
+  { method: 'GET',    path: '/patient/me/health-summary',                              desc: 'Profile + latest metrics + active medications (Dashboard)' },
+  { method: 'GET',    path: '/patient/me/active-medications',                          desc: 'Duration-filtered active medications only' },
+  { method: 'POST',   path: '/patient/me/medication-safety',                           desc: 'Check if a medication is safe for this patient' },
+  { method: 'GET',    path: '/patient/me/documents',                                   desc: 'All uploaded reports and prescription scans' },
+  // ── Patient – Appointments ──
+  { method: 'GET',    path: '/patient/doctors',                                        desc: 'List available doctors for booking' },
+  { method: 'GET',    path: '/patient/doctors/:doctorId/availability',                 desc: 'Get available time slots for a doctor on a date' },
+  { method: 'POST',   path: '/patient/appointments',                                   desc: 'Book appointment (serial-based, 10-min slot estimation)' },
+  { method: 'GET',    path: '/patient/appointments',                                   desc: 'Get patient\'s appointment history' },
+  { method: 'PATCH',  path: '/patient/appointments/:id/arrive',                        desc: 'Mark patient as arrived at clinic' },
+  { method: 'PATCH',  path: '/patient/appointments/:id/cancel',                        desc: 'Cancel appointment' },
+  // ── Patient – Reports ──
+  { method: 'POST',   path: '/patient/reports/analyze',                                desc: 'Upload & analyze lab report (Claude Sonnet 4.6 vision)' },
+  { method: 'GET',    path: '/patient/reports/history',                                desc: 'Get report history' },
+  { method: 'PATCH',  path: '/patient/reports/update/:reportId',                       desc: 'Inline-edit report patient info or metric values/statuses' },
+  { method: 'PATCH',  path: '/patient/reports/save/:reportId',                         desc: 'Save report to patient profile' },
+  { method: 'PATCH',  path: '/patient/reports/remove/:reportId',                       desc: 'Remove report from patient profile' },
+  { method: 'DELETE', path: '/patient/reports/delete/:reportId',                       desc: 'Permanently delete report' },
+  { method: 'POST',   path: '/patient/reports/chat',                                   desc: 'AI Q&A chat about a specific lab report' },
+  // ── Patient – Timeline ──
+  { method: 'GET',    path: '/patient/timeline',                                       desc: 'Chronological health timeline (reports, prescriptions, symptoms)' },
+  { method: 'POST',   path: '/patient/timeline',                                       desc: 'Manually add a timeline entry' },
+  // ── Prescription ──
+  { method: 'POST',   path: '/prescription/analyze',                                   desc: 'Upload image → MedGemma OCR + GPT-4.1 dosage extraction' },
+  { method: 'GET',    path: '/prescription/history',                                   desc: 'Scan history (includes rx_status, rx_end_date)' },
+  { method: 'PATCH',  path: '/prescription/update/:scanId',                            desc: 'Inline-edit prescription details, rx_status, medications' },
+  { method: 'PATCH',  path: '/prescription/save/:scanId',                              desc: 'Save scan to patient profile' },
+  { method: 'PATCH',  path: '/prescription/remove/:scanId',                            desc: 'Detach scan from patient profile' },
+  { method: 'DELETE', path: '/prescription/delete/:scanId',                            desc: 'Permanently delete prescription scan' },
+  { method: 'POST',   path: '/prescription/chat',                                      desc: 'AI chat about a prescription (DrugBank-grounded)' },
+  // ── Symptom ──
+  { method: 'POST',   path: '/symptom/check',                                          desc: 'Multi-turn AI symptom assessment — Bengali, emergency detection' },
+  { method: 'POST',   path: '/symptom/share',                                          desc: 'Share symptom session transcript with a doctor' },
+  // ── Drugs ──
+  { method: 'POST',   path: '/drugs/interactions',                                     desc: 'Check drug-drug interactions (open, no auth required)' },
+  { method: 'POST',   path: '/drugs/newmedinteractions/:patientId',                    desc: 'Check new medication against patient\'s current active meds' },
+  // ── Insights ──
+  { method: 'GET',    path: '/insights',                                               desc: 'AI health score, trend alerts, risk breakdown (24h DB cache)' },
+  { method: 'POST',   path: '/insights/patient-summary',                               desc: 'Warm Bangla health narrative for patient (active meds only)' },
+  { method: 'POST',   path: '/insights/doctor-summary',                                desc: 'Clinical summary card for sharing with doctor' },
+  // ── Predictive ──
+  { method: 'GET',    path: '/predictive',                                             desc: 'AI complication risk predictions with confidence scores' },
+  { method: 'GET',    path: '/predictive/trends/:metricName',                          desc: 'Trend series for a specific lab metric over time' },
+  { method: 'POST',   path: '/predictive/refresh',                                     desc: 'Force-regenerate predictions' },
+  { method: 'POST',   path: '/predictive/compute-trends',                              desc: 'Compute trend analysis across all tracked metrics' },
+  // ── Family ──
+  { method: 'GET',    path: '/family/my-code',                                         desc: 'Get personal family share code' },
+  { method: 'POST',   path: '/family/my-code/regenerate',                              desc: 'Regenerate family share code' },
+  { method: 'POST',   path: '/family/lookup',                                          desc: 'Preview a member by share code before linking' },
+  { method: 'POST',   path: '/family/link',                                            desc: 'Link a family member with relationship type' },
+  { method: 'GET',    path: '/family/members',                                         desc: 'List all linked family members' },
+  { method: 'GET',    path: '/family/members/:linkId/health',                          desc: 'Full health snapshot (vitals, conditions, allergies with severity)' },
+  { method: 'DELETE', path: '/family/link/:linkId',                                    desc: 'Remove a family link' },
+  // ── Doctor – Auth & Profile ──
+  { method: 'POST',   path: '/doctor/register',                                        desc: 'Register doctor account (separate credential store)' },
+  { method: 'POST',   path: '/doctor/login',                                           desc: 'Doctor login' },
+  { method: 'GET',    path: '/doctor/get-profile/:doctorId',                           desc: 'Get doctor profile & specialties' },
+  { method: 'PATCH',  path: '/doctor/update-profile/:doctorId',                        desc: 'Update doctor profile, specialties, qualifications' },
+  { method: 'POST',   path: '/doctor/change-password/:doctorId',                       desc: 'Change doctor account password' },
+  // ── Doctor – Hospitals & Availability ──
+  { method: 'GET',    path: '/doctor/hospitals-list',                                  desc: 'Get all registered hospitals' },
+  { method: 'POST',   path: '/doctor/hospitals/:doctorId',                             desc: 'Add hospital affiliation' },
+  { method: 'GET',    path: '/doctor/hospitals/:doctorId',                             desc: 'Get doctor\'s hospital affiliations' },
+  { method: 'PATCH',  path: '/doctor/limits',                                          desc: 'Update daily patient limit per hospital' },
+  { method: 'GET',    path: '/doctor/availability',                                    desc: 'Get availability time slots' },
+  { method: 'PATCH',  path: '/doctor/availability',                                    desc: 'Set weekly availability schedule' },
+  // ── Doctor – Appointments ──
+  { method: 'GET',    path: '/doctor/patients',                                        desc: 'List doctor\'s patients' },
+  { method: 'GET',    path: '/doctor/appointments',                                    desc: 'Get today\'s and upcoming appointments' },
+  { method: 'PATCH',  path: '/doctor/appointments/:id/late',                           desc: 'Mark appointment as late' },
+  { method: 'PATCH',  path: '/doctor/appointments/:id/arrived',                        desc: 'Mark patient has arrived' },
+  { method: 'PATCH',  path: '/doctor/appointments/:id/start',                          desc: 'Start the appointment (in_progress)' },
+  { method: 'PATCH',  path: '/doctor/appointments/:id/complete',                       desc: 'Complete appointment' },
+  // ── Doctor – Patient Management ──
+  { method: 'GET',    path: '/doctor/patients/:patientId',                             desc: 'Comprehensive patient chart (conditions, allergies, scans, reports, meds)' },
+  { method: 'POST',   path: '/doctor/patients/:patientId/ai-summary',                  desc: 'Generate AI-powered patient summary narrative' },
+  { method: 'POST',   path: '/doctor/patients/:patientId/check-safety',                desc: 'AI safety check for a proposed prescription' },
+  { method: 'POST',   path: '/doctor/patients/:patientId/prescriptions',               desc: 'Create formal prescription for patient' },
+  { method: 'PATCH',  path: '/doctor/patients/:patientId/prescription-items/:itemId',  desc: 'Modify a prescription line item' },
+  { method: 'POST',   path: '/doctor/patients/:patientId/allergies',                   desc: 'Add allergy record for patient' },
+  { method: 'POST',   path: '/doctor/patients/:patientId/vaccinations',                desc: 'Add vaccination record' },
+  { method: 'POST',   path: '/doctor/patients/:patientId/surgeries',                   desc: 'Add surgical history entry' },
+  { method: 'GET',    path: '/doctor/drugs/search',                                    desc: 'Search DrugBank drug database by name' },
+  { method: 'GET',    path: '/doctor/patients/:patientId/paused-medications',           desc: 'Get paused or stopped medications for patient' },
+  // ── Places ──
+  { method: 'GET',    path: '/places/nearby',                                          desc: 'Find nearby hospitals, clinics & doctor chambers (Google Places)' },
+  { method: 'GET',    path: '/places/geocode',                                         desc: 'Geocode address to lat/lng coordinates' },
+  { method: 'POST',   path: '/places/infer-specialty',                                 desc: 'AI: infer required medical specialty from condition description' },
+  // ── User ──
+  { method: 'GET',    path: '/user/get-profile/:userId',                               desc: 'Get user profile by ID' },
+  { method: 'PATCH',  path: '/user/update-profile/:userId',                            desc: 'Update user profile' },
+  { method: 'PATCH',  path: '/user/subscription/:userId',                              desc: 'Change subscription tier' },
+  { method: 'POST',   path: '/user/avatar/:userId',                                    desc: 'Upload profile avatar image' },
 ];
 
 const METHOD_COLORS = {
@@ -89,9 +170,10 @@ function Badge({ children, color = 'emerald' }) {
     purple:  'bg-purple-500/20 text-purple-400 border-purple-500/30',
     amber:   'bg-amber-500/20 text-amber-400 border-amber-500/30',
     red:     'bg-red-500/20 text-red-400 border-red-500/30',
+    teal:    'bg-teal-500/20 text-teal-400 border-teal-500/30',
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colors[color]}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colors[color] || colors.emerald}`}>
       {children}
     </span>
   );
@@ -105,9 +187,10 @@ function FlowBox({ label, sub, color = 'slate' }) {
     purple:  'bg-purple-900/40 border-purple-600/50 text-purple-200',
     amber:   'bg-amber-900/40 border-amber-600/50 text-amber-200',
     teal:    'bg-teal-900/40 border-teal-600/50 text-teal-200',
+    red:     'bg-red-900/40 border-red-600/50 text-red-200',
   };
   return (
-    <div className={`border rounded-lg px-4 py-2.5 text-center text-sm font-medium ${colors[color]}`}>
+    <div className={`border rounded-lg px-4 py-2.5 text-center text-sm font-medium ${colors[color] || colors.slate}`}>
       <div>{label}</div>
       {sub && <div className="text-xs opacity-60 mt-0.5">{sub}</div>}
     </div>
@@ -211,18 +294,17 @@ export default function Docs() {
                 </h1>
                 <p className="text-slate-400 text-lg max-w-2xl leading-relaxed">
                   AI-powered health management platform that reads prescriptions, interprets lab reports,
-                  predicts health risks, and connects families — making clinical intelligence accessible
-                  to every patient regardless of medical literacy.
+                  predicts health risks, connects families, and provides doctors with a full clinical workspace —
+                  making clinical intelligence accessible to every patient regardless of medical literacy.
                 </p>
               </div>
 
-              {/* Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
                 {[
-                  { label: 'API Endpoints', value: '47' },
-                  { label: 'Database Tables', value: '28' },
-                  { label: 'AI Models', value: '5' },
-                  { label: 'RAG Sources', value: '4' },
+                  { label: 'API Endpoints',   value: `${API_ENDPOINTS.length}` },
+                  { label: 'Database Tables', value: '31' },
+                  { label: 'AI Models',       value: '7' },
+                  { label: 'RAG Sources',     value: '4' },
                 ].map(({ label, value }) => (
                   <Card key={label} className="text-center">
                     <div className="text-3xl font-bold text-emerald-400">{value}</div>
@@ -254,9 +336,9 @@ export default function Docs() {
               </p>
               <div className="grid sm:grid-cols-3 gap-4">
                 {[
-                  { title: 'Prescription Confusion', desc: 'Patients cannot read or understand what doctors write' },
-                  { title: 'Lab Report Overload', desc: 'Complex clinical values are meaningless without context' },
-                  { title: 'No Risk Continuity', desc: 'Nobody tracks patterns across visits to predict early risk' },
+                  { title: 'Prescription Confusion',   desc: 'Patients cannot read or understand what doctors write' },
+                  { title: 'Lab Report Overload',      desc: 'Complex clinical values are meaningless without context' },
+                  { title: 'No Risk Continuity',       desc: 'Nobody tracks patterns across visits to predict early risk' },
                 ].map(({ title, desc }) => (
                   <div key={title} className="bg-red-950/30 border border-red-800/30 rounded-lg p-4">
                     <div className="text-red-400 font-semibold mb-1">{title}</div>
@@ -272,12 +354,18 @@ export default function Docs() {
             <SectionHeading id="solution" title="Solution" subtitle="How RxSense addresses each problem" />
             <div className="grid sm:grid-cols-2 gap-4">
               {[
-                { title: 'Prescription Analysis', desc: 'Upload a photo — AI extracts drugs, dosages, and frequencies using MedGemma OCR + Claude vision', icon: '💊' },
-                { title: 'Lab Report Interpretation', desc: 'AI reads lab values, flags abnormals against MedlinePlus ranges, and explains results in plain Bangla or English', icon: '🧪' },
-                { title: 'Risk Prediction', desc: 'Health score + trend analysis across visits detects early signs of diabetes, cardiovascular risk, and more', icon: '📊' },
-                { title: 'Symptom Checker', desc: 'Claude agent with tool-use fetches patient history and medical literature to give personalised assessments', icon: '🩺' },
-                { title: 'Drug Interaction Safety', desc: 'Cross-references active medications against DrugBank to warn about dangerous combinations', icon: '⚠️' },
-                { title: 'Family Health Network', desc: 'Share codes connect family members so caregivers stay informed about their loved ones\' health', icon: '👨‍👩‍👧' },
+                { title: 'Prescription Analysis',         icon: '💊', desc: 'Upload a photo — MedGemma OCR + GPT-4.1 vision extracts drugs, dosages, frequencies, meal instructions, and diseases. Supports handwritten Bengali and English.' },
+                { title: 'Lab Report Interpretation',     icon: '🧪', desc: 'Claude Sonnet 4.6 reads lab values, flags abnormals against reference ranges, groups by section (CBC, lipids, thyroid), and explains results in plain Bangla or English.' },
+                { title: 'Predictive Analytics',          icon: '📊', desc: 'AI analyzes trends across all past reports to predict future complications — diabetes, cardiovascular risk, kidney disease. Each prediction carries a confidence score and preventive actions.' },
+                { title: 'Symptom Checker',               icon: '🩺', desc: 'Claude agent with RAG tool-use fetches patient history and Harrison\'s Medical knowledge to give personalised, multi-turn Bengali assessments. Fires an EMERGENCY_CARD for life-threatening presentations.' },
+                { title: 'Drug Interaction Safety',       icon: '⚠️', desc: 'Multi-source lookup — local DrugBank → NIH RxNorm → Medscape → Tavily web search. Provides severity, mechanism, and clinical action for every interaction found.' },
+                { title: 'Doctor Portal',                 icon: '👨‍⚕️', desc: 'Full clinical workspace: view comprehensive patient charts (conditions, allergies, vaccinations, surgeries, prescriptions, reports), create prescriptions with drug-database search, run AI safety checks before prescribing, and generate one-click AI summaries.' },
+                { title: 'Appointment System',            icon: '📅', desc: 'Patients browse available doctors by specialty, pick a date, and book in real time. Serial number assignment estimates wait time in 10-minute slots. Doctors manage arrivals through a status lifecycle: booked → arrived → in_progress → completed.' },
+                { title: 'Family Health Network',         icon: '👨‍👩‍👧', desc: 'Share codes connect family members so caregivers stay informed — full vitals, conditions, and allergies (with severity) visible from the family panel. Links can be regenerated or revoked at any time.' },
+                { title: 'Prescription Lifecycle',        icon: '📋', desc: 'Each scan carries rx_status (ongoing / closed) and an optional rx_end_date. Duration-based expiry math filters out stale medications from all AI prompts, the dashboard, and the drug interaction checker.' },
+                { title: 'Inline Data Editing',           icon: '✏️', desc: 'Patients can correct OCR mistakes directly in the UI — edits to patient info, metric values, statuses, and medication names persist to the database immediately via PATCH endpoints.' },
+                { title: 'Nearby Facilities',             icon: '📍', desc: 'Google Places API locates hospitals, clinics, and doctor chambers within 5–8 km. Condition keywords are AI-inferred to the right medical specialty. Full skeleton loader prevents churn during the GPS + search latency.' },
+                { title: 'Offline-First Persistence',     icon: '💾', desc: 'Insights, family health, drug interactions, and active medications are cached in localStorage with TTLs (2 h insights, 30 min meds). A refresh button force-invalidates the cache on any page.' },
               ].map(({ title, desc, icon }) => (
                 <Card key={title}>
                   <div className="flex gap-3">
@@ -294,7 +382,7 @@ export default function Docs() {
 
           {/* ── FEATURES ── */}
           <section>
-            <SectionHeading id="features" title="Feature Matrix" subtitle="Current capabilities" />
+            <SectionHeading id="features" title="Feature Matrix" subtitle="Complete capability list — patient and doctor sides" />
             <Card className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -306,20 +394,47 @@ export default function Docs() {
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {[
-                    ['Prescription OCR + Analysis', 'Patient', 'Live'],
-                    ['Lab Report Analysis', 'Patient', 'Live'],
-                    ['AI Symptom Checker', 'Patient', 'Live'],
-                    ['Drug Interaction Checker', 'Patient / Doctor', 'Live'],
-                    ['Health Dashboard + Risk Score', 'Patient', 'Live'],
-                    ['Health Timeline', 'Patient', 'Live'],
-                    ['Family Health Network', 'Patient', 'Live'],
-                    ['Nearby Facilities (Google Maps)', 'Patient', 'Live'],
-                    ['Doctor Portal', 'Doctor', 'Live'],
-                    ['Prescription Safety Check', 'Doctor', 'Live'],
-                    ['Patient Chart View', 'Doctor', 'Live'],
-                    ['Bangla / English UI', 'Both', 'Live'],
+                    // Patient
+                    ['Prescription OCR + Analysis (MedGemma + GPT-4.1)', 'Patient', 'Live'],
+                    ['Lab Report Analysis (Claude Sonnet 4.6 vision)', 'Patient', 'Live'],
+                    ['Report & Prescription AI Chat', 'Patient', 'Live'],
+                    ['Inline Report & Prescription Editing', 'Patient', 'Live'],
+                    ['Prescription Status Tracking (rx_status / expiry)', 'Patient', 'Live'],
+                    ['Active Medication Filtering (duration-based)', 'Patient', 'Live'],
+                    ['Save / Remove / Delete Reports & Scans', 'Patient', 'Live'],
+                    ['Predictive Health Analysis (complication risks)', 'Patient', 'Live'],
+                    ['AI Symptom Checker (Bengali, emergency detection)', 'Patient', 'Live'],
+                    ['Symptom Sharing with Doctor', 'Patient', 'Live'],
+                    ['Drug Interaction Checker (open)', 'Patient / Doctor', 'Live'],
+                    ['New Medication vs Active Meds Safety Check', 'Patient / Doctor', 'Live'],
+                    ['Health Dashboard + AI Health Story', 'Patient', 'Live'],
+                    ['Health Insights (score, trends, risk, actions)', 'Patient', 'Live'],
+                    ['Health Timeline (filterable, searchable)', 'Patient', 'Live'],
+                    ['Family Health Network (share codes)', 'Patient', 'Live'],
+                    ['Family Health Snapshot (vitals, conditions, allergies)', 'Patient', 'Live'],
+                    ['Appointment Booking & Calendar', 'Patient', 'Live'],
+                    ['Nearby Facilities (Google Places + AI specialty)', 'Patient', 'Live'],
+                    ['Offline-First Data Persistence (localStorage)', 'Patient', 'Live'],
+                    ['Profile Management (vitals, conditions, allergies)', 'Patient', 'Live'],
+                    ['Avatar Upload', 'Patient', 'Live'],
+                    ['Subscription Management', 'Patient', 'Live'],
+                    // Doctor
+                    ['Doctor Portal & Authentication', 'Doctor', 'Live'],
+                    ['Hospital Affiliations Management', 'Doctor', 'Live'],
+                    ['Availability Scheduling', 'Doctor', 'Live'],
+                    ['Daily Patient Limit Setting', 'Doctor', 'Live'],
+                    ['Appointment Status Lifecycle (booked → arrived → in_progress → completed)', 'Doctor', 'Live'],
+                    ['Comprehensive Patient Chart', 'Doctor', 'Live'],
+                    ['AI Patient Summary (one-click narrative)', 'Doctor', 'Live'],
+                    ['Prescription Creation with Drug-Database Search', 'Doctor', 'Live'],
+                    ['AI Prescription Safety Check before Prescribing', 'Doctor', 'Live'],
+                    ['Modify Prescription Line Items', 'Doctor', 'Live'],
+                    ['View Paused / Stopped Medications', 'Doctor', 'Live'],
+                    ['Add Allergies, Vaccinations, Surgical History', 'Doctor', 'Live'],
+                    // Shared
+                    ['Bangla / English UI (750+ i18n keys)', 'Both', 'Live'],
                     ['Google OAuth Login', 'Patient', 'Live'],
-                    ['Email Verification', 'Both', 'Live'],
+                    ['Email Verification + Password Reset', 'Both', 'Live'],
                   ].map(([feat, user, status]) => (
                     <tr key={feat}>
                       <td className="py-2 pr-4 text-slate-300">{feat}</td>
@@ -338,38 +453,35 @@ export default function Docs() {
 
           {/* ── ARCHITECTURE ── */}
           <section>
-            <SectionHeading id="architecture" title="System Architecture" subtitle="How the three services connect" />
+            <SectionHeading id="architecture" title="System Architecture" subtitle="How the three deployable services connect" />
             <Card>
               <div className="space-y-3">
-                {/* Frontend */}
                 <div className="grid grid-cols-3 gap-2">
                   <FlowBox label="Patient App" sub="React 19 + Vite" color="blue" />
                   <FlowBox label="Doctor Portal" sub="React 19 + Vite" color="blue" />
                   <FlowBox label="Public /docs" sub="React 19 + Vite" color="blue" />
                 </div>
                 <Arrow />
-                {/* API Gateway */}
                 <FlowBox label="Express 5 REST API" sub="Node.js · JWT Auth · Rate Limiting · Swagger /api/docs" color="teal" />
                 <Arrow />
-                {/* Services row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <FlowBox label="Auth Service" sub="bcrypt · JWT" color="slate" />
-                  <FlowBox label="AI Service" sub="Claude · Gemini · GPT-4o" color="purple" />
-                  <FlowBox label="OCR Service" sub="MedGemma · Modal GPU" color="amber" />
-                  <FlowBox label="File Service" sub="Multer · Sharp · Cloudinary" color="slate" />
+                  <FlowBox label="Auth Service"   sub="bcrypt · JWT · Google OAuth" color="slate" />
+                  <FlowBox label="AI Service"     sub="Claude · Gemini · GPT-4o"   color="purple" />
+                  <FlowBox label="OCR Service"    sub="MedGemma · Modal GPU"        color="amber" />
+                  <FlowBox label="File Service"   sub="Multer · Sharp · Cloudinary" color="slate" />
                 </div>
                 <Arrow />
-                {/* Data layer */}
                 <div className="grid grid-cols-2 gap-2">
-                  <FlowBox label="PostgreSQL" sub="24 tables · NeonDB serverless" color="emerald" />
-                  <FlowBox label="pgvector" sub="RAG embeddings · cosine similarity" color="emerald" />
+                  <FlowBox label="PostgreSQL" sub="31 tables · NeonDB serverless"       color="emerald" />
+                  <FlowBox label="pgvector"   sub="RAG embeddings · cosine similarity"  color="emerald" />
                 </div>
                 <Arrow />
-                {/* External */}
-                <div className="grid grid-cols-3 gap-2">
-                  <FlowBox label="Anthropic API" sub="Claude Sonnet 4.6" color="purple" />
-                  <FlowBox label="OpenAI API" sub="GPT-4o · Embeddings" color="purple" />
-                  <FlowBox label="Google APIs" sub="Gemini · Places · OAuth" color="purple" />
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  <FlowBox label="Anthropic API"    sub="Claude Sonnet 4.6"        color="purple" />
+                  <FlowBox label="OpenAI API"       sub="GPT-4o · Embeddings"      color="purple" />
+                  <FlowBox label="Google APIs"      sub="Gemini · Places · OAuth"  color="purple" />
+                  <FlowBox label="NIH RxNorm"       sub="Drug interaction lookup"  color="teal" />
+                  <FlowBox label="Tavily Search"    sub="Web fallback for DDI"     color="teal" />
                 </div>
               </div>
             </Card>
@@ -377,43 +489,172 @@ export default function Docs() {
 
           {/* ── DATA FLOW ── */}
           <section>
-            <SectionHeading id="dataflow" title="Data Flow" subtitle="Prescription & lab report analysis pipeline" />
-            <div className="grid sm:grid-cols-2 gap-6">
+            <SectionHeading id="dataflow" title="Data Flow" subtitle="Key pipelines — patient and doctor side" />
+
+            {/* Row 1 */}
+            <div className="grid sm:grid-cols-2 gap-6 mb-6">
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Report Analysis Pipeline</h3>
+                <div className="space-y-2">
+                  <FlowBox label="User uploads lab report" sub="JPEG / PNG / PDF" color="blue" />
+                  <Arrow />
+                  <FlowBox label="Sharp converts to JPEG" sub="Format normalisation" color="slate" />
+                  <Arrow />
+                  <FlowBox label="Cloudinary stores image" sub="Returns permanent public URL" color="slate" />
+                  <Arrow />
+                  <FlowBox label="Claude Sonnet 4.6 (vision)" sub="Reads lab values, diagnoses, narrative findings" color="purple" />
+                  <Arrow />
+                  <FlowBox label="Structured JSON extraction" sub="metrics · normal ranges · abnormal flags · sections" color="amber" />
+                  <Arrow />
+                  <FlowBox label="Saved to medical_report + report_metric" sub="PostgreSQL — RAG embeddings ingested" color="emerald" />
+                  <Arrow />
+                  <FlowBox label="Returned to patient" sub="Summary · abnormal highlights · follow-up advice" color="blue" />
+                </div>
+              </Card>
               <Card>
                 <h3 className="font-semibold text-white mb-4">Prescription Analysis Pipeline</h3>
                 <div className="space-y-2">
-                  <FlowBox label="User uploads image" sub="JPEG / PNG / PDF" color="blue" />
+                  <FlowBox label="User uploads prescription image" sub="JPEG / PNG / PDF" color="blue" />
                   <Arrow />
                   <FlowBox label="Sharp converts to JPEG" sub="Format normalisation" color="slate" />
                   <Arrow />
                   <FlowBox label="Cloudinary stores image" sub="Returns public URL" color="slate" />
                   <Arrow />
-                  <FlowBox label="MedGemma 1.5 4B (Modal GPU)" sub="OCR + medical text extraction" color="amber" />
+                  <FlowBox label="MedGemma 1.5 4B (Modal GPU)" sub="VLM — OCR + medical text extraction" color="amber" />
                   <Arrow />
-                  <FlowBox label="Claude / Gemini analysis" sub="Structures extracted text to JSON" color="purple" />
+                  <FlowBox label="GPT-4.1 vision (dosage pass)" sub="Frequency notation · meal instructions · duration" color="amber" />
                   <Arrow />
-                  <FlowBox label="Saved to prescription_scan" sub="PostgreSQL" color="emerald" />
+                  <FlowBox label="EasyOCR fallback" sub="English + Bengali if MedGemma unavailable" color="slate" />
                   <Arrow />
-                  <FlowBox label="Returned to patient" sub="Drugs · dosages · follow-up" color="blue" />
+                  <FlowBox label="Saved to prescription_scan" sub="PostgreSQL with rx_status, rx_end_date" color="emerald" />
+                  <Arrow />
+                  <FlowBox label="Returned to patient" sub="Drugs · dosages · diseases · follow-up" color="blue" />
                 </div>
               </Card>
+            </div>
+
+            {/* Row 2 */}
+            <div className="grid sm:grid-cols-2 gap-6 mb-6">
               <Card>
                 <h3 className="font-semibold text-white mb-4">Symptom Checker Agent Pipeline</h3>
                 <div className="space-y-2">
                   <FlowBox label="User sends symptom message" sub="+ full conversation history" color="blue" />
                   <Arrow />
-                  <FlowBox label="SymptomAgent builds context" sub="History formatted as रोगी / ডাক্তার" color="slate" />
+                  <FlowBox label="SymptomAgent builds context" sub="History formatted as রোগী / ডাক্তার turns" color="slate" />
                   <Arrow />
                   <FlowBox label="Claude Sonnet 4.6 (Turn 1)" sub="Decides: ask more OR use tools" color="purple" />
                   <Arrow />
                   <div className="grid grid-cols-2 gap-2">
-                    <FlowBox label="get_patient_profile" sub="age · conditions · allergies" color="teal" />
-                    <FlowBox label="rag_search" sub="Harrison's · Davidson's · MedlinePlus" color="teal" />
+                    <FlowBox label="get_patient_profile" sub="age · conditions · allergies · active meds" color="teal" />
+                    <FlowBox label="rag_search" sub="Harrison's · MedlinePlus" color="teal" />
                   </div>
                   <Arrow />
-                  <FlowBox label="Claude synthesises (up to 8 turns)" sub="Tool results injected back" color="purple" />
+                  <FlowBox label="Claude synthesises (up to 8 turns)" sub="Tool results injected into context" color="purple" />
                   <Arrow />
-                  <FlowBox label="Bangla assessment returned" sub="+ EMERGENCY_CARD if critical" color="emerald" />
+                  <FlowBox label="Bengali assessment returned" sub="+ EMERGENCY_CARD JSON if life-threatening" color="emerald" />
+                  <Arrow />
+                  <FlowBox label="Session persisted in localStorage" sub="max 20 sessions — accessible from History" color="blue" />
+                </div>
+              </Card>
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Active Medication Filtering</h3>
+                <div className="space-y-2">
+                  <FlowBox label="prescription_scan rows fetched" sub="WHERE rx_status IS NULL OR = 'ongoing'" color="blue" />
+                  <Arrow />
+                  <FlowBox label="normalizeScanRows({ activeOnly: true })" sub="Node.js utility — cannot be done in SQL" color="amber" />
+                  <Arrow />
+                  <FlowBox label="parseDurationDays(med.duration)" sub="'7 days' / '2 weeks' / '1 month' → N" color="slate" />
+                  <Arrow />
+                  <FlowBox label="expiresAt = rx_date + durationDays" sub="Missing rx_date → fallback −90 days" color="slate" />
+                  <Arrow />
+                  <FlowBox label="Filter: expiresAt ≥ today" sub="Expired meds silently dropped" color="emerald" />
+                  <Arrow />
+                  <FlowBox label="Consumed by: Dashboard · AI Summary · Insights · Doctor Summary · Drug Checker" sub="Every AI context receives filtered list" color="purple" />
+                </div>
+              </Card>
+            </div>
+
+            {/* Row 3 */}
+            <div className="grid sm:grid-cols-2 gap-6 mb-6">
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Drug Interaction Check Pipeline</h3>
+                <div className="space-y-2">
+                  <FlowBox label="Drug list submitted" sub="Patient open-form or new-med vs active meds" color="blue" />
+                  <Arrow />
+                  <FlowBox label="DrugInteractionAgent runs" sub="GPT-4o · multi-source tool-use loop" color="purple" />
+                  <Arrow />
+                  <div className="grid grid-cols-2 gap-2">
+                    <FlowBox label="check_local_db" sub="Local DrugBank table" color="teal" />
+                    <FlowBox label="rxnorm_lookup" sub="NIH RxNorm API" color="teal" />
+                  </div>
+                  <Arrow />
+                  <div className="grid grid-cols-2 gap-2">
+                    <FlowBox label="medscape_lookup" sub="Medscape reference DB" color="teal" />
+                    <FlowBox label="web_search" sub="Tavily — last-resort fallback" color="teal" />
+                  </div>
+                  <Arrow />
+                  <FlowBox label="Structured interaction result" sub="severity · mechanism · clinical_action · source" color="amber" />
+                  <Arrow />
+                  <FlowBox label="Returned to caller" sub="Unrecognised drugs flagged separately" color="emerald" />
+                </div>
+              </Card>
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Doctor Prescription Safety Pipeline</h3>
+                <div className="space-y-2">
+                  <FlowBox label="Doctor searches DrugBank" sub="GET /doctor/drugs/search" color="blue" />
+                  <Arrow />
+                  <FlowBox label="Adds drugs with dosage, frequency, duration" sub="UI builds prescription draft" color="slate" />
+                  <Arrow />
+                  <FlowBox label="POST /doctor/patients/:id/check-safety" sub="Proposed drugs + patient ID" color="blue" />
+                  <Arrow />
+                  <FlowBox label="Patient active meds fetched" sub="normalizeScanRows — duration-filtered" color="amber" />
+                  <Arrow />
+                  <FlowBox label="AI safety check runs" sub="New drugs × active meds interaction matrix" color="purple" />
+                  <Arrow />
+                  <FlowBox label="Interaction alerts shown to doctor" sub="Severity / mechanism / clinical action" color="red" />
+                  <Arrow />
+                  <FlowBox label="Doctor confirms → POST /prescriptions" sub="Saved to prescription table in DB" color="emerald" />
+                </div>
+              </Card>
+            </div>
+
+            {/* Row 4 */}
+            <div className="grid sm:grid-cols-2 gap-6">
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Health Insights Agent Pipeline</h3>
+                <div className="space-y-2">
+                  <FlowBox label="GET /insights (patient or force=true)" sub="Check DB cache (24h TTL) first" color="blue" />
+                  <Arrow />
+                  <FlowBox label="InsightsAgent runs" sub="GPT-4o · up to 8 turns" color="purple" />
+                  <Arrow />
+                  <div className="grid grid-cols-2 gap-2">
+                    <FlowBox label="get_report_history" sub="Last 3 lab reports + metrics" color="teal" />
+                    <FlowBox label="get_patient_profile" sub="Conditions · allergies · active meds" color="teal" />
+                  </div>
+                  <Arrow />
+                  <FlowBox label="Structured JSON output" sub="health_score · trend_alerts · risk_breakdown · recommended_actions" color="amber" />
+                  <Arrow />
+                  <FlowBox label="Saved to patient_insights" sub="Expires after 24h" color="emerald" />
+                  <Arrow />
+                  <FlowBox label="Client caches in localStorage" sub="2h TTL — refresh button force-invalidates" color="blue" />
+                </div>
+              </Card>
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Appointment Booking Pipeline</h3>
+                <div className="space-y-2">
+                  <FlowBox label="Patient browses doctors" sub="GET /patient/doctors" color="blue" />
+                  <Arrow />
+                  <FlowBox label="Picks date → fetch availability" sub="GET /patient/doctors/:id/availability" color="slate" />
+                  <Arrow />
+                  <FlowBox label="POST /patient/appointments" sub="doctor_id + appointment_date" color="blue" />
+                  <Arrow />
+                  <FlowBox label="Serial number assigned" sub="Daily serial → estimated wait (serial × 10 min)" color="amber" />
+                  <Arrow />
+                  <FlowBox label="Appointment saved" sub="status = booked" color="emerald" />
+                  <Arrow />
+                  <FlowBox label="Patient marks arrival" sub="PATCH .../arrive → status = arrived" color="slate" />
+                  <Arrow />
+                  <FlowBox label="Doctor progresses through lifecycle" sub="arrived → in_progress → completed" color="teal" />
                 </div>
               </Card>
             </div>
@@ -427,32 +668,44 @@ export default function Docs() {
                 {
                   model: 'Claude Sonnet 4.6',
                   provider: 'Anthropic',
-                  role: 'Primary AI — lab report analysis, prescription understanding, symptom assessment agent (tool-use loop, max 8 turns), health insights generation, patient and doctor summary creation',
                   badge: 'primary',
+                  role: 'Lab report analysis (vision), prescription understanding, symptom assessment agent (tool-use loop, max 8 turns), health insights generation, patient and doctor summary creation. The get_patient_profile tool returns only duration-filtered active medications via normalizeScanRows so AI summaries never cite expired prescriptions.',
                 },
                 {
                   model: 'MedGemma 1.5 4B',
-                  provider: 'Google (open-weight)',
-                  role: 'Prescription image OCR and medical text extraction — runs on Modal.com serverless GPU. Purpose-built for medical vision tasks.',
+                  provider: 'Google (open-weight, Modal GPU)',
                   badge: 'vision',
+                  role: 'Prescription image OCR and medical text extraction. Purpose-built vision-language model for medical documents. Quantized to 4-bit (BitsAndBytes) and deployed on Modal.com L4 GPU with auto-scale to zero after 600 s idle.',
                 },
                 {
-                  model: 'Gemini 2.5 Flash',
-                  provider: 'Google',
-                  role: 'Cost-effective fallback for prescription analysis flows when Claude is unavailable or for high-volume scenarios.',
-                  badge: 'fallback',
+                  model: 'GPT-4.1',
+                  provider: 'OpenAI',
+                  badge: 'vision',
+                  role: 'Dosage detail pass in the prescription pipeline — parses frequency notation (1+0+1, BD, TDS), meal timing (PC, AC, HS, SOS), duration, and drug strength from MedGemma OCR output.',
                 },
                 {
                   model: 'GPT-4o / GPT-4o-mini',
                   provider: 'OpenAI',
-                  role: 'Prescription and report chat conversations, health insights agent runner (openaiAgentRunner.js).',
                   badge: 'chat',
+                  role: 'Prescription and report chat conversations, health insights agent, predictive analysis agent, drug interaction agent (GPT-4o), symptom checker, and specialty inference from condition keywords (GPT-4o-mini).',
                 },
                 {
-                  model: 'text-embedding-ada-002',
+                  model: 'Gemini 2.5 Flash',
+                  provider: 'Google',
+                  badge: 'fallback',
+                  role: 'Cost-effective fallback for prescription analysis flows when Claude is unavailable or for high-volume scenarios.',
+                },
+                {
+                  model: 'text-embedding-3-small',
                   provider: 'OpenAI',
-                  role: 'Generates vector embeddings for the RAG knowledge base stored in pgvector. Used at both ingestion time and query time.',
                   badge: 'embeddings',
+                  role: 'Generates 1536-dimension vector embeddings for the RAG knowledge base stored in pgvector. Used at both ingestion time (medical books, patient reports) and query time (cosine similarity search).',
+                },
+                {
+                  model: 'EasyOCR',
+                  provider: 'open-source (Python service)',
+                  badge: 'ocr',
+                  role: 'Fallback OCR for English and Bengali text when the MedGemma GPU endpoint is unavailable. Runs on CPU in the same Modal Python service.',
                 },
               ].map(({ model, provider, role, badge }) => (
                 <Card key={model} className="flex gap-4">
@@ -479,11 +732,10 @@ export default function Docs() {
                 <div className="space-y-3">
                   {[
                     { source: "Harrison's Principles of Internal Medicine", weight: '1.0', type: 'medical_book' },
-                    { source: "Davidson's Principles and Practice of Medicine", weight: '1.0', type: 'medical_book' },
-                    { source: 'MedlinePlus Lab Test References', weight: '1.0', type: 'medical_book' },
-                    { source: 'Patient Lab Reports', weight: '0.7', type: 'patient_report' },
-                    { source: 'Patient Profile', weight: '0.6', type: 'patient_profile' },
-                    { source: 'Chat History', weight: '0.3', type: 'chat_history' },
+                    { source: 'MedlinePlus Lab Test References',            weight: '1.0', type: 'medical_book' },
+                    { source: 'Patient Lab Reports',                        weight: '0.7', type: 'patient_report' },
+                    { source: 'Patient Profile',                            weight: '0.6', type: 'patient_profile' },
+                    { source: 'Chat History',                               weight: '0.3', type: 'chat_history' },
                   ].map(({ source, weight, type }) => (
                     <div key={source} className="flex items-center justify-between">
                       <div>
@@ -499,15 +751,15 @@ export default function Docs() {
                 <h3 className="font-semibold text-white mb-4">Retrieval Config</h3>
                 <div className="space-y-3">
                   {[
-                    ['Vector Store', 'pgvector inside PostgreSQL'],
-                    ['Embedding Model', 'text-embedding-ada-002'],
-                    ['Similarity', 'Cosine distance'],
-                    ['Score formula', '(1 - cosine_dist) × weight'],
+                    ['Vector Store',        'pgvector inside PostgreSQL'],
+                    ['Embedding Model',     'text-embedding-3-small (1536-dim)'],
+                    ['Similarity',          'Cosine distance'],
+                    ['Score formula',       '(1 − cosine_dist) × source_weight'],
                     ['Min score threshold', '0.25'],
-                    ['Top-K', '6 default · 10 max'],
-                    ['Chunking', 'Semantic (chapter / topic)'],
-                    ['Global sources', 'Books (user_id IS NULL)'],
-                    ['Private sources', 'Per-patient vectors'],
+                    ['Top-K',              '6 default · 10 max'],
+                    ['Chunking',           'Semantic (chapter / topic boundary)'],
+                    ['Global sources',     'Books (user_id IS NULL)'],
+                    ['Private sources',    'Per-patient vectors (user_id = ?)'],
                   ].map(([k, v]) => (
                     <div key={k} className="flex justify-between text-sm">
                       <span className="text-slate-400">{k}</span>
@@ -528,7 +780,7 @@ export default function Docs() {
                 <Arrow direction="right" />
                 <FlowBox label="pgvector cosine search" color="emerald" />
                 <Arrow direction="right" />
-                <FlowBox label="Top-K chunks returned" color="slate" />
+                <FlowBox label="Top-K chunks × weights" color="slate" />
                 <Arrow direction="right" />
                 <FlowBox label="Claude reasons over chunks" color="purple" />
                 <Arrow direction="right" />
@@ -555,22 +807,22 @@ export default function Docs() {
                 {
                   layer: 'Database',
                   color: 'emerald',
-                  items: ['PostgreSQL (NeonDB)', 'pgvector extension', '24 tables', 'Raw SQL (no ORM)', 'UUID primary keys'],
+                  items: ['PostgreSQL (NeonDB)', 'pgvector extension', '31 tables', 'Raw SQL (no ORM)', 'UUID primary keys'],
                 },
                 {
                   layer: 'AI & Models',
                   color: 'purple',
-                  items: ['Claude Sonnet 4.6', 'MedGemma 1.5 4B', 'Gemini 2.5 Flash', 'GPT-4o / GPT-4o-mini', 'text-embedding-ada-002'],
+                  items: ['Claude Sonnet 4.6', 'MedGemma 1.5 4B', 'Gemini 2.5 Flash', 'GPT-4o / GPT-4.1', 'text-embedding-3-small', 'EasyOCR'],
                 },
                 {
                   layer: 'Infrastructure',
                   color: 'amber',
-                  items: ['Modal.com (serverless GPU)', 'Cloudinary (image storage)', 'NeonDB (serverless PostgreSQL)', 'ngrok (dev tunneling)'],
+                  items: ['Modal.com (serverless GPU)', 'Cloudinary (image storage)', 'NeonDB (serverless Postgres)', 'ngrok (dev tunneling)'],
                 },
                 {
                   layer: 'External APIs',
                   color: 'red',
-                  items: ['Anthropic API', 'OpenAI API', 'Google Gemini API', 'Google Places API', 'Google OAuth', 'Mailtrap (email)', 'Prescripto OCR API'],
+                  items: ['Anthropic API', 'OpenAI API', 'Google Gemini API', 'Google Places API', 'Google OAuth', 'NIH RxNorm API', 'Tavily Search API', 'Mailtrap (email)'],
                 },
               ].map(({ layer, color, items }) => (
                 <Card key={layer}>
@@ -587,7 +839,8 @@ export default function Docs() {
 
           {/* ── API REFERENCE ── */}
           <section>
-            <SectionHeading id="api" title="API Reference" subtitle={`${API_ENDPOINTS.length} endpoints across 10 route groups`} />
+            <SectionHeading id="api" title="API Reference" subtitle={`${API_ENDPOINTS.length} endpoints across 11 route groups`} />
+
             <a
               href="https://registry.scalar.com/@default-team-ptg7m/apis/rxsense-api@latest"
               target="_blank"
@@ -636,25 +889,94 @@ export default function Docs() {
 
           {/* ── DATABASE ── */}
           <section>
-            <SectionHeading id="database" title="Database Schema" subtitle="28 PostgreSQL tables" />
+            <SectionHeading id="database" title="Database Schema" subtitle="31 PostgreSQL tables · pgvector extension · NeonDB serverless" />
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { group: 'Auth & Users', tables: ['users', 'patient', 'doctor'], color: 'blue' },
-                { group: 'Healthcare Facilities', tables: ['hospital', 'doctor_hospital'], color: 'teal' },
-                { group: 'Patient Health', tables: ['known_condition', 'surgical_history', 'vaccination_record', 'patient_allergy'], color: 'emerald' },
-                { group: 'Medications', tables: ['drug', 'drugs', 'drug_interaction', 'drug_interactions', 'drugbank_drug', 'prescription', 'prescription_item', 'prescription_scan'], color: 'purple' },
-                { group: 'Reports & Metrics', tables: ['medical_report', 'report_metric', 'lab_test_info'], color: 'amber' },
-                { group: 'AI & Intelligence', tables: ['symptom_log', 'ai_risk_assessment', 'llm_query_log', 'rag_documents', 'patient_insights'], color: 'red' },
-                { group: 'Social', tables: ['family_link'], color: 'slate' },
-                { group: 'Chat', tables: ['chat_session', 'chat_message'], color: 'teal' },
+                {
+                  group: 'Auth & Users',
+                  color: 'blue',
+                  tables: [
+                    'users — shared registry (patient + doctor)',
+                    'patient — demographics, vitals, blood group',
+                    'doctor — specialties[], license, daily_limit',
+                  ],
+                },
+                {
+                  group: 'Facilities & Availability',
+                  color: 'teal',
+                  tables: [
+                    'hospital — name, location, type',
+                    'doctor_hospital — M:N affiliation, is_primary',
+                    'doctor_availability — date, start_time, end_time',
+                  ],
+                },
+                {
+                  group: 'Appointments',
+                  color: 'emerald',
+                  tables: [
+                    'appointment — status lifecycle, serial_number',
+                    '  status: booked → arrived → in_progress → completed',
+                  ],
+                },
+                {
+                  group: 'Patient Health Records',
+                  color: 'emerald',
+                  tables: [
+                    'known_condition — icd_10, status, severity',
+                    'surgical_history — procedure, outcome, anaesthesia',
+                    'vaccination_record — cvx_code, next_due_date',
+                    'patient_allergy — severity, reaction_type, llm_flagged',
+                    'patient_vitals — bp, heart_rate, glucose, weight',
+                  ],
+                },
+                {
+                  group: 'Prescriptions & Drugs',
+                  color: 'purple',
+                  tables: [
+                    'prescription — doctor-issued, interaction_alert',
+                    'prescription_item — dosage, frequency, duration_days',
+                    'prescription_scan — +rx_status +rx_end_date',
+                    'drug / drugs / drugbank_drug — three catalog tables',
+                    'drug_interaction / drug_interactions — DDI pairs',
+                  ],
+                },
+                {
+                  group: 'Reports & Metrics',
+                  color: 'amber',
+                  tables: [
+                    'medical_report — patient_json editable',
+                    'report_metric — value + status editable',
+                    'lab_test_info — reference ranges',
+                  ],
+                },
+                {
+                  group: 'AI & Intelligence',
+                  color: 'red',
+                  tables: [
+                    'symptom_log — JSONB Q&A, body_system',
+                    'ai_risk_assessment — conditions[], cancer_risk_flag',
+                    'patient_insights — 24h TTL insights JSON',
+                    'rag_documents — pgvector + source_type + weight',
+                    'llm_query_log — full audit trail (tokens, model)',
+                  ],
+                },
+                {
+                  group: 'Family & Chat',
+                  color: 'slate',
+                  tables: [
+                    'family_link — relationship, share_code',
+                    'chat_session — conversation metadata',
+                    'chat_message — role, content, timestamp',
+                  ],
+                },
               ].map(({ group, tables, color }) => (
                 <Card key={group}>
                   <div className="font-semibold text-white mb-3">{group}</div>
                   <div className="space-y-1">
                     {tables.map((t) => (
-                      <div key={t} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                        <code className="text-slate-300 text-xs">{t}</code>
+                      <div key={t} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
+                        <code className="text-slate-300 text-xs leading-relaxed">{t}</code>
                       </div>
                     ))}
                   </div>
@@ -682,7 +1004,7 @@ export default function Docs() {
                   title: 'Password Security',
                   points: [
                     'bcrypt hashing with 13 salt rounds',
-                    'Time-expiring password reset tokens',
+                    'Time-expiring password reset tokens via email',
                     'Account lockout after failed attempts',
                     'No plain-text credentials stored anywhere',
                     'Secure reset via email link only',
@@ -694,7 +1016,7 @@ export default function Docs() {
                     'Role-based: patient vs doctor middleware',
                     'Separate auth middleware per route group',
                     'Patients cannot access doctor routes',
-                    'Family health access gated by link_id',
+                    'Family health access gated by link_id ownership',
                     'Doctor sees only affiliated patients',
                   ],
                 },
@@ -733,11 +1055,11 @@ export default function Docs() {
                   timeframe: '0–3 months',
                   color: 'emerald',
                   items: [
-                    'Real-time notifications for critical lab values',
-                    'PDF export of health reports',
-                    'Appointment booking with nearby doctors',
-                    'Medication reminder system',
+                    'Real-time push notifications for critical lab values',
+                    'PDF export of health reports and prescriptions',
+                    'Medication reminder system with push alerts',
                     'Voice input for symptom checker',
+                    'Doctor in-app messaging with patients',
                   ],
                 },
                 {
@@ -746,7 +1068,7 @@ export default function Docs() {
                   color: 'blue',
                   items: [
                     'Wearable device integration (heart rate, glucose)',
-                    'Predictive risk scoring with trend ML models',
+                    'Predictive risk scoring with dedicated ML models',
                     'Doctor-patient video consultation',
                     'Insurance claim document generation',
                     'Community health worker portal',
@@ -759,7 +1081,7 @@ export default function Docs() {
                   items: [
                     'Hospital EHR system integration',
                     'Government health database API',
-                    'Population-level health analytics for NGOs',
+                    'Population-level analytics for NGOs',
                     'Offline mode for low-connectivity areas',
                     'Multi-country rollout across South Asia',
                   ],

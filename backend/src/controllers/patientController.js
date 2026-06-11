@@ -861,6 +861,59 @@ class PatientController {
         }
     };
 
+
+
+    addTimelineEntry = async (req, res) => {
+        try {
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, error: 'Unauthorized' });
+            }
+
+            const patientId = await this.resolvePatientId(userId);
+            if (!patientId) {
+                return res.status(404).json({ success: false, error: 'Patient not found' });
+            }
+
+            const { type, data } = req.body || {};
+            if (!type || !data) {
+                return res.status(400).json({ success: false, error: 'Missing type or data' });
+            }
+
+            let result;
+            if (type === 'visit') {
+                result = await this.patientModel.createPatientCondition(patientId, {
+                    conditionName: data.diagnosis,
+                    diagnosedByDoctorName: data.doctor,
+                    diagnosedAt: data.date,
+                    notes: data.notes || data.complaint,
+                    status: 'active'
+                });
+            } else if (type === 'vaccination') {
+                result = await this.patientModel.createPatientVaccination(patientId, {
+                    vaccineName: data.vaccine,
+                    administeredAt: data.date,
+                    dose: data.dose,
+                    facilityName: data.facility
+                });
+            } else if (type === 'surgery') {
+                result = await this.patientModel.createPatientSurgery(patientId, {
+                    procedureName: data.surgery,
+                    performedAt: data.date,
+                    surgeonName: data.doctor,
+                    hospitalName: data.hospital
+                });
+            } else {
+                return res.status(400).json({ success: false, error: `Unsupported entry type: ${type}` });
+            }
+
+            return res.status(201).json({ success: true, entry: result });
+        } catch (error) {
+            console.error('[Timeline] Add error:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    };
+
     medicationSafetyCheck = async (req, res) => {
         try {
             const { medications } = req.body || {};

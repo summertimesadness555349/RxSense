@@ -3,31 +3,52 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Input, { Select, Textarea } from '../ui/Input.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { addTimelineEntry } from '../../services/api.js';
 
 const entryTypes = [
   { value: 'visit', label: '🏥 Doctor Visit' },
-  { value: 'note', label: '📝 Personal Note' },
-  { value: 'medication', label: '💊 Medication Change' },
+  // { value: 'note', label: '📝 Personal Note' },
+  // { value: 'medication', label: '💊 Medication Change' },
   { value: 'vaccination', label: '💉 Vaccination' },
+  { value: 'surgery', label: '🩹 Surgery' },
 ];
 
 export default function AddEntryModal({ isOpen, onClose, onAdd }) {
   const [type, setType] = useState('visit');
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
+  const { user } = useAuth();
   const [form, setForm] = useState({});
+
+  const userId = user?.patient_id || user?.uuid || user?.id || null;
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    onAdd?.({ type, ...form, date: new Date().toISOString(), id: `tl_${Date.now()}` });
-    addToast('Entry added to your timeline!', 'success');
-    setLoading(false);
-    setForm({});
-    onClose();
+
+    try {
+      const payload = {
+        type,
+        data: {
+          ...form,
+          date: form.date || new Date().toISOString().slice(0, 10),
+        }
+      };
+
+      await addTimelineEntry(userId, payload);
+
+      onAdd?.();
+      addToast('Entry added to your timeline!', 'success');
+      setForm({});
+      onClose();
+    } catch (err) {
+      addToast(err.message || 'Failed to add entry', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,7 +71,7 @@ export default function AddEntryModal({ isOpen, onClose, onAdd }) {
           </>
         )}
 
-        {type === 'note' && (
+        {/* {type === 'note' && (
           <>
             <Textarea label="Note" placeholder="How are you feeling? Any symptoms?" rows={4} onChange={(e) => set('note', e.target.value)} required />
             <Select label="Mood (1 = Very Bad, 5 = Great)" onChange={(e) => set('mood', e.target.value)}>
@@ -60,9 +81,9 @@ export default function AddEntryModal({ isOpen, onClose, onAdd }) {
               {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
             </Select>
           </>
-        )}
+        )} */}
 
-        {type === 'medication' && (
+        {/* {type === 'medication' && (
           <>
             <Input label="Drug Name" placeholder="Metformin" onChange={(e) => set('drug', e.target.value)} required />
             <Input label="Old Dosage" placeholder="250mg" onChange={(e) => set('oldDosage', e.target.value)} />
@@ -70,7 +91,7 @@ export default function AddEntryModal({ isOpen, onClose, onAdd }) {
             <Input label="Reason" placeholder="Blood sugar not controlled" onChange={(e) => set('reason', e.target.value)} />
             <Input label="Prescribing Doctor" placeholder="Dr. Karim Ahmed" onChange={(e) => set('prescribingDoctor', e.target.value)} />
           </>
-        )}
+        )} */}
 
         {type === 'vaccination' && (
           <>
@@ -78,6 +99,15 @@ export default function AddEntryModal({ isOpen, onClose, onAdd }) {
             <Input label="Date" type="date" onChange={(e) => set('date', e.target.value)} required />
             <Input label="Dose Number / Type" placeholder="Dose 1, Booster..." onChange={(e) => set('dose', e.target.value)} />
             <Input label="Facility" placeholder="Dhaka City Health Center" onChange={(e) => set('facility', e.target.value)} />
+          </>
+        )}
+
+        {type === 'surgery' && (
+          <>
+            <Input label="Surgery Name" placeholder="Appendectomy" onChange={(e) => set('surgery', e.target.value)} required />
+            <Input label="Date" type="date" onChange={(e) => set('date', e.target.value)} required />
+            <Input label="Doctor" placeholder="Dr. Karim Ahmed" onChange={(e) => set('doctor', e.target.value)} />
+            <Input label="Hospital" placeholder="Dhaka Medical College" onChange={(e) => set('hospital', e.target.value)} />
           </>
         )}
 

@@ -116,4 +116,9 @@ patientRouter.get('/timeline',
     patientController.getTimeline
 );
 
+patientRouter.post('/timeline',
+    authenticateToken.authenticateToken,
+    patientController.addTimelineEntry
+);
+
 module.exports = { patientRouter };

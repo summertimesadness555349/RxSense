@@ -770,6 +770,148 @@ await this.db_connection.query_executor(query1, [patientId]);
         const result = await this.db_connection.query_executor(query, [reportId]);
         return result.rows[0] || null;
     };
+
+    resolveOrCreateHospital = async (hospitalName) => {
+        if (!hospitalName || !hospitalName.trim()) return null;
+        const nameTrimmed = hospitalName.trim();
+        const selectQuery = `SELECT hospital_id FROM hospital WHERE name ILIKE $1 LIMIT 1;`;
+        const selectResult = await this.db_connection.query_executor(selectQuery, [nameTrimmed]);
+        if (selectResult.rows[0]) {
+            return selectResult.rows[0].hospital_id;
+        }
+        const insertQuery = `INSERT INTO hospital (name) VALUES ($1) RETURNING hospital_id;`;
+        const insertResult = await this.db_connection.query_executor(insertQuery, [nameTrimmed]);
+        return insertResult.rows[0]?.hospital_id || null;
+    };
+
+    resolveDoctorByName = async (doctorName) => {
+        if (!doctorName || !doctorName.trim()) return null;
+        const rawName = doctorName.trim();
+        const cleanName = rawName.replace(/^(dr\.?\s*)/i, '').trim();
+        
+        const query = `
+            SELECT doctor_id 
+            FROM doctor 
+            WHERE name ILIKE $1 
+               OR name ILIKE $2
+               OR REPLACE(name, 'Dr. ', '') ILIKE $2
+            LIMIT 1;
+        `;
+        const result = await this.db_connection.query_executor(query, [rawName, cleanName]);
+        return result.rows[0]?.doctor_id || null;
+    };
+
+    createPatientCondition = async (patientId, { conditionName, diagnosedByDoctorName, diagnosedAt, notes, status, severity }) => {
+        const doctorId = await this.resolveDoctorByName(diagnosedByDoctorName);
+        let finalNotes = notes || '';
+        if (diagnosedByDoctorName && !doctorId) {
+            finalNotes = finalNotes ? `${finalNotes}\n(Diagnosed by: ${diagnosedByDoctorName})` : `(Diagnosed by: ${diagnosedByDoctorName})`;
+        }
+        
+        const query = `
+            INSERT INTO known_condition (
+                patient_id,
+                diagnosed_by,
+                condition_name,
+                diagnosed_at,
+                status,
+                severity,
+                notes
+            )
+            VALUES ($1, $2, $3, $4::date, COALESCE($5::condition_status, 'active'), $6::severity_type, $7)
+            RETURNING *;
+        `;
+        const params = [
+            patientId,
+            doctorId,
+            conditionName || 'Unspecified Condition',
+            diagnosedAt || null,
+            status || 'active',
+            severity || null,
+            finalNotes || null
+        ];
+        const result = await this.db_connection.query_executor(query, params);
+        return result.rows[0] || null;
+    };
+
+    createPatientVaccination = async (patientId, { vaccineName, administeredAt, dose, totalDoses, facilityName, notes }) => {
+        const hospitalId = await this.resolveOrCreateHospital(facilityName);
+        let parsedDoseNumber = null;
+        let finalNotes = notes || '';
+        if (dose) {
+            const numMatch = String(dose).match(/\d+/);
+            if (numMatch) {
+                parsedDoseNumber = parseInt(numMatch[0], 10);
+            }
+            if (isNaN(Number(dose)) || !parsedDoseNumber) {
+                finalNotes = finalNotes ? `Dose Type: ${dose}\n${finalNotes}` : `Dose Type: ${dose}`;
+            }
+        }
+
+        const query = `
+            INSERT INTO vaccination_record (
+                patient_id,
+                hospital_id,
+                vaccine_name,
+                dose_number,
+                total_doses,
+                administered_at,
+                notes
+            )
+            VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), $7)
+            RETURNING *;
+        `;
+        const params = [
+            patientId,
+            hospitalId,
+            vaccineName || 'Unspecified Vaccine',
+            parsedDoseNumber,
+            totalDoses || null,
+            administeredAt || null,
+            finalNotes || null
+        ];
+        const result = await this.db_connection.query_executor(query, params);
+        return result.rows[0] || null;
+    };
+
+    createPatientSurgery = async (patientId, { procedureName, performedAt, surgeonName, hospitalName, outcome, complications, anaesthesiaType, notes }) => {
+        const hospitalId = await this.resolveOrCreateHospital(hospitalName);
+        const surgeonId = await this.resolveDoctorByName(surgeonName);
+        
+        let finalNotes = notes || '';
+        if (surgeonName && !surgeonId) {
+            finalNotes = finalNotes ? `Surgeon: ${surgeonName}\n${finalNotes}` : `Surgeon: ${surgeonName}`;
+        }
+
+        const query = `
+            INSERT INTO surgical_history (
+                patient_id,
+                hospital_id,
+                surgeon_id,
+                procedure_name,
+                performed_at,
+                outcome,
+                complications,
+                anaesthesia_type,
+                notes
+            )
+            VALUES ($1, $2, $3, $4, COALESCE($5::date, CURRENT_DATE), $6::surgery_outcome, $7, $8, $9)
+            RETURNING *;
+        `;
+        const params = [
+            patientId,
+            hospitalId,
+            surgeonId,
+            procedureName || 'Unspecified Surgery',
+            performedAt || null,
+            outcome || 'successful',
+            complications || null,
+            anaesthesiaType || null,
+            finalNotes || null
+        ];
+        const result = await this.db_connection.query_executor(query, params);
+        return result.rows[0] || null;
+    };
 }
 
 module.exports = PatientModel;

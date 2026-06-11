@@ -19,40 +19,29 @@ export default function HistoryTimeline() {
 
   const userId = user?.patient_id || user?.uuid || user?.id || null;
 
+  const loadTimeline = async () => {
+    if (!userId) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const data = await getTimeline(userId);
+      setEntries(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load timeline.');
+      setEntries([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let alive = true;
-
-    const loadTimeline = async () => {
-      if (authLoading) return;
-      if (!userId) {
-        if (alive) {
-          setEntries([]);
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        if (alive) {
-          setLoading(true);
-          setError('');
-        }
-        const data = await getTimeline(userId);
-        if (alive) setEntries(Array.isArray(data) ? data : []);
-      } catch (err) {
-        if (alive) {
-          setError(err?.message || 'Failed to load timeline.');
-          setEntries([]);
-        }
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-
+    if (authLoading) return;
     loadTimeline();
-    return () => {
-      alive = false;
-    };
   }, [authLoading, userId]);
 
   const filtered = entries.filter((e) => {
@@ -64,16 +53,8 @@ export default function HistoryTimeline() {
     return matchType && matchSearch;
   });
 
-  const handleAdd = (entry) => {
-    const newEntry = {
-      ...entry,
-      title: entry.type === 'visit' ? 'Doctor Visit Logged'
-        : entry.type === 'note' ? 'Personal Note Added'
-        : entry.type === 'medication' ? 'Medication Changed'
-        : 'Vaccination Recorded',
-      summary: entry.note || entry.diagnosis || entry.drug || entry.vaccine || 'New entry',
-    };
-    setEntries((p) => [newEntry, ...p]);
+  const handleAdd = () => {
+    loadTimeline();
   };
 
   return (

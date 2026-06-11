@@ -5,6 +5,138 @@ import { searchNearby, geocodeAddress, inferSpecialty } from '../../services/api
 import { AMBULANCE_NUMBERS } from '../../data/ambulanceNumbers.js';
 import { useLanguage } from '../../context/LanguageContext.jsx';
 
+// ── Skeleton card (mirrors PlaceCard layout) ──────────────────────────────────
+function PlaceSkeleton() {
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-md w-2/3" />
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-md w-14 flex-shrink-0" />
+      </div>
+      <div className="flex gap-4">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-md w-14" />
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-md w-20" />
+      </div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-md w-full" />
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-md w-44" />
+      <div className="flex gap-2 pt-1">
+        <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded-lg w-20" />
+        <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded-lg w-28" />
+        <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded-lg w-16" />
+      </div>
+    </div>
+  );
+}
+
+// ── Full-panel loading state ──────────────────────────────────────────────────
+const SEARCH_STAGES = [
+  { Icon: Building2,   label: 'Finding hospitals within 5 km',   color: 'text-blue-500' },
+  { Icon: Stethoscope, label: 'Searching doctor chambers nearby', color: 'text-purple-500' },
+  { Icon: Ambulance,   label: 'Locating ambulance services',      color: 'text-red-500' },
+  { Icon: Navigation,  label: 'Calculating distances & sorting',  color: 'text-emerald-500' },
+];
+
+function SearchingLoader({ gpsLoading }) {
+  const [stageIdx, setStageIdx] = useState(0);
+  const [dots,     setDots]     = useState('');
+
+  useEffect(() => {
+    const dotTimer = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
+    return () => clearInterval(dotTimer);
+  }, []);
+
+  useEffect(() => {
+    if (gpsLoading) return;
+    const stageTimer = setInterval(() => setStageIdx(i => (i + 1) % SEARCH_STAGES.length), 1600);
+    return () => clearInterval(stageTimer);
+  }, [gpsLoading]);
+
+  const { Icon: StageIcon, label: stageLabel, color: stageColor } = SEARCH_STAGES[stageIdx];
+
+  return (
+    <div className="flex flex-col h-full">
+
+      {/* Hero status banner */}
+      <div className="rounded-2xl mb-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800 overflow-hidden">
+        <div className="px-5 py-4 flex items-center gap-4">
+          {/* Pulsing location pin */}
+          <div className="relative flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center">
+              <MapPin className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="absolute inset-0 rounded-full border-2 border-emerald-400 dark:border-emerald-500 animate-ping opacity-60" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-gray-900 dark:text-white text-base leading-tight">
+              {gpsLoading ? 'Getting your location' : 'Searching nearby services'}{dots}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <StageIcon className={`w-3.5 h-3.5 flex-shrink-0 ${stageColor}`} />
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{stageLabel}</p>
+            </div>
+          </div>
+
+          <Loader2 className="w-5 h-5 text-emerald-500 animate-spin flex-shrink-0" />
+        </div>
+
+        {/* Animated progress bar */}
+        <div className="h-1 bg-emerald-100 dark:bg-emerald-900/40">
+          <motion.div
+            className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-r-full"
+            animate={{ width: gpsLoading ? '25%' : `${((stageIdx + 1) / SEARCH_STAGES.length) * 100}%` }}
+            transition={{ duration: 0.8, ease: 'easeInOut' }}
+          />
+        </div>
+      </div>
+
+      {/* Category pills */}
+      {!gpsLoading && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {[
+            { Icon: Building2,   label: 'Hospitals',   cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
+            { Icon: Stethoscope, label: 'Chambers',    cls: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
+            { Icon: Ambulance,   label: 'Ambulances',  cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
+          ].map(({ Icon, label, cls }) => (
+            <motion.span
+              key={label}
+              initial={{ opacity: 0.4 }}
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium border ${cls}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </motion.span>
+          ))}
+        </div>
+      )}
+
+      {/* Hint text */}
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-1.5">
+        <Activity className="w-3.5 h-3.5" />
+        {gpsLoading
+          ? 'Waiting for location permission — check your browser prompt'
+          : 'Scanning up to 5–8 km around you. Results appear sorted by distance.'}
+      </p>
+
+      {/* Skeleton cards */}
+      <div className="flex-1 overflow-hidden space-y-3">
+        {[0, 1, 2, 3].map(i => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }}
+          >
+            <PlaceSkeleton />
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const EMBED_KEY = import.meta.env.VITE_GOOGLE_MAPS_EMBED_KEY || '';
 
 const TAB_IDS   = ['hospitals',  'chambers',    'ambulances'];
@@ -341,32 +473,38 @@ export default function NearMePanel({
       {/* ══ RIGHT — only this scrolls (60%) ══════════════════════════════════ */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3 flex-shrink-0">
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-            {resultsHeader}
-          </p>
-          {searching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-        </div>
+        {/* Full-panel loader: GPS acquisition or search in progress */}
+        {(gpsLoading || searching) ? (
+          <SearchingLoader gpsLoading={gpsLoading} />
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                {resultsHeader}
+              </p>
+            </div>
 
-        {/* Scrollable results */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-          {searchErr && <p className="text-sm text-red-500 py-2">{searchErr}</p>}
+            {/* Scrollable results */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {searchErr && <p className="text-sm text-red-500 py-2">{searchErr}</p>}
 
-          {location && !searching && currentResults.length === 0 && !searchErr && (
-            <p className="text-sm text-gray-400 dark:text-gray-600 py-2">{t('noResultsFound')}</p>
-          )}
+              {location && currentResults.length === 0 && !searchErr && (
+                <p className="text-sm text-gray-400 dark:text-gray-600 py-2">{t('noResultsFound')}</p>
+              )}
 
-          {location && !searching && currentResults.map(place => (
-            <PlaceCard
-              key={place.id}
-              place={place}
-              userLocation={location}
-              expandedId={expandedId}
-              onToggle={toggleDirection}
-            />
-          ))}
-        </div>
+              {location && currentResults.map(place => (
+                <PlaceCard
+                  key={place.id}
+                  place={place}
+                  userLocation={location}
+                  expandedId={expandedId}
+                  onToggle={toggleDirection}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
       </div>
     </div>

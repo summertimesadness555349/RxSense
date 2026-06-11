@@ -10,7 +10,32 @@ import Button                from '../components/ui/Button.jsx';
 import { getInsights, generateDoctorSummary } from '../services/api.js';
 import { useToast }          from '../context/ToastContext.jsx';
 import { useLanguage }       from '../context/LanguageContext.jsx';
+import { useAuth }           from '../context/AuthContext.jsx';
 import { relativeTime }      from '../utils/timeUtils.js';
+
+const INSIGHTS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+const insightsCacheKey = (userId) => `rxsense_insights_v2_${userId}`;
+const doctorSummaryCacheKey = (userId) => `rxsense_doctor_summary_v1_${userId}`;
+
+const readInsightsCache = (userId) => {
+  try {
+    const raw = localStorage.getItem(insightsCacheKey(userId));
+    if (!raw) return null;
+    const { data, cachedAt } = JSON.parse(raw);
+    if (Date.now() - new Date(cachedAt).getTime() > INSIGHTS_TTL_MS) return null;
+    return data;
+  } catch { return null; }
+};
+const writeInsightsCache = (userId, data) => {
+  try { localStorage.setItem(insightsCacheKey(userId), JSON.stringify({ data, cachedAt: new Date().toISOString() })); } catch {}
+};
+const readDoctorSummaryCache = (userId) => {
+  try { return JSON.parse(localStorage.getItem(doctorSummaryCacheKey(userId))) || null; } catch { return null; }
+};
+const writeDoctorSummaryCache = (userId, summary) => {
+  try { localStorage.setItem(doctorSummaryCacheKey(userId), JSON.stringify(summary)); } catch {}
+};
 
 const LEVEL_COLORS = { High: '#ef4444', Moderate: '#f59e0b', Low: '#22c55e' };
 
@@ -61,28 +86,35 @@ function InsightsError({ message, onRetry }) {
 export default function HistoryInsights() {
   const { t } = useLanguage();
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const userId = user?.id;
 
-  const [data,              setData]              = useState(null);
-  const [loading,           setLoading]           = useState(true);
+  const [data,              setData]              = useState(() => readInsightsCache(userId));
+  const [loading,           setLoading]           = useState(() => !readInsightsCache(userId));
   const [error,             setError]             = useState(null);
   const [refreshing,        setRefreshing]        = useState(false);
-  const [showSummary,       setShowSummary]       = useState(false);
-  const [summary,           setSummary]           = useState(null);
+  const [summary,           setSummary]           = useState(() => readDoctorSummaryCache(userId));
+  const [showSummary,       setShowSummary]       = useState(() => Boolean(readDoctorSummaryCache(userId)));
   const [generatingSummary, setGeneratingSummary] = useState(false);
 
   const fetchInsights = useCallback(async (force = false) => {
+    if (!force) {
+      const cached = readInsightsCache(userId);
+      if (cached) { setData(cached); setLoading(false); return; }
+    }
     try {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const result = await getInsights({ force });
       setData(result);
+      writeInsightsCache(userId, result);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => { fetchInsights(); }, [fetchInsights]);
 
@@ -94,6 +126,7 @@ export default function HistoryInsights() {
       const result = await generateDoctorSummary();
       setSummary(result);
       setShowSummary(true);
+      writeDoctorSummaryCache(userId, result);
       addToast(t('insightsSummaryToast'), 'success');
     } catch (err) {
       addToast(err.message || t('insightsErrorTitle'), 'error');
@@ -244,14 +277,25 @@ export default function HistoryInsights() {
           </div>
         </div>
 
-        <Button
-          className="mt-4 w-full"
-          variant="secondary"
-          loading={generatingSummary}
-          onClick={handleGenerateSummary}
-        >
-          {showSummary ? t('insightsRegenerateBtn') : t('insightsGenerateBtn')}
-        </Button>
+        <div className="mt-4 flex gap-2">
+          {summary && (
+            <Button
+              className="flex-1"
+              variant="ghost"
+              onClick={() => setShowSummary(v => !v)}
+            >
+              {showSummary ? 'Hide Summary' : 'View Summary'}
+            </Button>
+          )}
+          <Button
+            className={summary ? 'flex-1' : 'w-full'}
+            variant="secondary"
+            loading={generatingSummary}
+            onClick={handleGenerateSummary}
+          >
+            {summary ? t('insightsRegenerateBtn') : t('insightsGenerateBtn')}
+          </Button>
+        </div>
 
         {showSummary && summary && (
           <motion.div

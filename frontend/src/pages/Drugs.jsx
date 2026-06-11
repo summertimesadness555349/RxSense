@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Info, Pill, CheckCircle2, ShieldAlert, AlertTriangle, Sparkles, ShieldCheck, FlaskConical } from 'lucide-react';
+import { Plus, Info, Pill, CheckCircle2, ShieldAlert, AlertTriangle, Sparkles, ShieldCheck, FlaskConical, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DrugInputRow from '../components/drugs/DrugInputRow.jsx';
 import InteractionCard from '../components/drugs/InteractionCard.jsx';
@@ -10,6 +10,22 @@ import { useToast } from '../context/ToastContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { checkDrugInteractions, getPatientActiveMedications, checkNewMedInteractions } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+
+const DRUGS_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+const activeMedsCacheKey = (userId) => `rxsense_active_meds_v1_${userId}`;
+const readActiveMedsCache = (userId) => {
+  try {
+    const raw = localStorage.getItem(activeMedsCacheKey(userId));
+    if (!raw) return null;
+    const { data, cachedAt } = JSON.parse(raw);
+    if (Date.now() - new Date(cachedAt).getTime() > DRUGS_TTL_MS) return null;
+    return data;
+  } catch { return null; }
+};
+const writeActiveMedsCache = (userId, data) => {
+  try { localStorage.setItem(activeMedsCacheKey(userId), JSON.stringify({ data, cachedAt: new Date().toISOString() })); } catch {}
+};
 
 
 const defaultDrugs = [
@@ -62,7 +78,7 @@ export default function Drugs() {
 
   // Patient-oriented states
   const [activeTab, setActiveTab] = useState('standard');
-  const [ongoingMeds, setOngoingMeds] = useState([]);
+  const [ongoingMeds, setOngoingMeds] = useState(() => readActiveMedsCache(patientId) || []);
   const [loadingOngoingMeds, setLoadingOngoingMeds] = useState(false);
   const [newMedName, setNewMedName] = useState('');
   const [newMedDosage, setNewMedDosage] = useState('');
@@ -70,7 +86,11 @@ export default function Drugs() {
   const [loadingPatientCheck, setLoadingPatientCheck] = useState(false);
   const [patientCheckResult, setPatientCheckResult] = useState(null);
 
-  const loadOngoingMeds = async () => {
+  const loadOngoingMeds = async (force = false) => {
+    if (!force) {
+      const cached = readActiveMedsCache(patientId);
+      if (cached) { setOngoingMeds(cached); return; }
+    }
     setLoadingOngoingMeds(true);
     try {
       const data = await getPatientActiveMedications();
@@ -84,6 +104,7 @@ export default function Drugs() {
           source: m.source || 'prescription_item',
         }));
       setOngoingMeds(activeMeds);
+      writeActiveMedsCache(patientId, activeMeds);
     } catch (err) {
       console.error('Failed to load ongoing medications:', err);
     } finally {
@@ -387,10 +408,20 @@ export default function Drugs() {
 
               {/* List of Ongoing Medicines to check against */}
               <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-800">
-                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Pill className="w-4 h-4 text-emerald-500" />
-                  {t('ongoingMedsLabel')}
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Pill className="w-4 h-4 text-emerald-500" />
+                    {t('ongoingMedsLabel')}
+                  </h4>
+                  <button
+                    onClick={() => loadOngoingMeds(true)}
+                    disabled={loadingOngoingMeds}
+                    className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors disabled:opacity-40"
+                    title="Refresh medications"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingOngoingMeds ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
                 {loadingOngoingMeds ? (
                   <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                     <span className="w-4 h-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />

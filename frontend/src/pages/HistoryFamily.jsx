@@ -5,6 +5,7 @@ import Button from '../components/ui/Button.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Input, { Select } from '../components/ui/Input.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import {
   getFamilyShareCode,
   regenerateFamilyShareCode,
@@ -14,6 +15,25 @@ import {
   getFamilyMemberHealth,
   removeFamilyLink,
 } from '../services/api.js';
+
+const familyCacheKey = (userId) => `rxsense_family_v1_${userId}`;
+const memberHealthCacheKey = (linkId) => `rxsense_family_health_v1_${linkId}`;
+
+const readFamilyCache = (userId) => {
+  try { return JSON.parse(localStorage.getItem(familyCacheKey(userId))) || null; } catch { return null; }
+};
+const writeFamilyCache = (userId, members) => {
+  try { localStorage.setItem(familyCacheKey(userId), JSON.stringify(members)); } catch {}
+};
+const clearFamilyCache = (userId) => {
+  try { localStorage.removeItem(familyCacheKey(userId)); } catch {}
+};
+const readMemberHealthCache = (linkId) => {
+  try { return JSON.parse(localStorage.getItem(memberHealthCacheKey(linkId))) || null; } catch { return null; }
+};
+const writeMemberHealthCache = (linkId, health) => {
+  try { localStorage.setItem(memberHealthCacheKey(linkId), JSON.stringify(health)); } catch {}
+};
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Guardian', 'Other'];
 
@@ -114,13 +134,13 @@ function MemberCard({ entry, onRemove, onExpand, expanded }) {
 }
 
 function MemberHealthPanel({ linkId }) {
-  const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [health, setHealth] = useState(() => readMemberHealthCache(linkId));
+  const [loading, setLoading] = useState(!readMemberHealthCache(linkId));
 
   useEffect(() => {
     getFamilyMemberHealth(linkId)
-      .then(setHealth)
-      .catch(() => setHealth(null))
+      .then((h) => { setHealth(h); writeMemberHealthCache(linkId, h); })
+      .catch(() => { if (!readMemberHealthCache(linkId)) setHealth(null); })
       .finally(() => setLoading(false));
   }, [linkId]);
 
@@ -137,28 +157,36 @@ function MemberHealthPanel({ linkId }) {
   );
 
   const rows = [
+    health.age          && ['Age', `${health.age} years`],
+    health.bloodGroup   && ['Blood Group', health.bloodGroup],
+    health.height       && ['Height', `${health.height} cm`],
     health.weight       && ['Weight', `${health.weight} kg`],
     (health.bpSystolic && health.bpDiastolic) && ['Blood Pressure', `${health.bpSystolic}/${health.bpDiastolic} mmHg`],
     health.allergyCount > 0 && ['Allergies', `${health.allergyCount} known`],
+    health.smokingStatus && health.smokingStatus !== 'non-smoker' && ['Smoking', health.smokingStatus.replace(/_/g, ' ')],
     health.lastReportAt && ['Last Report', new Date(health.lastReportAt).toLocaleDateString()],
   ].filter(Boolean);
+
+  const noData = rows.length === 0 && !health.conditions?.length && !health.allergies?.length;
 
   return (
     <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-2">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
         <Activity className="w-3 h-3" /> Health Summary
       </div>
-      {rows.length === 0 && health.conditions?.length === 0 && (
+      {noData && (
         <p className="text-sm text-emerald-600 dark:text-emerald-400">No health data recorded yet.</p>
       )}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-        {rows.map(([label, val]) => (
-          <div key={label}>
-            <dt className="text-xs text-gray-400 dark:text-gray-500">{label}</dt>
-            <dd className="text-sm font-medium text-gray-800 dark:text-gray-200">{val}</dd>
-          </div>
-        ))}
-      </dl>
+      {rows.length > 0 && (
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+          {rows.map(([label, val]) => (
+            <div key={label}>
+              <dt className="text-xs text-gray-400 dark:text-gray-500">{label}</dt>
+              <dd className="text-sm font-medium text-gray-800 dark:text-gray-200">{val}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {health.conditions?.length > 0 && (
         <div className="pt-1">
           <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Active Conditions</p>
@@ -271,12 +299,15 @@ function AddMemberModal({ isOpen, onClose, onLinked }) {
 
 export default function HistoryFamily() {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const userId = user?.id;
+
   const [shareCode, setShareCode] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [members, setMembers] = useState(() => readFamilyCache(userId) || []);
   const [expandedId, setExpandedId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [codeLoading, setCodeLoading] = useState(true);
-  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(!readFamilyCache(userId));
 
   const loadCode = useCallback(() => {
     setCodeLoading(true);
@@ -287,12 +318,13 @@ export default function HistoryFamily() {
   }, []);
 
   const loadMembers = useCallback(() => {
-    setMembersLoading(true);
+    const cached = readFamilyCache(userId);
+    if (!cached) setMembersLoading(true);
     getFamilyMembers()
-      .then(setMembers)
-      .catch(() => setMembers([]))
+      .then((fresh) => { setMembers(fresh); writeFamilyCache(userId, fresh); })
+      .catch(() => { if (!cached) setMembers([]); })
       .finally(() => setMembersLoading(false));
-  }, []);
+  }, [userId]);
 
   useEffect(() => { loadCode(); loadMembers(); }, [loadCode, loadMembers]);
 
@@ -310,7 +342,12 @@ export default function HistoryFamily() {
     if (!window.confirm(`Remove ${name || 'this member'} from your family network?`)) return;
     try {
       await removeFamilyLink(linkId);
-      setMembers((prev) => prev.filter((m) => m.linkId !== linkId));
+      setMembers((prev) => {
+        const updated = prev.filter((m) => m.linkId !== linkId);
+        writeFamilyCache(userId, updated);
+        return updated;
+      });
+      try { localStorage.removeItem(memberHealthCacheKey(linkId)); } catch {}
       addToast('Link removed', 'success');
     } catch {
       addToast('Could not remove link', 'error');

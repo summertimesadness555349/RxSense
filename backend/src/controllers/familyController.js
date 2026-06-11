@@ -136,9 +136,21 @@ class FamilyController {
                 success: true,
                 health: {
                     ...health,
-                    age: calcAge(health.date_of_birth),
-                    conditions: health.conditions || [],
-                    allergies:  health.allergies  || [],
+                    age:           calcAge(health.date_of_birth),
+                    bloodGroup:    health.blood_group                || null,
+                    height:        health.height                     || null,
+                    weight:        health.weight                     || null,
+                    bpSystolic:    health.blood_pressure_systolic    || null,
+                    bpDiastolic:   health.blood_pressure_diastolic   || null,
+                    bpRecordedAt:  health.bp_recorded_at             || null,
+                    smokingStatus: health.smoking_status             || null,
+                    lastReportAt:  health.last_report_at             || null,
+                    allergyCount:  (health.allergies || []).length,
+                    conditions:    (health.conditions || []).map(c => c.name || String(c)).filter(Boolean),
+                    allergies:     (health.allergies  || []).map(a => {
+                        const name = a.name || String(a);
+                        return a.severity ? `${name} (${a.severity})` : name;
+                    }).filter(Boolean),
                 },
             });
         } catch (err) {

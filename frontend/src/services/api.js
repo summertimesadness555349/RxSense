@@ -709,10 +709,14 @@ export const checkPatientMedicationSafety = async (patientData) => {
   return data.safetyReport || null;
 };
 
-// POST /api/timeline/:userId/entry
+// POST /api/patient/timeline
 export const addTimelineEntry = async (userId, entry) => {
-  await delay(800);
-  return { ...entry, id: `tl_${Date.now()}`, date: new Date().toISOString() };
+  const response = await request('/patient/timeline', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  });
+  return response.entry;
 };
 
 // GET /api/user/:userId/profile

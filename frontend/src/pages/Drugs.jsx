@@ -277,7 +277,7 @@ export default function Drugs() {
               <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
 
                 {/* AI Clinical Summary */}
-                {result.clinical_summary && (
+                {/* {result.clinical_summary && (
                   <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/10 p-4 flex gap-3">
                     <Sparkles className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <div>
@@ -285,7 +285,7 @@ export default function Drugs() {
                       <p className="text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">{result.clinical_summary}</p>
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {/* Summary counts */}
                 <div className="grid grid-cols-3 gap-3">

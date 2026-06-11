@@ -459,11 +459,17 @@ await this.db_connection.query_executor(query1, [patientId]);
     };
 
     getPrescriptionScanMedications = async (patientId, { activeOnly = false } = {}) => {
+        // Match scans that are saved to this patient profile (patient_id = $1)
+        // OR scans uploaded by this patient's user account but not yet linked (patient_id IS NULL).
+        // Also SELECT rx_status so normalizeScanMedication can respect 'ongoing' overrides.
         const query = `
             SELECT scan_id, user_id, patient_id, doctor_name, doctor_specialty, hospital_name,
-                   patient_name_rx, rx_date, diseases, medications, created_at
+                   patient_name_rx, rx_date, rx_status, diseases, medications, created_at
             FROM prescription_scan
             WHERE patient_id = $1
+               OR (patient_id IS NULL AND user_id = (
+                       SELECT user_id FROM patient WHERE patient_id = $1 LIMIT 1
+                  ))
             ORDER BY COALESCE(created_at, NOW()) DESC;
         `;
 

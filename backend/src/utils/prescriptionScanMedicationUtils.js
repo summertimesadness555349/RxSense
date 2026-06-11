@@ -117,7 +117,10 @@ function normalizeScanMedication(scan, med, index, now = new Date()) {
     const issuedDay = issuedAt ? startOfUtcDay(issuedAt) : null;
     const durationDays = parseDurationDays(med.duration);
     const expiresAt = issuedDay ? new Date(issuedDay.getTime() + durationDays * DAY_MS) : null;
-    const active = durationDays > 0 && expiresAt ? expiresAt.getTime() >= startOfUtcDay(now).getTime() : false;
+    // rx_status = 'ongoing' means the user explicitly marked this prescription as still active —
+    // bypass duration math so it never expires until manually closed.
+    const isExplicitlyOngoing = scan.rx_status === 'ongoing';
+    const active = isExplicitlyOngoing || (durationDays > 0 && expiresAt ? expiresAt.getTime() >= startOfUtcDay(now).getTime() : false);
     const itemId = `${scan.scan_id}:${index}`;
     const brandName = normalizeMedName(med);
     const genericName = med.generic || med.generic_name || med.extracted_name || brandName;
